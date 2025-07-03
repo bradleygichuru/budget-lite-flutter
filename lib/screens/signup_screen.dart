@@ -27,7 +27,7 @@ class SignUpFormState extends State<SignupForm> {
   @override
   Widget build(BuildContext context) {
     Future<void> registerUser() async {
-      Uri url = Uri.parse("http://192.168.0.7:8000/api/v1/register");
+      Uri url = Uri.parse("http://192.168.0.7:8001/api/v1/register");
       final payload = <String, dynamic>{};
       payload["name"] = fullNameController.value.text;
       payload["email"] = emailController.value.text;

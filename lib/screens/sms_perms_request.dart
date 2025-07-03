@@ -1,11 +1,40 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_application_1/screens/sms_perms_request.dart';
+import 'dart:io';
 
-class AutoImportInfoScreen extends StatelessWidget {
-  const AutoImportInfoScreen({super.key});
+import 'package:flutter/material.dart';
+import 'package:flutter_application_1/main.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+class SmsPermsRequest extends StatelessWidget {
+  const SmsPermsRequest({super.key});
+
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
+    Future<void> requestPermission() async {
+      final permission = Permission.sms;
+
+      if (await permission.isDenied) {
+        print("sms permissions: false");
+        var status = await permission.request();
+        if (status.isGranted) {
+          if (context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MyApp()),
+            );
+          }
+        }
+      }
+      if (await permission.isGranted) {
+        print("sms permissions: true");
+        if (context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MyApp()),
+          );
+        }
+      }
+    }
+
     return MaterialApp(
       theme: ThemeData(
         colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
@@ -38,7 +67,7 @@ class AutoImportInfoScreen extends StatelessWidget {
                   ),
                   Center(
                     child: const Text(
-                      "Auto-Import Transactions",
+                      "SMS Permission Required",
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 20,
@@ -48,7 +77,7 @@ class AutoImportInfoScreen extends StatelessWidget {
 
                   Center(
                     child: const Text(
-                      "BudgetLite automatically imports your transactions from SMS notifications",
+                      "BudgetLite needs permission to read SMS messages to automatically import your transactions",
                     ),
                   ),
 
@@ -62,15 +91,17 @@ class AutoImportInfoScreen extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
-                            const ListTile(
-                              leading: Icon(
-                                Icons.bolt,
+                            ListTile(
+                              leading: const Icon(
+                                Icons.ad_units,
                                 size: 30,
                                 color: Color(0xFFA3E635),
                               ),
-                              title: Text('Zero Manual Entry'),
-                              subtitle: Text(
-                                'Automatically capture M-Pesa and bank transaction SMS messages',
+                              title: Text(
+                                '${Platform.isAndroid ? "Android" : 'IOS'} device',
+                              ),
+                              subtitle: const Text(
+                                'Device will ask for permission to access messages. This helps automatically import your financial transactions.',
                               ),
                             ),
                           ],
@@ -84,19 +115,32 @@ class AutoImportInfoScreen extends StatelessWidget {
                       vertical: 16,
                     ),
                     child: Center(
-                      child: Card(
+                      child: Card.outlined(
+                        color: Color(0xFFF0FDF4),
+
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            const ListTile(
-                              leading: Icon(
-                                Icons.shield,
-                                color: Color(0xFF1E88E5),
-                                size: 30,
+                          children: [
+                            ListTile(
+                              leading: Icon(Icons.shield),
+                              title: Text("Your Privacy is Protected"),
+                            ),
+                            ListTile(
+                              dense: true,
+                              leading: Text("•"),
+                              title: Text(
+                                "Only financial SMS messages are processed",
                               ),
-                              title: Text('Secure & Private'),
-                              subtitle: Text(
-                                'SMS data is processed locally on your device and encrypted',
+                            ),
+                            ListTile(
+                              dense: true,
+                              leading: Text("•"),
+                              title: Text("Personal messages are ignored"),
+                            ),
+                            ListTile(
+                              dense: true,
+                              leading: Text("•"),
+                              title: Text(
+                                "Only financial SMS messages are processed",
                               ),
                             ),
                           ],
@@ -104,28 +148,7 @@ class AutoImportInfoScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 16,
-                    ),
-                    child: Center(
-                      child: Card(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            const ListTile(
-                              leading: Icon(Icons.bolt, size: 30),
-                              title: Text('Smart Categorization'),
-                              subtitle: Text(
-                                'Automatically categorize transactions',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
                     child: Center(
@@ -136,17 +159,12 @@ class AutoImportInfoScreen extends StatelessWidget {
                           ),
                         ),
                         onPressed: () {
-                           Navigator.push(
-                             context,
-                             MaterialPageRoute(
-                               builder: (context) => const SmsPermsRequest(),
-                           ),
-                          );
+                          requestPermission();
                         },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text('Enable Auto-Import'),
+                            const Text('Grant SMS Permission'),
                             Padding(
                               padding: EdgeInsets.symmetric(horizontal: 4),
                               child: const Icon(Icons.arrow_right_alt),

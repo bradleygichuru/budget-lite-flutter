@@ -1,8 +1,6 @@
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(const MyApp());
@@ -39,17 +37,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-Future<void> requestPermission() async {
-  final permission = Permission.sms;
 
-  if (await permission.isDenied) {
-    log("sms permissions: false");
-    await permission.request();
-  }
-  if (await permission.isGranted) {
-    log("sms permissions: true");
-  }
-}
 
 class NavigationExample extends StatefulWidget {
   const NavigationExample({super.key});
@@ -98,7 +86,7 @@ class _NavigationExampleState extends State<NavigationExample> {
             child: Center(
               child: ElevatedButton(
                 onPressed: () {
-                  requestPermission();
+                  
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (con) => const LoginForm()),
