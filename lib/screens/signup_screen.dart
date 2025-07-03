@@ -1,0 +1,262 @@
+import 'dart:convert';
+import 'dart:developer';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_application_1/screens/login_screen.dart';
+import 'package:flutter_application_1/screens/select_region_screen.dart';
+import 'package:http/http.dart' as http;
+
+class SignupForm extends StatefulWidget {
+  const SignupForm({super.key});
+  @override
+  State<SignupForm> createState() => SignUpFormState();
+}
+
+class SignUpFormState extends State<SignupForm> {
+  TextEditingController emailController = TextEditingController();
+
+  TextEditingController passwordController = TextEditingController();
+
+  TextEditingController fullNameController = TextEditingController();
+
+  TextEditingController confirmPasswordController = TextEditingController();
+
+  TextEditingController phoneNumberController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  Widget build(BuildContext context) {
+    Future<void> registerUser() async {
+      Uri url = Uri.parse("http://192.168.0.7:8000/api/v1/register");
+      final payload = <String, dynamic>{};
+      payload["name"] = fullNameController.value.text;
+      payload["email"] = emailController.value.text;
+      payload["password"] = passwordController.value.text;
+      payload["device_name"] = "X";
+      payload["phone"] = phoneNumberController.value.text;
+      payload["password_confirmation"] = confirmPasswordController.value.text;
+
+      http.Response response = await http.post(url, body: payload);
+      print("resp:${response.body}");
+      var decodedResponse = jsonDecode(response.body) as Map;
+      if (decodedResponse["success"]) {
+        log("request successful");
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SelectRegion()),
+        );
+      } else {
+        log("request failed");
+      }
+    }
+
+    return MaterialApp(
+      theme: ThemeData(
+        colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
+      ),
+      home: SafeArea(
+        child: Scaffold(
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFEFF6FF), Color(0xFFF3E8FF)],
+              ),
+            ),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(8),
+                children: <Widget>[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                    child: Center(
+                      child: Icon(
+                        size: 50,
+                        Icons.account_circle,
+                        color: Color(0xFF2563EB),
+                      ),
+                    ),
+                  ),
+
+                  Center(
+                    child: const Text(
+                      "Welcome to BudgetLite",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+
+                  Center(
+                    child: const Text(
+                      "Let's get started with your zero-friction budgeting journey",
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                    child: TextFormField(
+                      controller: fullNameController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter Name';
+                        }
+                        return null;
+                      },
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'John Doe',
+                        labelText: "Full name",
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                    child: TextFormField(
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter valid Email';
+                        }
+                        return null;
+                      },
+                      controller: emailController,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'johndoe@gmail.com',
+                        labelText: "Email",
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                    child: TextFormField(
+                      controller: phoneNumberController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter phoneNumber';
+                        }
+                        return null;
+                      },
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: '+25471234567',
+                        labelText: "Phone Number",
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 16,
+                    ),
+                    child: TextFormField(
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter password';
+                        }
+                        return null;
+                      },
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Password',
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 16,
+                    ),
+                    child: TextFormField(
+                      controller: confirmPasswordController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter some text';
+                        }
+                        if (value != confirmPasswordController.text) {
+                          return 'passwords dont match';
+                        }
+                        return null;
+                      },
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Confirm Password',
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                    child: Center(
+                      child: FilledButton(
+                        style: ButtonStyle(
+                          backgroundColor: WidgetStatePropertyAll<Color>(
+                            Color(0xFF2563EB),
+                          ),
+                        ),
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            log("registering user");
+                            registerUser();
+                          }
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Continue'),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 4),
+                              child: const Icon(Icons.arrow_right_alt),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(3),
+                    child: Center(
+                      child: const Text("Already have an account?"),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                    child: Center(
+                      child: OutlinedButton(
+                        
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginForm(),
+                            ),
+                          );
+                          // Navigate back to first route when tapped.
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 4),
+                              child: const Icon(Icons.person_add),
+                            ),
+
+                            const Text('Sign In'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

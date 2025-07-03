@@ -1,8 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/screens/signup_scree.dart';
+import 'package:flutter_application_1/screens/signup_screen.dart';
 
-class LoginForm extends StatelessWidget {
+class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
+  @override
+  State<LoginForm> createState() => LoginFormState();
+}
+
+class LoginFormState extends State<LoginForm> {
+  //const LoginForm({super.key});
+  TextEditingController emailController = TextEditingController();
+
+  TextEditingController passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    // Clean up the controller when the widget is disposed.
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,8 +33,8 @@ class LoginForm extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
                 colors: [Color(0xFFEFF6FF), Color(0xFFF3E8FF)],
               ),
             ),
@@ -48,10 +65,14 @@ class LoginForm extends StatelessWidget {
                   ),
                 ),
 
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 16,
+                  ),
                   child: TextField(
-                    decoration: InputDecoration(
+                    controller: emailController,
+                    decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       hintText: 'johndoe@gmail.com',
                       labelText: "Email",
@@ -64,6 +85,7 @@ class LoginForm extends StatelessWidget {
                     vertical: 16,
                   ),
                   child: TextField(
+                    controller: passwordController,
                     obscureText: true,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(),
@@ -101,17 +123,17 @@ class LoginForm extends StatelessWidget {
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
                   child: Center(
-                    child: FilledButton(
+                    child: OutlinedButton(
                       style: ButtonStyle(
                         backgroundColor: WidgetStatePropertyAll<Color>(
-                          Color(0xFF2563EB),
+                          Colors.white,
                         ),
                       ),
                       onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const SignUpForm(),
+                            builder: (context) => const SignupForm(),
                           ),
                         );
                         // Navigate back to first route when tapped.
