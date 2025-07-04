@@ -5,7 +5,6 @@ class AutoImportInfoScreen extends StatelessWidget {
   const AutoImportInfoScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
     return MaterialApp(
       theme: ThemeData(
         colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),

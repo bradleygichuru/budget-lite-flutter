@@ -1,5 +1,15 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/screens/signup_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import 'dart:developer';
+import 'package:http/http.dart' as http;
+
+final storage = FlutterSecureStorage();
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
@@ -13,6 +23,7 @@ class LoginFormState extends State<LoginForm> {
 
   TextEditingController passwordController = TextEditingController();
 
+  final _formKey = GlobalKey<FormState>();
   @override
   void dispose() {
     // Clean up the controller when the widget is disposed.
@@ -23,6 +34,34 @@ class LoginFormState extends State<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
+    Future<void> loginUser() async {
+      Uri url = Uri.parse("http://192.168.0.7:8000/api/v1/login");
+      final payload = <String, dynamic>{};
+      payload["email"] = emailController.value.text;
+      payload["password"] = passwordController.value.text;
+      payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
+      http.Response response = await http.post(url, body: payload);
+      print("resp:${response.body}");
+      var decodedResponse = jsonDecode(response.body) as Map;
+      if (decodedResponse["success"]) {
+        log("request successful");
+        await storage.write(
+          key: "auth_token",
+          value: decodedResponse["response"]["Bearer"],
+        );
+        log("setting auth token");
+        log(decodedResponse["response"]["Bearer"]);
+        if (context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MyApp()),
+          );
+        }
+      } else {
+        log("request failed");
+      }
+    }
+
     return MaterialApp(
       theme: ThemeData(
         colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
@@ -38,121 +77,144 @@ class LoginFormState extends State<LoginForm> {
                 colors: [Color(0xFFEFF6FF), Color(0xFFF3E8FF)],
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-                  child: Center(
-                    child: Icon(
-                      size: 50,
-                      Icons.account_circle,
-                      color: Color(0xFF2563EB),
-                    ),
-                  ),
-                ),
-
-                Center(
-                  child: const Text(
-                    "Welcome Back",
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
-                  ),
-                ),
-
-                Center(
-                  child: const Text(
-                    "Sign in to continue your budgeting journey",
-                  ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 16,
-                  ),
-                  child: TextField(
-                    controller: emailController,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'johndoe@gmail.com',
-                      labelText: "Email",
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 16,
-                  ),
-                  child: TextField(
-                    controller: passwordController,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      labelText: 'Password',
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-                  child: Center(
-                    child: FilledButton(
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStatePropertyAll<Color>(
-                          Color(0xFF2563EB),
-                        ),
-                      ),
-                      onPressed: () => {null},
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('Sign In'),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 4),
-                            child: const Icon(Icons.arrow_right_alt),
-                          ),
-                        ],
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                    child: Center(
+                      child: Icon(
+                        size: 50,
+                        Icons.account_circle,
+                        color: Color(0xFF2563EB),
                       ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: EdgeInsets.all(3),
-                  child: Center(child: const Text("Don't have an account?")),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-                  child: Center(
-                    child: OutlinedButton(
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStatePropertyAll<Color>(
-                          Colors.white,
-                        ),
+
+                  Center(
+                    child: const Text(
+                      "Welcome Back",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 20,
                       ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignupForm(),
-                          ),
-                        );
-                        // Navigate back to first route when tapped.
+                    ),
+                  ),
+
+                  Center(
+                    child: const Text(
+                      "Sign in to continue your budgeting journey",
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 16,
+                    ),
+                    child: TextFormField(
+                      controller: emailController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter valid Email';
+                        }
+                        return null;
                       },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 4),
-                            child: const Icon(Icons.person_add),
-                          ),
-
-                          const Text('Create Account'),
-                        ],
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'johndoe@gmail.com',
+                        labelText: "Email",
                       ),
                     ),
                   ),
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 16,
+                    ),
+                    child: TextFormField(
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter password';
+                        }
+                        return null;
+                      },
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Password',
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                    child: Center(
+                      child: FilledButton(
+                        style: ButtonStyle(
+                          backgroundColor: WidgetStatePropertyAll<Color>(
+                            Color(0xFF2563EB),
+                          ),
+                        ),
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            log("signing user in");
+                            loginUser();
+                          }
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Sign In'),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 4),
+                              child: const Icon(Icons.arrow_right_alt),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(3),
+                    child: Center(child: const Text("Don't have an account?")),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                    child: Center(
+                      child: OutlinedButton(
+                        style: ButtonStyle(
+                          backgroundColor: WidgetStatePropertyAll<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SignupForm(),
+                            ),
+                          );
+                          // Navigate back to first route when tapped.
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 4),
+                              child: const Icon(Icons.person_add),
+                            ),
+
+                            const Text('Create Account'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

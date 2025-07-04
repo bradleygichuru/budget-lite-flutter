@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
@@ -27,12 +28,12 @@ class SignUpFormState extends State<SignupForm> {
   @override
   Widget build(BuildContext context) {
     Future<void> registerUser() async {
-      Uri url = Uri.parse("http://192.168.0.7:8001/api/v1/register");
+      Uri url = Uri.parse("http://192.168.0.7:8000/api/v1/register");
       final payload = <String, dynamic>{};
       payload["name"] = fullNameController.value.text;
       payload["email"] = emailController.value.text;
       payload["password"] = passwordController.value.text;
-      payload["device_name"] = "X";
+      payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
       payload["phone"] = phoneNumberController.value.text;
       payload["password_confirmation"] = confirmPasswordController.value.text;
 
