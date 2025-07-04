@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/funcs/auth.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:flutter_application_1/screens/select_region_screen.dart';
 import 'package:http/http.dart' as http;
@@ -42,10 +43,13 @@ class SignUpFormState extends State<SignupForm> {
       var decodedResponse = jsonDecode(response.body) as Map;
       if (decodedResponse["success"]) {
         log("request successful");
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SelectRegion()),
-        );
+        await setAuthToken(decodedResponse["response"]["Bearer"]);
+        if (context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SelectRegion()),
+          );
+        }
       } else {
         log("request failed");
       }
@@ -228,7 +232,6 @@ class SignUpFormState extends State<SignupForm> {
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
                     child: Center(
                       child: OutlinedButton(
-                        
                         onPressed: () {
                           Navigator.push(
                             context,

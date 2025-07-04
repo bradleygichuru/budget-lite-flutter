@@ -1,15 +1,55 @@
-
+import 'package:another_telephony/telephony.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/funcs/transactions.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
+
+@pragma('vm:entry-point')
+backgroundMessageHandler(SmsMessage message) async {
+  //Handle background message
+  print(message);
+  print('message:${parseMpesa(message)}');
+}
 
 void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+  @override
+  _MyAppState createState() => _MyAppState();
+}
 
-  // This widget is the root of your application.
+class _MyAppState extends State<MyApp> {
+  final telephony = Telephony.instance;
+  @override
+  void initState() {
+    super.initState();
+    initPlatformState();
+  }
+
+  onMessage(SmsMessage message) async {
+    print('message:${message.body}');
+  }
+
+  Future<void> initPlatformState() async {
+    // Platform messages may fail, so we use a try/catch PlatformException.
+    // If the widget was removed from the tree while the asynchronous platform
+    // message was in flight, we want to discard the reply rather than calling
+    // setState to update our non-existent appearance.
+
+    final bool? result = await telephony.requestPhoneAndSmsPermissions;
+
+    if (result != null && result) {
+      telephony.listenIncomingSms(
+        onNewMessage: onMessage,
+        onBackgroundMessage: backgroundMessageHandler,
+      );
+    }
+
+    if (!mounted) return;
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -36,8 +76,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-
 
 class NavigationExample extends StatefulWidget {
   const NavigationExample({super.key});
@@ -86,7 +124,6 @@ class _NavigationExampleState extends State<NavigationExample> {
             child: Center(
               child: ElevatedButton(
                 onPressed: () {
-                  
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (con) => const LoginForm()),

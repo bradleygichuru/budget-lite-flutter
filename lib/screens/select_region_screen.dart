@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/screens/auto-import-info.dart';
+import 'package:flutter_application_1/screens/auto_import_info.dart';
 
 class SelectRegion extends StatefulWidget {
   const SelectRegion({super.key});

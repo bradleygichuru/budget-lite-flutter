@@ -2,14 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/funcs/auth.dart';
 import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/screens/signup_screen.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 
-final storage = FlutterSecureStorage();
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
@@ -42,13 +41,14 @@ class LoginFormState extends State<LoginForm> {
       payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
       http.Response response = await http.post(url, body: payload);
       print("resp:${response.body}");
+
       var decodedResponse = jsonDecode(response.body) as Map;
+
       if (decodedResponse["success"]) {
         log("request successful");
-        await storage.write(
-          key: "auth_token",
-          value: decodedResponse["response"]["Bearer"],
-        );
+
+        await setAuthToken(decodedResponse["response"]["Bearer"]);
+
         log("setting auth token");
         log(decodedResponse["response"]["Bearer"]);
         if (context.mounted) {

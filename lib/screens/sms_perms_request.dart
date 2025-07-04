@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/main.dart';
+import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class SmsPermsRequest extends StatelessWidget {
@@ -19,7 +20,7 @@ class SmsPermsRequest extends StatelessWidget {
           if (context.mounted) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const MyApp()),
+              MaterialPageRoute(builder: (context) => const LoginForm()),
             );
           }
         }
@@ -29,7 +30,7 @@ class SmsPermsRequest extends StatelessWidget {
         if (context.mounted) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const MyApp()),
+            MaterialPageRoute(builder: (context) => const LoginForm()),
           );
         }
       }
