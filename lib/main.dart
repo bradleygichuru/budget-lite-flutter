@@ -1,37 +1,59 @@
 import 'package:another_telephony/telephony.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/funcs/transactions.dart';
-import 'package:flutter_application_1/screens/login_screen.dart';
+import 'package:flutter_application_1/screens/dashboard_screen.dart';
+import 'package:path/path.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
 
 @pragma('vm:entry-point')
 backgroundMessageHandler(SmsMessage message) async {
   //Handle background message
-  print(message);
-  print('message:${parseMpesa(message)}');
+  var transaction = parseMpesa(message);
+  print('from:${message.address} message:${message.body}');
+
+  print('background_transaction:${transaction}');
+  if (transaction != null) {
+    insertTransaction(
+      TransactionObj(
+        type: transaction['type'],
+        source: transaction['source'],
+        amount: transaction['amount'],
+        date: transaction['date'],
+      ),
+    );
+  }
 }
 
-void main() {
-  runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  List<TransactionObj> initialTransactions = await transactions();
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => TransactionsModel(initialTransactions),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
   @override
-  _MyAppState createState() => _MyAppState();
+  MyAppState createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
   final telephony = Telephony.instance;
+
   @override
   void initState() {
     super.initState();
     initPlatformState();
   }
 
-  onMessage(SmsMessage message) async {
-    print('message:${message.body}');
-  }
-
+  Future<void> setTransactions() async {}
   Future<void> initPlatformState() async {
     // Platform messages may fail, so we use a try/catch PlatformException.
     // If the widget was removed from the tree while the asynchronous platform
@@ -50,26 +72,28 @@ class _MyAppState extends State<MyApp> {
     if (!mounted) return;
   }
 
+  onMessage(SmsMessage message) async {
+    print('from:${message.address} message:${message.body}');
+    var transaction = parseMpesa(message);
+
+    print('foreground_transaction:${transaction}');
+    if (transaction != null) {
+      insertTransaction(
+        TransactionObj(
+          type: transaction['type'],
+          source: transaction['source'],
+          amount: transaction['amount'],
+          date: transaction['date'],
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       home: const NavigationExample(),
@@ -89,120 +113,112 @@ class _NavigationExampleState extends State<NavigationExample> {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return Scaffold(
-      bottomNavigationBar: NavigationBar(
-        onDestinationSelected: (int index) {
-          setState(() {
-            currentPageIndex = index;
-          });
-        },
-        indicatorColor: Colors.amber,
-        selectedIndex: currentPageIndex,
-        destinations: const <Widget>[
-          NavigationDestination(
-            selectedIcon: Icon(Icons.home),
-            icon: Icon(Icons.home_outlined),
-            label: 'DashBoard',
-          ),
-          NavigationDestination(
-            icon: Badge(child: Icon(Icons.wallet)),
-            label: 'Envelopes',
-          ),
-          NavigationDestination(
-            icon: Badge(label: Text(''), child: Icon(Icons.crisis_alert)),
-            label: 'Goals',
-          ),
-        ],
+    final ThemeData theme = ThemeData(
+      colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
+    );
+    return MaterialApp(
+      theme: ThemeData(
+        colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
       ),
-      body: <Widget>[
-        /// Home page
-        Card(
-          shadowColor: Colors.transparent,
-          margin: const EdgeInsets.all(8.0),
-          child: SizedBox.expand(
-            child: Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (con) => const LoginForm()),
-                  );
-                  // Navigate back to first route when tapped.
-                },
-                child: const Text('Go back!'),
+      home: SafeArea(
+        child: Scaffold(
+          bottomNavigationBar: NavigationBar(
+            onDestinationSelected: (int index) {
+              setState(() {
+                currentPageIndex = index;
+              });
+            },
+            indicatorColor: Color(0xFFE0F2FE),
+            selectedIndex: currentPageIndex,
+            destinations: const <Widget>[
+              NavigationDestination(
+                selectedIcon: Icon(Icons.home),
+                icon: Icon(Icons.home_outlined),
+                label: 'DashBoard',
               ),
-            ),
-          ),
-        ),
-
-        /// Notifications page
-        const Padding(
-          padding: EdgeInsets.all(8.0),
-          child: Column(
-            children: <Widget>[
-              Card(
-                child: ListTile(
-                  leading: Icon(Icons.notifications_sharp),
-                  title: Text('Notification 1'),
-                  subtitle: Text('This is a notification'),
-                ),
+              NavigationDestination(
+                icon: Badge(child: Icon(Icons.wallet)),
+                label: 'Envelopes',
               ),
-              Card(
-                child: ListTile(
-                  leading: Icon(Icons.notifications_sharp),
-                  title: Text('Notification 2'),
-                  subtitle: Text('This is a notification'),
-                ),
+              NavigationDestination(
+                icon: Badge(label: Text(''), child: Icon(Icons.crisis_alert)),
+                label: 'Goals',
               ),
             ],
           ),
-        ),
+          body: <Widget>[
+            /// Home page
+            const Dashboard(),
 
-        /// Messages page
-        ListView.builder(
-          reverse: true,
-          itemCount: 2,
-          itemBuilder: (BuildContext context, int index) {
-            if (index == 0) {
-              return Align(
-                alignment: Alignment.centerRight,
-                child: Container(
-                  margin: const EdgeInsets.all(8.0),
-                  padding: const EdgeInsets.all(8.0),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: Text(
-                    'Hello',
-                    style: theme.textTheme.bodyLarge!.copyWith(
-                      color: theme.colorScheme.onPrimary,
+            /// Notifications page
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Column(
+                children: <Widget>[
+                  Card(
+                    child: ListTile(
+                      leading: Icon(Icons.notifications_sharp),
+                      title: Text('Notification 1'),
+                      subtitle: Text('This is a notification'),
                     ),
                   ),
-                ),
-              );
-            }
-            return Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                margin: const EdgeInsets.all(8.0),
-                padding: const EdgeInsets.all(8.0),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: Text(
-                  'Hi!',
-                  style: theme.textTheme.bodyLarge!.copyWith(
-                    color: theme.colorScheme.onPrimary,
+                  Card(
+                    child: ListTile(
+                      leading: Icon(Icons.notifications_sharp),
+                      title: Text('Notification 2'),
+                      subtitle: Text('This is a notification'),
+                    ),
                   ),
-                ),
+                ],
               ),
-            );
-          },
+            ),
+
+            /// Messages page
+            ListView.builder(
+              reverse: true,
+              itemCount: 2,
+              itemBuilder: (BuildContext context, int index) {
+                if (index == 0) {
+                  return Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      margin: const EdgeInsets.all(8.0),
+                      padding: const EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Text(
+                        'Hello',
+                        style: theme.textTheme.bodyLarge!.copyWith(
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary,
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: Text(
+                      'Hi!',
+                      style: theme.textTheme.bodyLarge!.copyWith(
+                        color: theme.colorScheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ][currentPageIndex],
         ),
-      ][currentPageIndex],
+      ),
     );
   }
 }

@@ -1,9 +1,99 @@
+
 import 'package:another_telephony/telephony.dart';
+import 'package:flutter/material.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 
 const String received = "received";
 const String paid = "paid to";
 const String sent = "sent to";
 const String transferred = "transferred to";
+
+Future<void> insertTransaction(TransactionObj transaction) async {
+  final db = await openDatabase(
+    // Set the path to the database. Note: Using the `join` function from the
+    // `path` package is best practice to ensure the path is correctly
+    // constructed for each platform.
+    join(await getDatabasesPath(), 'budget_lite_database.db'),
+    onCreate: (db, version) {
+      // Run the CREATE TABLE statement on the database.
+      return db.execute(
+        'CREATE TABLE transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT)',
+      );
+    },
+
+    // When the database is first created, create a table to store dogs.
+    // Set the version. This executes the onCreate function and provides a
+    // path to perform database upgrades and downgrades.
+    version: 1,
+  );
+  await db.insert('transactions', transaction.toMap());
+}
+
+Future<List<TransactionObj>> transactions() async {
+  final db = await openDatabase(
+    // Set the path to the database. Note: Using the `join` function from the
+    // `path` package is best practice to ensure the path is correctly
+    // constructed for each platform.
+    join(await getDatabasesPath(), 'budget_lite_database.db'),
+    onCreate: (db, version) {
+      // Run the CREATE TABLE statement on the database.
+      return db.execute(
+        'CREATE TABLE transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT)',
+      );
+    },
+
+    // When the database is first created, create a table to store dogs.
+    // Set the version. This executes the onCreate function and provides a
+    // path to perform database upgrades and downgrades.
+    version: 1,
+  );
+  final List<Map<String, Object?>> transactionMaps = await db.query(
+    'transactions',
+  );
+  return [
+    for (final {
+          'id': id as int,
+          'type': type as String,
+          'date': date as String,
+          'amount': amount as double,
+          'source': source as String,
+        }
+        in transactionMaps)
+      TransactionObj(
+        id: id,
+        type: type,
+        amount: amount,
+        source: source,
+        date: date,
+      ),
+  ];
+}
+
+class TransactionObj {
+  final int? id;
+  final String type;
+  final String source;
+  final double amount;
+  final String date;
+
+  TransactionObj({
+    this.id,
+    required this.type,
+    required this.source,
+    required this.amount,
+    required this.date,
+  });
+
+  Map<String, Object> toMap() {
+    return {"type": type, "source": source, "amount": amount, "date": date};
+  }
+
+  @override
+  String toString() {
+    return 'Transaction{type:$type,source:$source,amount:$amount,date:$date}';
+  }
+}
 
 Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
   if (messageObj.body != null) {
@@ -60,10 +150,63 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
 
       transaction["amount"] = double.parse(amount);
 
+      transaction["type"] = "spend";
       transaction['date'] = message.split(" on ")[1].split("at")[0].trim();
 
       return transaction;
     }
   }
   return null;
+}
+
+class TransactionsModel extends ChangeNotifier {
+  TransactionsModel(List<TransactionObj> initialTransactions) {
+    transactions = initialTransactions;
+  }
+  List<TransactionObj> transactions = [];
+
+  Future<void> addNewTransaction(Map<String, dynamic> transaction) async {
+    insertTransaction(
+      TransactionObj(
+        type: transaction["type"],
+        source: transaction["source"],
+        amount: transaction['amount'],
+        date: transaction['date'],
+      ),
+    );
+    notifyListeners();
+  }
+
+  List<Widget> composeTransactions() {
+    List<Widget> x = [];
+    for (var tx in transactions) {
+      final String sign = tx.type == "spend" ? '-' : '+';
+      final double amount = tx.amount;
+      Icon iconsToUse = tx.type == "spend"
+          ? Icon(size: 15, Icons.outbound, color: Colors.red)
+          : Icon(size: 15, Icons.call_received, color: Colors.green);
+      x.add(
+        SizedBox(
+          child: Card.outlined(
+            color: Colors.white,
+
+            child: Column(
+              children: [
+                ListTile(
+                  leading: iconsToUse,
+                  title: Text('Cat x'),
+                  subtitle: Text(
+                    '${sign} KSh ${amount}',
+                    style: TextStyle(color:tx.type =="spend"? Colors.red:Colors.green),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return x;
+  }
 }
