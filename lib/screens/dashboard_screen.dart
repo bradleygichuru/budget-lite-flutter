@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/funcs/transactions.dart';
 import 'package:provider/provider.dart';
 
-class Dashboard extends StatefulWidget {
-  const Dashboard({super.key});
-  @override
-  State<Dashboard> createState() => DashboardState();
-}
+// class Dashboard extends StatefulWidget {
+//   const Dashboard({super.key});
+//   @override
+//   State<Dashboard> createState() => DashboardState();
+// }
 
-class DashboardState extends State<Dashboard> {
+class Dashboard extends StatelessWidget {
+  final List<Widget> composedTransactions;
+
+  const Dashboard({super.key, required this.composedTransactions});
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -158,10 +162,11 @@ class DashboardState extends State<Dashboard> {
         ),
         Consumer<TransactionsModel>(
           builder: (context, transactionsM, child) {
-            return Column(children: transactionsM.composeTransactions());
+            return Column(children: transactionsM.composedTranactions);
           },
         ),
-      ],
-    );
+        Column(children: composedTransactions,)
+      ,
+    ]);
   }
 }

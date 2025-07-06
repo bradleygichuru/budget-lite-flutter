@@ -39,7 +39,7 @@ class SignUpFormState extends State<SignupForm> {
       payload["password_confirmation"] = confirmPasswordController.value.text;
 
       http.Response response = await http.post(url, body: payload);
-      print("resp:${response.body}");
+      log("resp:${response.body}");
       var decodedResponse = jsonDecode(response.body) as Map;
       if (decodedResponse["success"]) {
         log("request successful");

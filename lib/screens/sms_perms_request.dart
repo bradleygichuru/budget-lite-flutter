@@ -1,9 +1,10 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SmsPermsRequest extends StatelessWidget {
   const SmsPermsRequest({super.key});
@@ -14,10 +15,12 @@ class SmsPermsRequest extends StatelessWidget {
       final permission = Permission.sms;
 
       if (await permission.isDenied) {
-        print("sms permissions: false");
+        log("sms permissions: false");
         var status = await permission.request();
         if (status.isGranted) {
           if (context.mounted) {
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            prefs.setBool("isNewUser", false);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const LoginForm()),
@@ -26,7 +29,7 @@ class SmsPermsRequest extends StatelessWidget {
         }
       }
       if (await permission.isGranted) {
-        print("sms permissions: true");
+        log("sms permissions: true");
         if (context.mounted) {
           Navigator.push(
             context,

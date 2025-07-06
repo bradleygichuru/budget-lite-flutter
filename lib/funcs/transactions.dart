@@ -1,3 +1,4 @@
+import 'dart:developer';
 
 import 'package:another_telephony/telephony.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,7 @@ Future<void> insertTransaction(TransactionObj transaction) async {
     // path to perform database upgrades and downgrades.
     version: 1,
   );
+  log("Inserting transaction");
   await db.insert('transactions', transaction.toMap());
 }
 
@@ -48,6 +50,7 @@ Future<List<TransactionObj>> transactions() async {
     // path to perform database upgrades and downgrades.
     version: 1,
   );
+  log("Getting Transactions");
   final List<Map<String, Object?>> transactionMaps = await db.query(
     'transactions',
   );
@@ -98,7 +101,7 @@ class TransactionObj {
 Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
   if (messageObj.body != null) {
     String? message = messageObj.body;
-    print("message:${messageObj.body}");
+    log("message:${messageObj.body}");
     Map<String, dynamic> transaction = {
       "type": "",
       "source": "Mpesa",
@@ -160,11 +163,16 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
 }
 
 class TransactionsModel extends ChangeNotifier {
-  TransactionsModel(List<TransactionObj> initialTransactions) {
+  TransactionsModel(
+    List<TransactionObj> initialTransactions,
+    List<Widget> initComposed,
+  ) {
     transactions = initialTransactions;
+    composedTranactions = initComposed;
   }
-  List<TransactionObj> transactions = [];
 
+  List<TransactionObj> transactions = [];
+  List<Widget> composedTranactions = [];
   Future<void> addNewTransaction(Map<String, dynamic> transaction) async {
     insertTransaction(
       TransactionObj(
@@ -177,15 +185,14 @@ class TransactionsModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<Widget> composeTransactions() {
-    List<Widget> x = [];
+  void composeTransactions() {
     for (var tx in transactions) {
       final String sign = tx.type == "spend" ? '-' : '+';
       final double amount = tx.amount;
       Icon iconsToUse = tx.type == "spend"
           ? Icon(size: 15, Icons.outbound, color: Colors.red)
           : Icon(size: 15, Icons.call_received, color: Colors.green);
-      x.add(
+      composedTranactions.add(
         SizedBox(
           child: Card.outlined(
             color: Colors.white,
@@ -196,8 +203,10 @@ class TransactionsModel extends ChangeNotifier {
                   leading: iconsToUse,
                   title: Text('Cat x'),
                   subtitle: Text(
-                    '${sign} KSh ${amount}',
-                    style: TextStyle(color:tx.type =="spend"? Colors.red:Colors.green),
+                    '$sign KSh $amount',
+                    style: TextStyle(
+                      color: tx.type == "spend" ? Colors.red : Colors.green,
+                    ),
                   ),
                 ),
               ],
@@ -206,7 +215,41 @@ class TransactionsModel extends ChangeNotifier {
         ),
       );
     }
-
-    return x;
+    notifyListeners();
   }
+}
+
+List<Widget> initComposeTransactions(List<TransactionObj> transactions) {
+  List<Widget> x = [];
+  for (var tx in transactions) {
+    final String sign = tx.type == "spend" ? '-' : '+';
+    final double amount = tx.amount;
+    Icon iconsToUse = tx.type == "spend"
+        ? Icon(size: 15, Icons.outbound, color: Colors.red)
+        : Icon(size: 15, Icons.call_received, color: Colors.green);
+    x.add(
+      SizedBox(
+        child: Card.outlined(
+          color: Colors.white,
+
+          child: Column(
+            children: [
+              ListTile(
+                leading: iconsToUse,
+                title: Text('Cat x'),
+                subtitle: Text(
+                  '$sign KSh $amount',
+                  style: TextStyle(
+                    color: tx.type == "spend" ? Colors.red : Colors.green,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  return x;
 }

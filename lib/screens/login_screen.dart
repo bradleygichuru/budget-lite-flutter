@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,10 +9,11 @@ import 'package:flutter_application_1/screens/signup_screen.dart';
 
 import 'dart:developer';
 import 'package:http/http.dart' as http;
-
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
+
   @override
   State<LoginForm> createState() => LoginFormState();
 }
@@ -23,6 +25,7 @@ class LoginFormState extends State<LoginForm> {
   TextEditingController passwordController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
+  @override
   @override
   void dispose() {
     // Clean up the controller when the widget is disposed.
@@ -40,7 +43,7 @@ class LoginFormState extends State<LoginForm> {
       payload["password"] = passwordController.value.text;
       payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
       http.Response response = await http.post(url, body: payload);
-      print("resp:${response.body}");
+      log("resp:${response.body}");
 
       var decodedResponse = jsonDecode(response.body) as Map;
 
@@ -50,6 +53,9 @@ class LoginFormState extends State<LoginForm> {
         await setAuthToken(decodedResponse["response"]["Bearer"]);
 
         log("setting auth token");
+
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setBool('isLoggedIn', true);
         log(decodedResponse["response"]["Bearer"]);
         if (context.mounted) {
           Navigator.push(
