@@ -65,8 +65,9 @@ class SignUpFormState extends State<SignupForm> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
+                
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFEFF6FF), Color(0xFFF3E8FF)],
+                colors: [Colors.blue.shade50,Colors.purple.shade50],
               ),
             ),
             child: Form(

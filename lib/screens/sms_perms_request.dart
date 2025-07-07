@@ -14,14 +14,15 @@ class SmsPermsRequest extends StatelessWidget {
     Future<void> requestPermission() async {
       final permission = Permission.sms;
 
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+
       if (await permission.isDenied) {
         log("sms permissions: false");
         var status = await permission.request();
         if (status.isGranted) {
           if (context.mounted) {
-            SharedPreferences prefs = await SharedPreferences.getInstance();
             prefs.setBool("isNewUser", false);
-            Navigator.push(
+            Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const LoginForm()),
             );
@@ -31,7 +32,8 @@ class SmsPermsRequest extends StatelessWidget {
       if (await permission.isGranted) {
         log("sms permissions: true");
         if (context.mounted) {
-          Navigator.push(
+          prefs.setBool("isNewUser", false);
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const LoginForm()),
           );
