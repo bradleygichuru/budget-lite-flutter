@@ -28,7 +28,11 @@ Future<void> insertTransaction(TransactionObj transaction) async {
     // path to perform database upgrades and downgrades.
     version: 1,
   );
-  reset() async {
+  
+  log("Inserting transaction");
+  await db.insert('transactions', transaction.toMap());
+}
+reset() async {
     final db = await openDatabase(
       // Set the path to the database. Note: Using the `join` function from the
       // `path` package is best practice to ensure the path is correctly
@@ -43,11 +47,8 @@ Future<void> insertTransaction(TransactionObj transaction) async {
     db.delete("transactions");
   }
 
-  log("Inserting transaction");
-  await db.insert('transactions', transaction.toMap());
-}
 
-Future<List<TransactionObj>> transactions() async {
+Future<List<TransactionObj>> getTransactions() async {
   final db = await openDatabase(
     // Set the path to the database. Note: Using the `join` function from the
     // `path` package is best practice to ensure the path is correctly
@@ -69,6 +70,7 @@ Future<List<TransactionObj>> transactions() async {
   final List<Map<String, Object?>> transactionMaps = await db.query(
     'transactions',
   );
+  log("found ${transactionMaps.length} transaction");
   return [
     for (final {
           'id': id as int,
@@ -175,63 +177,6 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
     }
   }
   return null;
-}
-
-class TransactionsModel extends ChangeNotifier {
-  TransactionsModel(
-    List<TransactionObj> initialTransactions,
-    List<Widget> initComposed,
-  ) {
-    transactions = initialTransactions;
-    composedTranactions = initComposed;
-  }
-
-  List<TransactionObj> transactions = [];
-  List<Widget> composedTranactions = [];
-  Future<void> addNewTransaction(Map<String, dynamic> transaction) async {
-    insertTransaction(
-      TransactionObj(
-        type: transaction["type"],
-        source: transaction["source"],
-        amount: transaction['amount'],
-        date: transaction['date'],
-      ),
-    );
-    notifyListeners();
-  }
-
-  void composeTransactions() {
-    for (var tx in transactions) {
-      final String sign = tx.type == "spend" ? '-' : '+';
-      final double amount = tx.amount;
-      Icon iconsToUse = tx.type == "spend"
-          ? Icon(size: 15, Icons.outbound, color: Colors.red)
-          : Icon(size: 15, Icons.call_received, color: Colors.green);
-      composedTranactions.add(
-        SizedBox(
-          child: Card.outlined(
-            color: Colors.white,
-
-            child: Column(
-              children: [
-                ListTile(
-                  leading: iconsToUse,
-                  title: Text('Cat x'),
-                  subtitle: Text(
-                    '$sign KSh $amount',
-                    style: TextStyle(
-                      color: tx.type == "spend" ? Colors.red : Colors.green,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    notifyListeners();
-  }
 }
 
 List<Widget> initComposeTransactions(List<TransactionObj> transactions) {

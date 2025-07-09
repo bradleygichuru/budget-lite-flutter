@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/funcs/auth.dart';
+import 'package:flutter_application_1/models/auth.dart';
 import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/screens/signup_screen.dart';
 
 import 'dart:developer';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginForm extends StatefulWidget {
@@ -24,7 +25,6 @@ class LoginFormState extends State<LoginForm> {
   TextEditingController passwordController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
-  @override
   @override
   void dispose() {
     // Clean up the controller when the widget is disposed.
@@ -49,7 +49,7 @@ class LoginFormState extends State<LoginForm> {
       if (decodedResponse["success"]) {
         log("request successful");
 
-        await setAuthToken(decodedResponse["response"]["Bearer"]);
+        Provider.of<AuthModel>(context,listen: false).setAuthToken(decodedResponse["response"]["Bearer"]);
 
         log("setting auth token");
 
