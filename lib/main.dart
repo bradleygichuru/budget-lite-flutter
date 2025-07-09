@@ -97,7 +97,11 @@ Future<void> main() async {
       );
 
       db.execute(
-        "CREATE TABLE wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT",
+        "CREATE TABLE wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT)",
+      );
+
+      db.execute(
+        "CREATE TABLE IF NOT EXISTS goals(id INTEGER PRIMARY KEY,name TEXT,target_amount REAL,target_date TEXT)",
       );
     },
 
@@ -106,10 +110,14 @@ Future<void> main() async {
     // path to perform database upgrades and downgrades.
     version: 1,
   );
+
   await db.execute(
-    "CREATE TABLE wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT",
+    "CREATE TABLE IF NOT EXISTS goals(id INTEGER PRIMARY KEY,name TEXT,target_amount REAL,target_date TEXT)",
   );
-  insertWallet(Wallet(name: "default", balance: 0));
+  await db.execute(
+    "CREATE TABLE IF NOT EXISTS wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT)",
+  );
+  //insertWallet(Wallet(name: "default", balance: 0));
   await db.execute(
     "CREATE TABLE IF NOT EXISTS categories(id INTEGER PRIMARY KEY,budget REAL,category_name TEXT,spent REAL)",
   ); //TODO: remove on prod

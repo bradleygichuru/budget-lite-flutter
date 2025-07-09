@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data-models/transactions.dart';
+import 'package:flutter_application_1/models/categories.dart';
 import 'package:flutter_application_1/models/txs.dart';
 import 'package:provider/provider.dart';
 
@@ -93,45 +94,81 @@ class DashboardState extends State<Dashboard> {
             ),
           ),
         ),
+        Consumer<CategoriesModel>(
+          builder: (context, ctM, child) {
+            return FutureBuilder(
+              future: ctM.categories,
+              builder: (context, snapshot) {
+                Widget x = SliverToBoxAdapter(
+                  child: Center(child: CircularProgressIndicator()),
+                );
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  x = SliverToBoxAdapter(
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                } else if (snapshot.hasError) {
+                  x = SliverToBoxAdapter(
+                    child: Center(
+                      child: Text("Error occured fetching categories"),
+                    ),
+                  );
+                }
+                if (snapshot.hasData) {
+                  if ((snapshot.data ?? []).isNotEmpty) {
+                    List<Widget> gridItems = [];
+                    for (final x in snapshot.requireData) {
+                      gridItems.add(
+                        Wrap(
+                          children: [
+                            SizedBox(
+                              width: 180,
+                              child: Card.outlined(
+                                color: Colors.white,
+
+                                child: Column(
+                                  children: [
+                                    ListTile(
+                                      leading: Icon(Icons.category, size: 15),
+                                      title: Text('${x.categoryName}'),
+                                      subtitle: Text(
+                                        'Ksh ${x.budget - x.spent} left',
+                                      ),
+                                    ),
+                                    SafeArea(
+                                      child: ListTile(
+                                        subtitle: Text(
+                                          "${((x.budget - x.spent) / x.budget * 100)}% remaining",
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    x = SliverGrid.count(
+                      crossAxisCount: 2,
+                      children: gridItems,
+                    );
+                  }
+                }
+                if ((snapshot.data ?? []).isEmpty) {
+                  x = SliverToBoxAdapter(
+                    child: Center(child: Text("No categories found")),
+                  );
+                }
+
+                return x;
+              },
+            );
+          },
+        ),
         SliverToBoxAdapter(
           child: Wrap(
             children: [
-              SizedBox(
-                width: 180,
-                height: 160,
-                child: Card.outlined(
-                  color: Colors.white,
-
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: Icon(Icons.category, size: 15),
-                        title: Text('Rent'),
-                        subtitle: Text('KSh 15,000 left'),
-                      ),
-                      ListTile(subtitle: Text("100% remaining")),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 180,
-                height: 160,
-                child: Card.outlined(
-                  color: Colors.white,
-
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: Icon(Icons.category, size: 15),
-                        title: Text('Rent'),
-                        subtitle: Text('KSh 15,000 left'),
-                      ),
-                      ListTile(subtitle: Text("100% remaining")),
-                    ],
-                  ),
-                ),
-              ),
               SizedBox(
                 width: 180,
                 height: 160,
@@ -222,9 +259,7 @@ class DashboardState extends State<Dashboard> {
                                             '$sign KSh $amount',
                                             style: TextStyle(
                                               color:
-                                                  snapshot
-                                                          .data![index]
-                                                          .type ==
+                                                  snapshot.data![index].type ==
                                                       "spend"
                                                   ? Colors.red
                                                   : Colors.green,
