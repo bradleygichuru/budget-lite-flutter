@@ -226,7 +226,7 @@ class EnvelopeViewState extends State<EnvelopesView> {
                                                         .handleCategoryAdd(
                                                           Category(
                                                             spent: 0,
-                                                            category_name:
+                                                            categoryName:
                                                                 newCategoryNameController
                                                                     .text,
                                                             budget: double.parse(
@@ -314,7 +314,7 @@ class EnvelopeViewState extends State<EnvelopesView> {
                                             Text(
                                               snapshot
                                                   .data![index]
-                                                  .category_name,
+                                                  .categoryName,
                                               style: TextStyle(
                                                 fontWeight: FontWeight.w600,
                                               ),

@@ -10,6 +10,38 @@ const String paid = "paid to";
 const String sent = "sent to";
 const String transferred = "transferred to";
 
+
+class TransactionObj {
+  final int? id;
+  final String type;
+  final String source;
+  final double amount;
+  final String date;
+
+  TransactionObj({
+    this.id,
+    required this.type,
+    required this.source,
+    required this.amount,
+    required this.date,
+  });
+
+  Map<String, Object> toMap() {
+    return {
+      "id": ?id,
+      "type": type,
+      "source": source,
+      "amount": amount,
+      "date": date,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'Transaction{type:$type,source:$source,amount:$amount,date:$date}';
+  }
+}
+
 Future<void> insertTransaction(TransactionObj transaction) async {
   final db = await openDatabase(
     // Set the path to the database. Note: Using the `join` function from the
@@ -28,25 +60,25 @@ Future<void> insertTransaction(TransactionObj transaction) async {
     // path to perform database upgrades and downgrades.
     version: 1,
   );
-  
+
   log("Inserting transaction");
   await db.insert('transactions', transaction.toMap());
 }
+
 reset() async {
-    final db = await openDatabase(
-      // Set the path to the database. Note: Using the `join` function from the
-      // `path` package is best practice to ensure the path is correctly
-      // constructed for each platform.
-      join(await getDatabasesPath(), 'budget_lite_database.db'),
+  final db = await openDatabase(
+    // Set the path to the database. Note: Using the `join` function from the
+    // `path` package is best practice to ensure the path is correctly
+    // constructed for each platform.
+    join(await getDatabasesPath(), 'budget_lite_database.db'),
 
-      // When the database is first created, create a table to store dogs.
-      // Set the version. This executes the onCreate function and provides a
-      // path to perform database upgrades and downgrades.
-      version: 1,
-    );
-    db.delete("transactions");
-  }
-
+    // When the database is first created, create a table to store dogs.
+    // Set the version. This executes the onCreate function and provides a
+    // path to perform database upgrades and downgrades.
+    version: 1,
+  );
+  db.delete("transactions");
+}
 
 Future<List<TransactionObj>> getTransactions() async {
   final db = await openDatabase(
@@ -88,31 +120,6 @@ Future<List<TransactionObj>> getTransactions() async {
         date: date,
       ),
   ];
-}
-
-class TransactionObj {
-  final int? id;
-  final String type;
-  final String source;
-  final double amount;
-  final String date;
-
-  TransactionObj({
-    this.id,
-    required this.type,
-    required this.source,
-    required this.amount,
-    required this.date,
-  });
-
-  Map<String, Object> toMap() {
-    return {"type": type, "source": source, "amount": amount, "date": date};
-  }
-
-  @override
-  String toString() {
-    return 'Transaction{type:$type,source:$source,amount:$amount,date:$date}';
-  }
 }
 
 Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
@@ -177,39 +184,4 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
     }
   }
   return null;
-}
-
-List<Widget> initComposeTransactions(List<TransactionObj> transactions) {
-  List<Widget> x = [];
-  for (var tx in transactions) {
-    final String sign = tx.type == "spend" ? '-' : '+';
-    final double amount = tx.amount;
-    Icon iconsToUse = tx.type == "spend"
-        ? Icon(size: 15, Icons.outbound, color: Colors.red)
-        : Icon(size: 15, Icons.call_received, color: Colors.green);
-    x.add(
-      SizedBox(
-        child: Card.outlined(
-          color: Colors.white,
-
-          child: Column(
-            children: [
-              ListTile(
-                leading: iconsToUse,
-                title: Text('Cat x'),
-                subtitle: Text(
-                  '$sign KSh $amount',
-                  style: TextStyle(
-                    color: tx.type == "spend" ? Colors.red : Colors.green,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  return x;
 }

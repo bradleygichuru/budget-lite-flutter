@@ -1,5 +1,4 @@
 import 'dart:developer';
-import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
@@ -35,13 +34,13 @@ class CategoriesModel extends ChangeNotifier {
 
 class Category {
   final int? id;
-  final String category_name;
+  final String categoryName;
   final double budget;
   final double spent;
 
   Category({
     this.id,
-    required this.category_name,
+    required this.categoryName,
     required this.budget,
     required this.spent,
   });
@@ -49,7 +48,7 @@ class Category {
   Map<String, Object> toMap() {
     return {
       "id": ?id,
-      "category_name": category_name,
+      "category_name": categoryName,
       "budget": budget,
       "spent": spent,
     };
@@ -57,7 +56,7 @@ class Category {
 
   @override
   String toString() {
-    return "Category{id:$id,category_name:$category_name,budget:$budget,spent:$spent}";
+    return "Category{id:$id,category_name:$categoryName,budget:$budget,spent:$spent}";
   }
 }
 
@@ -99,13 +98,13 @@ Future<List<Category>> getCategories() async {
   return [
     for (final {
           "id": id as int,
-          "category_name": category_name as String,
+          "category_name": categoryName as String,
           "budget": budget as double,
           "spent": spent as double,
         }
         in categoryMaps)
       Category(
-        category_name: category_name,
+        categoryName: categoryName,
         budget: budget,
         spent: spent,
         id: id,

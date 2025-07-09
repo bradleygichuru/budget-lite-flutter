@@ -3,7 +3,8 @@ import 'dart:developer';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:another_telephony/telephony.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/funcs/transactions.dart';
+import 'package:flutter_application_1/data-models/transactions.dart';
+import 'package:flutter_application_1/data-models/wallet.dart';
 import 'package:flutter_application_1/models/auth.dart';
 import 'package:flutter_application_1/models/categories.dart';
 import 'package:flutter_application_1/models/txs.dart';
@@ -94,6 +95,10 @@ Future<void> main() async {
       db.execute(
         "CREATE TABLE categories(id INTEGER PRIMARY KEY,budget REAL,category_name TEXT,spent REAL)",
       );
+
+      db.execute(
+        "CREATE TABLE wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT",
+      );
     },
 
     // When the database is first created, create a table to store dogs.
@@ -101,6 +106,10 @@ Future<void> main() async {
     // path to perform database upgrades and downgrades.
     version: 1,
   );
+  await db.execute(
+    "CREATE TABLE wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT",
+  );
+  insertWallet(Wallet(name: "default", balance: 0));
   await db.execute(
     "CREATE TABLE IF NOT EXISTS categories(id INTEGER PRIMARY KEY,budget REAL,category_name TEXT,spent REAL)",
   ); //TODO: remove on prod
