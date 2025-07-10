@@ -1,10 +1,10 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:developer';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:another_telephony/telephony.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data-models/transactions.dart';
-import 'package:flutter_application_1/data-models/wallet.dart';
 import 'package:flutter_application_1/models/auth.dart';
 import 'package:flutter_application_1/models/categories.dart';
 import 'package:flutter_application_1/models/txs.dart';
@@ -82,6 +82,7 @@ class NotificationController {
 
 Future<void> main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   final db = await openDatabase(
     // Set the path to the database. Note: Using the `join` function from the
     // `path` package is best practice to ensure the path is correctly
@@ -90,7 +91,7 @@ Future<void> main() async {
     onCreate: (db, version) {
       // Run the CREATE TABLE statement on the database.
       db.execute(
-        'CREATE TABLE transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT)',
+        'CREATE TABLE transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT,category TEXT)',
       );
       db.execute(
         "CREATE TABLE categories(id INTEGER PRIMARY KEY,budget REAL,category_name TEXT,spent REAL)",
@@ -117,11 +118,11 @@ Future<void> main() async {
   await db.execute(
     "CREATE TABLE IF NOT EXISTS wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT)",
   );
+  // await db.execute("ALTER TABLE transactions ADD COLUMN y TEXT");
   //insertWallet(Wallet(name: "default", balance: 0));
   await db.execute(
     "CREATE TABLE IF NOT EXISTS categories(id INTEGER PRIMARY KEY,budget REAL,category_name TEXT,spent REAL)",
   ); //TODO: remove on prod
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   AwesomeNotifications().initialize(
     // set the icon to null if you want to use the default app icon
@@ -167,14 +168,12 @@ class MyApp extends StatefulWidget {
 }
 
 class MyAppState extends State<MyApp> {
+  Future<List<TransactionObj>> unCategorizedTxs = Future.value([]);
   int currentPageIndex = 0;
   final telephony = Telephony.instance;
   late Timer pollingTx;
-  // late Future<List<Widget>> initComposed;
-  // late Future<bool> handleAuth;
-  // Widget authWidget = SafeArea(
-  //   child: Center(child: CircularProgressIndicator()),
-  // );
+  late final AppLifecycleListener _listener;
+  bool handleUncategorized = false;
 
   @override
   void didChangeDependencies() {
@@ -182,8 +181,27 @@ class MyAppState extends State<MyApp> {
   }
 
   @override
+  void dispose() {
+    // Do not forget to dispose the listener
+    _listener.dispose();
+
+    super.dispose();
+  }
+  // @override
+  // Future<void> didChangeAppLifecycleState(AppLifecycleState appState) async {
+  //   log('new state $appState');
+  //   if (appState == AppLifecycleState.resumed) {
+  //     List<TransactionObj> uncTxs = await getUncategorizedTx();
+  //     setState(() {
+  //       unCategorizedTxs = uncTxs;
+  //     });
+  //   }
+  // }
+
+  @override
   void initState() {
     // handleAuth = isSetLoggedIn();
+    _listener = AppLifecycleListener(onStateChange: _onStateChanged);
     AwesomeNotifications().setListeners(
       onActionReceivedMethod: NotificationController.onActionReceivedMethod,
       onNotificationCreatedMethod:
@@ -221,23 +239,42 @@ class MyAppState extends State<MyApp> {
     if (!mounted) return;
   }
 
-  // Future<List<Widget>> initTX() async {
-  //   List<Widget> newComposed = [];
-  //   await transactions().then((txs) {
-  //     log("fetched transactions ${txs.length}");
-  //     newComposed = initComposeTransactions(txs);
+  void _onStateChanged(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.detached:
+        _onDetached();
+      case AppLifecycleState.resumed:
+        _onResumed();
+      case AppLifecycleState.inactive:
+        _onInactive();
+      case AppLifecycleState.hidden:
+        _onHidden();
+      case AppLifecycleState.paused:
+        _onPaused();
+    }
+  }
 
-  //     log("composed transactions ${newComposed.length}");
-  //   });
-  //   return newComposed;
-  // }
+  void _onDetached() => print('detached');
 
-  // void pollFetchTx() {
-  //   setState(() {
-  //     initComposed = initTX();
-  //   });
-  // }
+  void _onResumed() {
+    log('resumed');
+    setState(() {
+      getUncategorizedTx().then((txs) {
+        if (txs.length > 0) {
+          setState(() {
+            handleUncategorized = true;
+            unCategorizedTxs = Future.value(txs);
+          });
+        }
+      });
+    });
+  }
 
+  void _onInactive() => log('inactive');
+
+  void _onHidden() => log('hidden');
+
+  void _onPaused() => log('paused');
   onMessage(SmsMessage message) async {
     log('from:${message.address} message:${message.body}');
     var transaction = parseMpesa(message);
@@ -247,16 +284,19 @@ class MyAppState extends State<MyApp> {
       Provider.of<TransactionsModel>(
         context as BuildContext,
         listen: false,
-      ).handleTxAdd(transaction);
-      AwesomeNotifications().createNotification(
-        content: NotificationContent(
-          id: 10,
-          channelKey: 'basic_channel',
-          actionType: ActionType.Default,
-          title: 'New transaction',
-          body: 'Click to set transaction category',
-        ),
-      );
+      ).handleTxAdd(transaction).then((rwid) {
+        if (rwid != null) {}
+      });
+
+      // AwesomeNotifications().createNotification(
+      //   content: NotificationContent(
+      //     id: 10,
+      //     channelKey: 'basic_channel',
+      //     actionType: ActionType.Default,
+      //     title: 'New transaction',
+      //     body: 'Click to set transaction category',
+      //   ),
+      // );
 
       // setState(() {
       //   initComposed = handleInsert(transaction);
@@ -269,140 +309,399 @@ class MyAppState extends State<MyApp> {
     final ThemeData theme = ThemeData(
       colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
     );
-    return MaterialApp(
-      theme: ThemeData(
-        colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
-      ),
-      home: Consumer<AuthModel>(
-        builder: (context, authM, child) {
-          return FutureBuilder<bool>(
-            future: authM.handleAuth,
-            builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
-              Widget cont = Text("");
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                cont = SafeArea(
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (snapshot.connectionState == ConnectionState.done) {
-                if (snapshot.hasData) {
-                  if (snapshot.requireData) {
-                    cont = authM.authWidget;
-                  } else {
-                    cont = SafeArea(
-                      child: Scaffold(
-                        bottomNavigationBar: NavigationBar(
-                          onDestinationSelected: (int index) {
-                            setState(() {
-                              currentPageIndex = index;
-                            });
-                          },
-                          indicatorColor: Color(0xFFE0F2FE),
-                          selectedIndex: currentPageIndex,
-                          destinations: const <Widget>[
-                            NavigationDestination(
-                              selectedIcon: Icon(Icons.home),
+    return handleUncategorized
+        ? MaterialApp(
+            theme: ThemeData(
+              colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
+            ),
+            home: Scaffold(
+              appBar: AppBar(
+                leading: IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: () {
+                    setState(() {
+                      handleUncategorized = false;
+                    });
+                  },
+                ),
+                backgroundColor: Colors.blue.shade700,
+                title: Column(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(7),
+                      child: FutureBuilder<List<TransactionObj>>(
+                        future: unCategorizedTxs,
+                        builder: (context, snapshot) {
+                          Widget x = CircularProgressIndicator();
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            x = CircularProgressIndicator();
+                          } else if (snapshot.hasError) {
+                            x = Text("Error occured fetching transactions");
+                          } else if (snapshot.connectionState ==
+                                  ConnectionState.done &&
+                              snapshot.hasData) {
+                                if(snapshot.data!.length < 0){
+                                  setState(() {
+                                    handleUncategorized = false;
+                                  });
+                                }
+                            x = Text(
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
 
-                              icon: Icon(Icons.home_outlined),
-                              label: 'DashBoard',
-                            ),
-                            NavigationDestination(
-                              icon: Badge(
-                                child: Icon(Icons.account_balance_wallet),
+                                color: Colors.white,
                               ),
-                              label: 'Budget',
-                            ),
-                            NavigationDestination(
-                              icon: Badge(
-                                label: Text(''),
-                                child: Icon(Icons.crisis_alert),
-                              ),
-                              label: 'Goals',
-                            ),
-                            NavigationDestination(
-                              icon: Badge(
-                                label: Text(''),
-                                child: Icon(Icons.settings),
-                              ),
-                              label: 'Settings',
-                            ),
-                          ],
-                        ),
-                        body: <Widget>[
-                          /// Home page
-                          Dashboard(),
-
-                          /// Notifications page
-                          EnvelopesView(),
-
-                          /// Messages page
-                          ListView.builder(
-                            reverse: true,
-                            itemCount: 2,
-                            itemBuilder: (BuildContext context, int index) {
-                              if (index == 0) {
-                                return Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Container(
-                                    margin: const EdgeInsets.all(8.0),
-                                    padding: const EdgeInsets.all(8.0),
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.primary,
-                                      borderRadius: BorderRadius.circular(8.0),
-                                    ),
-                                    child: Text(
-                                      'Hello',
-                                      style: theme.textTheme.bodyLarge!
-                                          .copyWith(
-                                            color: theme.colorScheme.onPrimary,
-                                          ),
-                                    ),
-                                  ),
-                                );
-                              }
-                              return Align(
-                                alignment: Alignment.centerLeft,
-                                child: Container(
-                                  margin: const EdgeInsets.all(8.0),
-                                  padding: const EdgeInsets.all(8.0),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary,
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
-                                  child: Text(
-                                    'Hi!',
-                                    style: theme.textTheme.bodyLarge!.copyWith(
-                                      color: theme.colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          FilledButton(
-                            onPressed: () async {
-                              SharedPreferences prefs =
-                                  await SharedPreferences.getInstance();
-                              prefs.setBool("isLoggedIn", false);
-                              authM.isSetLoggedIn();
-                            },
-                            child: Text("logout"),
-                          ),
-                        ][currentPageIndex],
+                              "Pending Category Assignment",
+                            );
+                          }
+                          return x;
+                        },
                       ),
-                    );
-                  }
-                }
-              } else {
-                if (snapshot.hasError) {
-                  cont = Text('Error: ${snapshot.error}');
-                }
-              }
-              return cont;
-            },
+                    ),
+                  ],
+                ),
+              ),
+              body: Consumer2<CategoriesModel, TransactionsModel>(
+                builder: (context, ctM, txsM, child) {
+                  final List<DropdownMenuEntry<String>> menuEntries =
+                      UnmodifiableListView<DropdownMenuEntry<String>>(
+                        ctM.knownCategoryEntries.map<DropdownMenuEntry<String>>(
+                          (String name) => DropdownMenuEntry<String>(
+                            value: name,
+                            label: name,
+                          ),
+                        ),
+                      );
+
+                  return FutureBuilder<List<TransactionObj>>(
+                    future: unCategorizedTxs,
+                    builder: (context, snapshot) {
+                      Widget x = CircularProgressIndicator();
+                      if (snapshot.connectionState == ConnectionState.done &&
+                          snapshot.hasData) {
+                        x = SafeArea(
+                          child: CustomScrollView(
+                            slivers: [
+                              SliverList.builder(
+                                itemCount: snapshot.data?.length,
+                                //shrinkWrap: true,
+                                itemBuilder: (context, index) {
+                                  String category = '';
+                                  bool categorizing = false;
+
+                                  final String sign =
+                                      snapshot.data?[index].type == "spend"
+                                      ? '-'
+                                      : '+';
+                                  final double amount =
+                                      snapshot.data![index].amount;
+                                  Icon iconsToUse =
+                                      snapshot.data![index].type == "spend"
+                                      ? Icon(
+                                          size: 15,
+                                          Icons.outbound,
+                                          color: Colors.red,
+                                        )
+                                      : Icon(
+                                          size: 15,
+                                          Icons.call_received,
+                                          color: Colors.green,
+                                        );
+
+                                  return Card(
+                                    color: Colors.white,
+                                    child: Column(
+                                      children: [
+                                        SizedBox(
+                                          child: Card.filled(
+                                            color: Colors.white,
+
+                                            child: Column(
+                                              children: [
+                                                ListTile(
+                                                  leading: iconsToUse,
+                                                  title: Text(
+                                                    snapshot
+                                                            .data![index]
+                                                            .category ??
+                                                        'Pending Category',
+                                                  ),
+                                                  subtitle: Text(
+                                                    '$sign KSh $amount',
+                                                    style: TextStyle(
+                                                      color:
+                                                          snapshot
+                                                                  .data![index]
+                                                                  .type ==
+                                                              "spend"
+                                                          ? Colors.red
+                                                          : Colors.green,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: EdgeInsets.all(10),
+                                          child: Column(
+                                            children: [
+                                              Padding(
+                                                padding: EdgeInsets.all(8),
+                                                child: Align(
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  child: Text(
+                                                    "Select Category",
+                                                    style: TextStyle(
+                                                      fontSize: 18,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding: EdgeInsets.all(8),
+                                                child: DropdownMenu<String>(
+                                                  width: double.infinity,
+                                                  hintText: "select category",
+                                                  onSelected: (value) {
+                                                    if (value != null) {
+                                                      category = value;
+                                                    }
+                                                    // This is called when the user selects an item.
+
+                                                    log(
+                                                      "selected_category:$category",
+                                                    );
+                                                  },
+                                                  dropdownMenuEntries:
+                                                      menuEntries,
+                                                ),
+                                              ),
+                                              FilledButton(
+                                                style: ButtonStyle(
+                                                  backgroundColor:
+                                                      WidgetStatePropertyAll<
+                                                        Color
+                                                      >(Colors.black),
+                                                ),
+                                                onPressed: () {
+                                                  if (!categorizing) {
+                                                    if (category.isNotEmpty &&
+                                                        snapshot
+                                                                .data![index]
+                                                                .id !=
+                                                            null) {
+                                                      txsM
+                                                          .setTxCategory(
+                                                            category,
+                                                            snapshot
+                                                                .data![index]
+                                                                .id!,
+                                                          )
+                                                          .then((count) async {
+                                                            if (count > 0) {
+ctM.handleCatBalanceCompute( category, snapshot.data![index]);
+                                                              unCategorizedTxs =
+                                                                  getUncategorizedTx();
+                                                              txsM.refreshTx();
+                                                            }
+                                                          });
+                                                    }
+                                                  }
+                                                },
+                                                child: Text(
+                                                  "Categorize Transaction",
+                                                ),
+                                              ),
+
+                                              OutlinedButton(
+                                                style: ButtonStyle(
+                                                  backgroundColor:
+                                                      WidgetStatePropertyAll<
+                                                        Color
+                                                      >(Colors.white),
+                                                ),
+                                                onPressed: () {},
+                                                child: Text(
+                                                  "Cancel",
+                                                  style: TextStyle(
+                                                    color: Colors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      return x;
+                      ;
+                    },
+                  );
+                },
+              ),
+            ),
+          )
+        : MaterialApp(
+            theme: ThemeData(
+              colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
+            ),
+            home: Consumer<AuthModel>(
+              builder: (context, authM, child) {
+                return FutureBuilder<bool>(
+                  future: authM.handleAuth,
+                  builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+                    Widget cont = Text("");
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      cont = SafeArea(
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    if (snapshot.connectionState == ConnectionState.done) {
+                      if (snapshot.hasData) {
+                        if (snapshot.requireData) {
+                          cont = authM.authWidget;
+                        } else {
+                          cont = SafeArea(
+                            child: Scaffold(
+                              bottomNavigationBar: NavigationBar(
+                                onDestinationSelected: (int index) {
+                                  setState(() {
+                                    currentPageIndex = index;
+                                  });
+                                },
+                                indicatorColor: Color(0xFFE0F2FE),
+                                selectedIndex: currentPageIndex,
+                                destinations: const <Widget>[
+                                  NavigationDestination(
+                                    selectedIcon: Icon(Icons.home),
+
+                                    icon: Icon(Icons.home_outlined),
+                                    label: 'DashBoard',
+                                  ),
+                                  NavigationDestination(
+                                    icon: Badge(
+                                      child: Icon(Icons.account_balance_wallet),
+                                    ),
+                                    label: 'Budget',
+                                  ),
+                                  NavigationDestination(
+                                    icon: Badge(
+                                      label: Text(''),
+                                      child: Icon(Icons.crisis_alert),
+                                    ),
+                                    label: 'Goals',
+                                  ),
+                                  NavigationDestination(
+                                    icon: Badge(
+                                      label: Text(''),
+                                      child: Icon(Icons.settings),
+                                    ),
+                                    label: 'Settings',
+                                  ),
+                                ],
+                              ),
+                              body: <Widget>[
+                                /// Home page
+                                Dashboard(),
+
+                                /// Notifications page
+                                EnvelopesView(),
+
+                                /// Messages page
+                                ListView.builder(
+                                  reverse: true,
+                                  itemCount: 2,
+                                  itemBuilder:
+                                      (BuildContext context, int index) {
+                                        if (index == 0) {
+                                          return Align(
+                                            alignment: Alignment.centerRight,
+                                            child: Container(
+                                              margin: const EdgeInsets.all(8.0),
+                                              padding: const EdgeInsets.all(
+                                                8.0,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    theme.colorScheme.primary,
+                                                borderRadius:
+                                                    BorderRadius.circular(8.0),
+                                              ),
+                                              child: Text(
+                                                'Hello',
+                                                style: theme
+                                                    .textTheme
+                                                    .bodyLarge!
+                                                    .copyWith(
+                                                      color: theme
+                                                          .colorScheme
+                                                          .onPrimary,
+                                                    ),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        return Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Container(
+                                            margin: const EdgeInsets.all(8.0),
+                                            padding: const EdgeInsets.all(8.0),
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primary,
+                                              borderRadius:
+                                                  BorderRadius.circular(8.0),
+                                            ),
+                                            child: Text(
+                                              'Hi!',
+                                              style: theme.textTheme.bodyLarge!
+                                                  .copyWith(
+                                                    color: theme
+                                                        .colorScheme
+                                                        .onPrimary,
+                                                  ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                ),
+                                FilledButton(
+                                  onPressed: () async {
+                                    SharedPreferences prefs =
+                                        await SharedPreferences.getInstance();
+                                    prefs.setBool("isLoggedIn", false);
+                                    authM.isSetLoggedIn();
+                                  },
+                                  child: Text("logout"),
+                                ),
+                              ][currentPageIndex],
+                            ),
+                          );
+                        }
+                      }
+                    } else {
+                      if (snapshot.hasError) {
+                        cont = Text('Error: ${snapshot.error}');
+                      }
+                    }
+                    return cont;
+                  },
+                );
+              },
+            ),
           );
-        },
-      ),
-    );
   }
 }

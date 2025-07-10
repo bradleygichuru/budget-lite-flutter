@@ -13,6 +13,7 @@ class Wallet {
     return {"id": ?id, "name": name, "balance": balance};
   }
 
+  @override
   String toString() {
     return 'Wallet{name:$name,balance:$balance}';
   }

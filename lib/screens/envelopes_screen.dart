@@ -66,7 +66,7 @@ class EnvelopeViewState extends State<EnvelopesView> {
                               child: Consumer<TransactionsModel>(
                                 builder: (context, txM, child) {
                                   return FutureBuilder<double>(
-                                    future: txM.ready_to_assign,
+                                    future: txM.readyToAssign,
                                     builder: (context, snapshot) {
                                       Widget x = Center(
                                         child: CircularProgressIndicator(),

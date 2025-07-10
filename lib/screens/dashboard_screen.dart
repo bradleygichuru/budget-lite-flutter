@@ -129,7 +129,7 @@ class DashboardState extends State<Dashboard> {
                                   children: [
                                     ListTile(
                                       leading: Icon(Icons.category, size: 15),
-                                      title: Text('${x.categoryName}'),
+                                      title: Text(x.categoryName),
                                       subtitle: Text(
                                         'Ksh ${x.budget - x.spent} left',
                                       ),
@@ -165,30 +165,6 @@ class DashboardState extends State<Dashboard> {
               },
             );
           },
-        ),
-        SliverToBoxAdapter(
-          child: Wrap(
-            children: [
-              SizedBox(
-                width: 180,
-                height: 160,
-                child: Card.outlined(
-                  color: Colors.white,
-
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: Icon(Icons.category, size: 15),
-                        title: Text('Rent'),
-                        subtitle: Text('KSh 15,000 left'),
-                      ),
-                      ListTile(subtitle: Text("100% remaining")),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
         SliverPadding(
           padding: EdgeInsets.all(10),
@@ -254,7 +230,10 @@ class DashboardState extends State<Dashboard> {
                                       children: [
                                         ListTile(
                                           leading: iconsToUse,
-                                          title: Text('Cat x'),
+                                          title: Text(
+                                            snapshot.data![index].category ??
+                                                "Pending category",
+                                          ),
                                           subtitle: Text(
                                             '$sign KSh $amount',
                                             style: TextStyle(

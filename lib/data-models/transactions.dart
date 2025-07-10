@@ -9,13 +9,13 @@ const String paid = "paid to";
 const String sent = "sent to";
 const String transferred = "transferred to";
 
-
 class TransactionObj {
   final int? id;
   final String type;
   final String source;
   final double amount;
   final String date;
+  final String? category;
 
   TransactionObj({
     this.id,
@@ -23,6 +23,7 @@ class TransactionObj {
     required this.source,
     required this.amount,
     required this.date,
+    this.category,
   });
 
   Map<String, Object> toMap() {
@@ -32,27 +33,113 @@ class TransactionObj {
       "source": source,
       "amount": amount,
       "date": date,
+      "category": ?category,
     };
   }
 
   @override
   String toString() {
-    return 'Transaction{type:$type,source:$source,amount:$amount,date:$date}';
+    return 'Transaction{id:$id,type:$type,source:$source,amount:$amount,date:$date,category:$category}';
   }
 }
 
-Future<void> insertTransaction(TransactionObj transaction) async {
+Future<List<TransactionObj>> getTxById(int id) async {
   final db = await openDatabase(
     // Set the path to the database. Note: Using the `join` function from the
     // `path` package is best practice to ensure the path is correctly
     // constructed for each platform.
     join(await getDatabasesPath(), 'budget_lite_database.db'),
-    onCreate: (db, version) {
-      // Run the CREATE TABLE statement on the database.
-      return db.execute(
-        'CREATE TABLE transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT)',
-      );
-    },
+
+    // When the database is first created, create a table to store dogs.
+    // Set the version. This executes the onCreate function and provides a
+    // path to perform database upgrades and downgrades.
+    version: 1,
+  );
+
+  final List<Map<String, Object?>> transactionMaps = await db.query(
+    "transactions",
+    where: '"id=$id"',
+  );
+
+  log("found ${transactionMaps.length} uncategorized transaction");
+  return [
+    for (final {
+          'id': id as int,
+          'type': type as String,
+          'date': date as String,
+          'amount': amount as double,
+          'source': source as String,
+          'category': category as String?,
+        }
+        in transactionMaps)
+      TransactionObj(
+        id: id,
+        type: type,
+        amount: amount,
+        source: source,
+        date: date,
+        category: category,
+      ),
+  ];
+}
+
+Future<List<TransactionObj>> getUncategorizedTx() async {
+  final db = await openDatabase(
+    // Set the path to the database. Note: Using the `join` function from the
+    // `path` package is best practice to ensure the path is correctly
+    // constructed for each platform.
+    join(await getDatabasesPath(), 'budget_lite_database.db'),
+
+    // When the database is first created, create a table to store dogs.
+    // Set the version. This executes the onCreate function and provides a
+    // path to perform database upgrades and downgrades.
+    version: 1,
+  );
+  final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
+    "SELECT * from transactions WHERE category is null",
+  );
+  log("found ${transactionMaps.length} uncategorized transaction");
+  transactionMaps.forEach((tx) {
+    log(
+      TransactionObj(
+        id: tx["id"] as int,
+        type: tx["type"] as String,
+        amount: tx["amount"] as double,
+        source: tx["source"] as String,
+        date: tx["date"] as String,
+
+        category: tx["category"] as String?,
+      ).toString(),
+    );
+  });
+
+  return [
+    for (final {
+          'id': id as int,
+          'type': type as String,
+          'date': date as String,
+          'amount': amount as double,
+          'source': source as String,
+          'category': category as String?,
+        }
+        in transactionMaps)
+      TransactionObj(
+        id: id,
+        type: type,
+        amount: amount,
+        source: source,
+        date: date,
+        category: category,
+      ),
+  ];
+}
+
+Future<int> insertTransaction(TransactionObj transaction) async {
+  final db = await openDatabase(
+    // Set the path to the database. Note: Using the `join` function from the
+    // `path` package is best practice to ensure the path is correctly
+    // constructed for each platform.
+    join(await getDatabasesPath(), 'budget_lite_database.db'),
 
     // When the database is first created, create a table to store dogs.
     // Set the version. This executes the onCreate function and provides a
@@ -61,7 +148,7 @@ Future<void> insertTransaction(TransactionObj transaction) async {
   );
 
   log("Inserting transaction");
-  await db.insert('transactions', transaction.toMap());
+  return await db.insert('transactions', transaction.toMap());
 }
 
 reset() async {
@@ -85,12 +172,6 @@ Future<List<TransactionObj>> getTransactions() async {
     // `path` package is best practice to ensure the path is correctly
     // constructed for each platform.
     join(await getDatabasesPath(), 'budget_lite_database.db'),
-    onCreate: (db, version) {
-      // Run the CREATE TABLE statement on the database.
-      return db.execute(
-        'CREATE TABLE transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT)',
-      );
-    },
 
     // When the database is first created, create a table to store dogs.
     // Set the version. This executes the onCreate function and provides a
@@ -102,6 +183,18 @@ Future<List<TransactionObj>> getTransactions() async {
     'transactions',
   );
   log("found ${transactionMaps.length} transaction");
+  transactionMaps.forEach((tx) {
+    log(
+      TransactionObj(
+        id: tx["id"] as int,
+        type: tx["type"] as String,
+        amount: tx["amount"] as double,
+        source: tx["source"] as String,
+        date: tx["date"] as String,
+        category: tx["category"] as String?,
+      ).toString(),
+    );
+  });
   return [
     for (final {
           'id': id as int,
@@ -109,6 +202,7 @@ Future<List<TransactionObj>> getTransactions() async {
           'date': date as String,
           'amount': amount as double,
           'source': source as String,
+          'category': category as String?,
         }
         in transactionMaps)
       TransactionObj(
@@ -117,6 +211,7 @@ Future<List<TransactionObj>> getTransactions() async {
         amount: amount,
         source: source,
         date: date,
+        category: category,
       ),
   ];
 }
