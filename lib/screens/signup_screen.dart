@@ -28,7 +28,12 @@ class SignUpFormState extends State<SignupForm> {
   @override
   Widget build(BuildContext context) {
     Future<void> registerUser() async {
-      Uri url = Uri.parse("http://192.168.0.7:8000/api/v1/register");
+      Uri url = Uri(
+        scheme: "http",
+        host: "192.168.0.5",
+        path: "api/v1/register",
+        port: 8000,
+      );
       final payload = <String, dynamic>{};
       payload["name"] = fullNameController.value.text;
       payload["email"] = emailController.value.text;
@@ -62,10 +67,10 @@ class SignUpFormState extends State<SignupForm> {
           body: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                
-                end: Alignment.bottomRight,
-                colors: [Colors.blue.shade50,Colors.purple.shade50],
+                begin: Alignment.centerLeft,
+
+                end: Alignment.centerRight,
+                colors: [Colors.blue.shade50, Colors.purple.shade50],
               ),
             ),
             child: Form(
@@ -94,7 +99,8 @@ class SignUpFormState extends State<SignupForm> {
                     ),
                   ),
 
-                  Center(
+                  Align(
+                    alignment: Alignment.centerRight,
                     child: const Text(
                       "Let's get started with your zero-friction budgeting journey",
                     ),
@@ -102,6 +108,7 @@ class SignUpFormState extends State<SignupForm> {
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
                     child: TextFormField(
+                      keyboardType: TextInputType.name,
                       controller: fullNameController,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -125,6 +132,7 @@ class SignUpFormState extends State<SignupForm> {
                         }
                         return null;
                       },
+                      keyboardType: TextInputType.emailAddress,
                       controller: emailController,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(),
@@ -136,6 +144,7 @@ class SignUpFormState extends State<SignupForm> {
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
                     child: TextFormField(
+                      keyboardType: TextInputType.phone,
                       controller: phoneNumberController,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -162,6 +171,7 @@ class SignUpFormState extends State<SignupForm> {
                         }
                         return null;
                       },
+                      keyboardType: TextInputType.visiblePassword,
                       controller: passwordController,
                       obscureText: true,
                       decoration: InputDecoration(
@@ -186,7 +196,9 @@ class SignUpFormState extends State<SignupForm> {
                         }
                         return null;
                       },
+
                       obscureText: true,
+                      keyboardType: TextInputType.visiblePassword,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(),
                         labelText: 'Confirm Password',

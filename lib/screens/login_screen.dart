@@ -36,7 +36,7 @@ class LoginFormState extends State<LoginForm> {
   @override
   Widget build(BuildContext context) {
     Future<void> loginUser() async {
-      Uri url = Uri.parse("http://192.168.0.7:8000/api/v1/login");
+      Uri url = Uri.parse("http://192.168.0.5:8000/api/v1/login");
       final payload = <String, dynamic>{};
       payload["email"] = emailController.value.text;
       payload["password"] = passwordController.value.text;
@@ -49,7 +49,10 @@ class LoginFormState extends State<LoginForm> {
       if (decodedResponse["success"]) {
         log("request successful");
 
-        Provider.of<AuthModel>(context,listen: false).setAuthToken(decodedResponse["response"]["Bearer"]);
+        Provider.of<AuthModel>(
+          context,
+          listen: false,
+        ).setAuthToken(decodedResponse["response"]["Bearer"]);
 
         log("setting auth token");
 
@@ -134,23 +137,25 @@ class LoginFormState extends State<LoginForm> {
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 16,
-                    ),
-                    child: TextFormField(
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter password';
-                        }
-                        return null;
-                      },
-                      controller: passwordController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: 'Password',
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 16,
+                      ),
+                      child: TextFormField(
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter password';
+                          }
+                          return null;
+                        },
+                        controller: passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Password',
+                        ),
                       ),
                     ),
                   ),

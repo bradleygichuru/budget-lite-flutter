@@ -304,7 +304,7 @@ class Landing extends StatelessWidget {
                                   Padding(
                                     padding: EdgeInsets.symmetric(vertical: 2),
                                     child: Text(
-                                      "Ready to take control",
+                                      "Ready to take control ?",
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
                                         color: Colors.white,

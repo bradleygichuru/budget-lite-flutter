@@ -153,3 +153,25 @@ Future<List<Category>> getCategories() async {
       ),
   ];
 }
+
+insertCategories(List<Category> categories) async {
+  final db = await openDatabase(
+    // Set the path to the database. Note: Using the `join` function from the
+    // `path` package is best practice to ensure the path is correctly
+    // constructed for each platform.
+    join(await getDatabasesPath(), 'budget_lite_database.db'),
+
+    // When the database is first created, create a table to store dogs.
+    // Set the version. This executes the onCreate function and provides a
+    // path to perform database upgrades and downgrades.
+    version: 1,
+  );
+  List<int> rwIds = [];
+  await db.transaction((tx) async {
+    for (Category cat in categories) {
+      var rwid = await tx.insert("categories", cat.toMap());
+      rwIds.add(rwid);
+    }
+  });
+  return rwIds;
+}

@@ -187,7 +187,7 @@ class DashboardState extends State<Dashboard> {
                     BuildContext context,
                     AsyncSnapshot<List<TransactionObj>> snapshot,
                   ) {
-                    Widget cont = Text("");
+                    Widget cont = SliverToBoxAdapter(child: Text(""));
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       cont = SliverToBoxAdapter(
                         child: CircularProgressIndicator(),

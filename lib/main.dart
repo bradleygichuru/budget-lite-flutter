@@ -10,6 +10,7 @@ import 'package:flutter_application_1/models/categories.dart';
 import 'package:flutter_application_1/models/txs.dart';
 import 'package:flutter_application_1/screens/dashboard_screen.dart';
 import 'package:flutter_application_1/screens/envelopes_screen.dart';
+import 'package:flutter_application_1/screens/setup_budget.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:path/path.dart';
 import 'package:provider/provider.dart';
@@ -341,11 +342,11 @@ class MyAppState extends State<MyApp> {
                           } else if (snapshot.connectionState ==
                                   ConnectionState.done &&
                               snapshot.hasData) {
-                                if(snapshot.data!.length < 0){
-                                  setState(() {
-                                    handleUncategorized = false;
-                                  });
-                                }
+                            if (snapshot.data!.length < 0) {
+                              setState(() {
+                                handleUncategorized = false;
+                              });
+                            }
                             x = Text(
                               style: TextStyle(
                                 fontSize: 20,
@@ -506,7 +507,11 @@ class MyAppState extends State<MyApp> {
                                                           )
                                                           .then((count) async {
                                                             if (count > 0) {
-ctM.handleCatBalanceCompute( category, snapshot.data![index]);
+                                                              ctM.handleCatBalanceCompute(
+                                                                category,
+                                                                snapshot
+                                                                    .data![index],
+                                                              );
                                                               unCategorizedTxs =
                                                                   getUncategorizedTx();
                                                               txsM.refreshTx();
@@ -548,7 +553,6 @@ ctM.handleCatBalanceCompute( category, snapshot.data![index]);
                         );
                       }
                       return x;
-                      ;
                     },
                   );
                 },
@@ -611,6 +615,13 @@ ctM.handleCatBalanceCompute( category, snapshot.data![index]);
                                       child: Icon(Icons.settings),
                                     ),
                                     label: 'Settings',
+                                  ),
+                                  NavigationDestination(
+                                    icon: Badge(
+                                      label: Text(''),
+                                      child: Icon(Icons.settings),
+                                    ),
+                                    label: 'Setup budget',
                                   ),
                                 ],
                               ),
@@ -678,15 +689,37 @@ ctM.handleCatBalanceCompute( category, snapshot.data![index]);
                                         );
                                       },
                                 ),
-                                FilledButton(
-                                  onPressed: () async {
-                                    SharedPreferences prefs =
-                                        await SharedPreferences.getInstance();
-                                    prefs.setBool("isLoggedIn", false);
-                                    authM.isSetLoggedIn();
-                                  },
-                                  child: Text("logout"),
+                                Column(
+                                  children: [
+                                    FilledButton(
+                                      onPressed: () async {
+                                        SharedPreferences prefs =
+                                            await SharedPreferences.getInstance();
+                                        prefs.setBool("isLoggedIn", false);
+                                        authM.isSetLoggedIn();
+                                      },
+                                      child: Text("logout"),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () async {
+                                        SharedPreferences prefs =
+                                            await SharedPreferences.getInstance();
+                                        prefs.setBool("isLoggedIn", false);
+
+                                        prefs.setBool("isNewUser", false);
+                                        await deleteDatabase(
+                                          join(
+                                            await getDatabasesPath(),
+                                            'budget_lite_database.db',
+                                          ),
+                                        );
+                                        authM.isSetLoggedIn();
+                                      },
+                                      child: Text("Dev Reset App"),
+                                    ),
+                                  ],
                                 ),
+                                SetupBudget(),
                               ][currentPageIndex],
                             ),
                           );

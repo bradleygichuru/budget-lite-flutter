@@ -1,8 +1,8 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/landing.dart';
+import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../screens/login_screen.dart' show LoginForm;
 
 class AuthModel extends ChangeNotifier {
   AuthModel() {
@@ -12,7 +12,8 @@ class AuthModel extends ChangeNotifier {
   late Future<bool> handleAuth;
   late bool isLoggedIn;
   late bool isNewUser;
-  late String authToken;
+  late String? authToken;
+
   Widget authWidget = SafeArea(
     child: Center(child: CircularProgressIndicator()),
   );
@@ -33,6 +34,7 @@ class AuthModel extends ChangeNotifier {
 
     isNewUser = prefs.getBool("isNewUser") ?? true;
 
+    log("isNewUser:${isNewUser},isLoggedIn:${isLoggedIn}");
     if (isNewUser) {
       authWidget = Landing();
 
@@ -60,11 +62,11 @@ class AuthModel extends ChangeNotifier {
   Future<void> removeAuthToken() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.remove("auth_token");
-    authToken = "";
+    authToken = null;
   }
 
   Future<void> getAuthToken() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    authToken = prefs.getString("auth_token") ?? "";
+    authToken = prefs.getString("auth_token");
   }
 }
