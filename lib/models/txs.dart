@@ -59,6 +59,8 @@ class TransactionsModel extends ChangeNotifier {
 
       transactions = getTransactions();
     });
+    notifyListeners();
+    return rowID;
   }
 
   Future<void> addNewTransaction(Map<String, dynamic> transaction) async {

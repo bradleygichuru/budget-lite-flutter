@@ -4,12 +4,14 @@ import 'dart:developer';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:another_telephony/telephony.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/data-models/goals.dart';
 import 'package:flutter_application_1/data-models/transactions.dart';
 import 'package:flutter_application_1/models/auth.dart';
 import 'package:flutter_application_1/models/categories.dart';
 import 'package:flutter_application_1/models/txs.dart';
 import 'package:flutter_application_1/screens/dashboard_screen.dart';
 import 'package:flutter_application_1/screens/envelopes_screen.dart';
+import 'package:flutter_application_1/screens/goals_page.dart';
 import 'package:flutter_application_1/screens/settings_page.dart';
 import 'package:flutter_application_1/screens/setup_budget.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -104,7 +106,7 @@ Future<void> main() async {
       );
 
       db.execute(
-        "CREATE TABLE IF NOT EXISTS goals(id INTEGER PRIMARY KEY,name TEXT,target_amount REAL,target_date TEXT)",
+        "CREATE TABLE IF NOT EXISTS goals(id INTEGER PRIMARY KEY,name TEXT,target_amount REAL,target_date TEXT,initial_amount REAL)",
       );
     },
 
@@ -142,6 +144,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (context) => TransactionsModel()),
         ChangeNotifierProvider(create: (context) => AuthModel()),
         ChangeNotifierProvider(create: (context) => CategoriesModel()),
+        ChangeNotifierProvider(create: (context) => GoalModel()),
       ],
       child: const MyApp(),
     ),
@@ -586,12 +589,8 @@ class MyAppState extends State<MyApp> {
                                         label: 'DashBoard',
                                       ),
                                       NavigationDestination(
-                                        selectedIcon: Icon(
-                                          Icons.account_balance_wallet,
-                                        ),
-                                        icon: Icon(
-                                          Icons.account_balance_wallet_outlined,
-                                        ),
+                                        selectedIcon: Icon(Icons.mail),
+                                        icon: Icon(Icons.mail_outlined),
                                         label: 'Budget',
                                       ),
                                       NavigationDestination(
@@ -603,6 +602,15 @@ class MyAppState extends State<MyApp> {
                                         icon: Icon(Icons.settings_outlined),
                                         selectedIcon: Icon(Icons.settings),
                                         label: 'Settings',
+                                      ),
+                                      NavigationDestination(
+                                        selectedIcon: Icon(
+                                          Icons.account_balance_wallet,
+                                        ),
+                                        icon: Icon(
+                                          Icons.account_balance_wallet_outlined,
+                                        ),
+                                        label: 'Wallet',
                                       ),
                                       // NavigationDestination(
                                       //   icon: Badge(
@@ -619,6 +627,7 @@ class MyAppState extends State<MyApp> {
 
                                     /// Notifications page
                                     EnvelopesView(),
+                                    GoalsPage(),
 
                                     /// Messages page
                                     ListView.builder(
@@ -692,6 +701,8 @@ class MyAppState extends State<MyApp> {
                                             );
                                           },
                                     ),
+                                    SettingsPage(),
+
                                     SettingsPage(),
                                   ][currentPageIndex],
                                 ),

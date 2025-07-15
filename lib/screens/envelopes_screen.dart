@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/categories.dart';
 import 'package:flutter_application_1/models/txs.dart';
+import 'package:flutter_application_1/screens/dashboard_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -311,7 +312,9 @@ class EnvelopeViewState extends State<EnvelopesView> {
 
                               return SizedBox(
                                 child: Card.outlined(
-                                  color: Colors.green.shade50,
+                                  color: getEnvelopecolor(
+                                    snapshot.data![index],
+                                  )["backgroundColor"],
                                   child: Padding(
                                     padding: EdgeInsets.all(10),
                                     child: Column(

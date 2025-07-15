@@ -1,8 +1,36 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data-models/transactions.dart';
 import 'package:flutter_application_1/models/categories.dart';
 import 'package:flutter_application_1/models/txs.dart';
 import 'package:provider/provider.dart';
+
+Map<String, Color> getEnvelopecolor(Category cat) {
+  Map<String, Color> y = {
+    "textColor": Colors.green.shade600,
+    "backgroundColor": Colors.green.shade600,
+  };
+  double percentageRem = (cat.budget - cat.spent) / cat.budget * 100;
+  log("rem percent:$percentageRem");
+  if (percentageRem > 50) {
+    y["textColor"] = Colors.green.shade600;
+    y["backgroundColor"] = Colors.green.shade50;
+    return y;
+  }
+  if (percentageRem > 20) {
+    y["textColor"] = Colors.yellow.shade600;
+    y["backgroundColor"] = Colors.yellow.shade50;
+
+    return y;
+  } else {
+    y["textColor"] = Colors.red.shade600;
+    y["backgroundColor"] = Colors.red.shade50;
+
+    return y;
+  }
+  // return y;
+}
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -128,15 +156,37 @@ class DashboardState extends State<Dashboard> {
                                 child: Column(
                                   children: [
                                     ListTile(
-                                      leading: Icon(Icons.category, size: 15),
+                                      trailing: Icon(Icons.category, size: 15),
                                       title: Text(x.categoryName),
                                       subtitle: Text(
                                         'Ksh ${x.budget - x.spent} left',
                                       ),
                                     ),
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 0,
+                                        horizontal: 10,
+                                      ),
+                                      child: LinearProgressIndicator(
+                                        borderRadius: BorderRadius.circular(2),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.green.shade600,
+                                            ),
+                                        value: (x.spent / x.budget),
+                                      ),
+                                    ),
                                     SafeArea(
                                       child: ListTile(
                                         subtitle: Text(
+                                          style: TextStyle(
+                                            backgroundColor: getEnvelopecolor(
+                                              x,
+                                            )["backgroundColor"],
+                                            color: getEnvelopecolor(
+                                              x,
+                                            )['textColor'],
+                                          ),
                                           "${((x.budget - x.spent) / x.budget * 100)}% remaining",
                                         ),
                                       ),
