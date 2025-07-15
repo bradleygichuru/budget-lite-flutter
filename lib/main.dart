@@ -10,6 +10,7 @@ import 'package:flutter_application_1/models/categories.dart';
 import 'package:flutter_application_1/models/txs.dart';
 import 'package:flutter_application_1/screens/dashboard_screen.dart';
 import 'package:flutter_application_1/screens/envelopes_screen.dart';
+import 'package:flutter_application_1/screens/settings_page.dart';
 import 'package:flutter_application_1/screens/setup_budget.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:path/path.dart';
@@ -92,14 +93,14 @@ Future<void> main() async {
     onCreate: (db, version) {
       // Run the CREATE TABLE statement on the database.
       db.execute(
-        'CREATE TABLE transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT,category TEXT)',
+        'CREATE TABLE IF NOT EXISTS transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT,category TEXT)',
       );
       db.execute(
-        "CREATE TABLE categories(id INTEGER PRIMARY KEY,budget REAL,category_name TEXT,spent REAL)",
+        "CREATE TABLE IF NOT EXISTS categories(id INTEGER PRIMARY KEY,budget REAL,category_name TEXT,spent REAL)",
       );
 
       db.execute(
-        "CREATE TABLE wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT)",
+        "CREATE TABLE IF NOT EXISTS wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT)",
       );
 
       db.execute(
@@ -112,18 +113,6 @@ Future<void> main() async {
     // path to perform database upgrades and downgrades.
     version: 1,
   );
-
-  await db.execute(
-    "CREATE TABLE IF NOT EXISTS goals(id INTEGER PRIMARY KEY,name TEXT,target_amount REAL,target_date TEXT)",
-  );
-  await db.execute(
-    "CREATE TABLE IF NOT EXISTS wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT)",
-  );
-  // await db.execute("ALTER TABLE transactions ADD COLUMN y TEXT");
-  //insertWallet(Wallet(name: "default", balance: 0));
-  await db.execute(
-    "CREATE TABLE IF NOT EXISTS categories(id INTEGER PRIMARY KEY,budget REAL,category_name TEXT,spent REAL)",
-  ); //TODO: remove on prod
 
   AwesomeNotifications().initialize(
     // set the icon to null if you want to use the default app icon
@@ -255,19 +244,17 @@ class MyAppState extends State<MyApp> {
     }
   }
 
-  void _onDetached() => print('detached');
+  void _onDetached() => log('detached');
 
   void _onResumed() {
     log('resumed');
-    setState(() {
-      getUncategorizedTx().then((txs) {
-        if (txs.length > 0) {
-          setState(() {
-            handleUncategorized = true;
-            unCategorizedTxs = Future.value(txs);
-          });
-        }
-      });
+    getUncategorizedTx().then((txs) {
+      if (txs.isNotEmpty) {
+        setState(() {
+          handleUncategorized = true;
+          unCategorizedTxs = Future.value(txs);
+        });
+      }
     });
   }
 
@@ -567,171 +554,157 @@ class MyAppState extends State<MyApp> {
               builder: (context, authM, child) {
                 return FutureBuilder<bool>(
                   future: authM.handleAuth,
-                  builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
-                    Widget cont = Text("");
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      cont = SafeArea(
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    if (snapshot.connectionState == ConnectionState.done) {
-                      if (snapshot.hasData) {
-                        if (snapshot.requireData) {
-                          cont = authM.authWidget;
-                        } else {
+                  builder:
+                      (BuildContext context, AsyncSnapshot<bool> snapshot) {
+                        Widget cont = Text("");
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
                           cont = SafeArea(
-                            child: Scaffold(
-                              bottomNavigationBar: NavigationBar(
-                                onDestinationSelected: (int index) {
-                                  setState(() {
-                                    currentPageIndex = index;
-                                  });
-                                },
-                                indicatorColor: Color(0xFFE0F2FE),
-                                selectedIndex: currentPageIndex,
-                                destinations: const <Widget>[
-                                  NavigationDestination(
-                                    selectedIcon: Icon(Icons.home),
-
-                                    icon: Icon(Icons.home_outlined),
-                                    label: 'DashBoard',
-                                  ),
-                                  NavigationDestination(
-                                    icon: Badge(
-                                      child: Icon(Icons.account_balance_wallet),
-                                    ),
-                                    label: 'Budget',
-                                  ),
-                                  NavigationDestination(
-                                    icon: Badge(
-                                      label: Text(''),
-                                      child: Icon(Icons.crisis_alert),
-                                    ),
-                                    label: 'Goals',
-                                  ),
-                                  NavigationDestination(
-                                    icon: Badge(
-                                      label: Text(''),
-                                      child: Icon(Icons.settings),
-                                    ),
-                                    label: 'Settings',
-                                  ),
-                                  NavigationDestination(
-                                    icon: Badge(
-                                      label: Text(''),
-                                      child: Icon(Icons.settings),
-                                    ),
-                                    label: 'Setup budget',
-                                  ),
-                                ],
-                              ),
-                              body: <Widget>[
-                                /// Home page
-                                Dashboard(),
-
-                                /// Notifications page
-                                EnvelopesView(),
-
-                                /// Messages page
-                                ListView.builder(
-                                  reverse: true,
-                                  itemCount: 2,
-                                  itemBuilder:
-                                      (BuildContext context, int index) {
-                                        if (index == 0) {
-                                          return Align(
-                                            alignment: Alignment.centerRight,
-                                            child: Container(
-                                              margin: const EdgeInsets.all(8.0),
-                                              padding: const EdgeInsets.all(
-                                                8.0,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    theme.colorScheme.primary,
-                                                borderRadius:
-                                                    BorderRadius.circular(8.0),
-                                              ),
-                                              child: Text(
-                                                'Hello',
-                                                style: theme
-                                                    .textTheme
-                                                    .bodyLarge!
-                                                    .copyWith(
-                                                      color: theme
-                                                          .colorScheme
-                                                          .onPrimary,
-                                                    ),
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                        return Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: Container(
-                                            margin: const EdgeInsets.all(8.0),
-                                            padding: const EdgeInsets.all(8.0),
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.primary,
-                                              borderRadius:
-                                                  BorderRadius.circular(8.0),
-                                            ),
-                                            child: Text(
-                                              'Hi!',
-                                              style: theme.textTheme.bodyLarge!
-                                                  .copyWith(
-                                                    color: theme
-                                                        .colorScheme
-                                                        .onPrimary,
-                                                  ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                ),
-                                Column(
-                                  children: [
-                                    FilledButton(
-                                      onPressed: () async {
-                                        SharedPreferences prefs =
-                                            await SharedPreferences.getInstance();
-                                        prefs.setBool("isLoggedIn", false);
-                                        authM.isSetLoggedIn();
-                                      },
-                                      child: Text("logout"),
-                                    ),
-                                    FilledButton(
-                                      onPressed: () async {
-                                        SharedPreferences prefs =
-                                            await SharedPreferences.getInstance();
-                                        prefs.setBool("isLoggedIn", false);
-
-                                        prefs.setBool("isNewUser", false);
-                                        await deleteDatabase(
-                                          join(
-                                            await getDatabasesPath(),
-                                            'budget_lite_database.db',
-                                          ),
-                                        );
-                                        authM.isSetLoggedIn();
-                                      },
-                                      child: Text("Dev Reset App"),
-                                    ),
-                                  ],
-                                ),
-                                SetupBudget(),
-                              ][currentPageIndex],
-                            ),
+                            child: Center(child: CircularProgressIndicator()),
                           );
                         }
-                      }
-                    } else {
-                      if (snapshot.hasError) {
-                        cont = Text('Error: ${snapshot.error}');
-                      }
-                    }
-                    return cont;
-                  },
+                        if (snapshot.connectionState == ConnectionState.done) {
+                          if (snapshot.hasData) {
+                            if (snapshot.requireData) {
+                              cont = authM.authWidget;
+                            } else {
+                              cont = SafeArea(
+                                child: Scaffold(
+                                  bottomNavigationBar: NavigationBar(
+                                    onDestinationSelected: (int index) {
+                                      setState(() {
+                                        currentPageIndex = index;
+                                      });
+                                    },
+                                    indicatorColor: Color(0xFFE0F2FE),
+                                    selectedIndex: currentPageIndex,
+                                    destinations: const <Widget>[
+                                      NavigationDestination(
+                                        selectedIcon: Icon(Icons.home),
+
+                                        icon: Icon(Icons.home_outlined),
+                                        label: 'DashBoard',
+                                      ),
+                                      NavigationDestination(
+                                        selectedIcon: Icon(
+                                          Icons.account_balance_wallet,
+                                        ),
+                                        icon: Icon(
+                                          Icons.account_balance_wallet_outlined,
+                                        ),
+                                        label: 'Budget',
+                                      ),
+                                      NavigationDestination(
+                                        selectedIcon: Icon(Icons.crisis_alert),
+                                        icon: Icon(Icons.crisis_alert_outlined),
+                                        label: 'Goals',
+                                      ),
+                                      NavigationDestination(
+                                        icon: Icon(Icons.settings_outlined),
+                                        selectedIcon: Icon(Icons.settings),
+                                        label: 'Settings',
+                                      ),
+                                      // NavigationDestination(
+                                      //   icon: Badge(
+                                      //     label: Text(''),
+                                      //     child: Icon(Icons.settings),
+                                      //   ),
+                                      //   label: 'Setup budget',
+                                      // ),
+                                    ],
+                                  ),
+                                  body: <Widget>[
+                                    /// Home page
+                                    Dashboard(),
+
+                                    /// Notifications page
+                                    EnvelopesView(),
+
+                                    /// Messages page
+                                    ListView.builder(
+                                      reverse: true,
+                                      itemCount: 2,
+                                      itemBuilder:
+                                          (BuildContext context, int index) {
+                                            if (index == 0) {
+                                              return Align(
+                                                alignment:
+                                                    Alignment.centerRight,
+                                                child: Container(
+                                                  margin: const EdgeInsets.all(
+                                                    8.0,
+                                                  ),
+                                                  padding: const EdgeInsets.all(
+                                                    8.0,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: theme
+                                                        .colorScheme
+                                                        .primary,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8.0,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    'Hello',
+                                                    style: theme
+                                                        .textTheme
+                                                        .bodyLarge!
+                                                        .copyWith(
+                                                          color: theme
+                                                              .colorScheme
+                                                              .onPrimary,
+                                                        ),
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                            return Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: Container(
+                                                margin: const EdgeInsets.all(
+                                                  8.0,
+                                                ),
+                                                padding: const EdgeInsets.all(
+                                                  8.0,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      theme.colorScheme.primary,
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        8.0,
+                                                      ),
+                                                ),
+                                                child: Text(
+                                                  'Hi!',
+                                                  style: theme
+                                                      .textTheme
+                                                      .bodyLarge!
+                                                      .copyWith(
+                                                        color: theme
+                                                            .colorScheme
+                                                            .onPrimary,
+                                                      ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                    ),
+                                    SettingsPage(),
+                                  ][currentPageIndex],
+                                ),
+                              );
+                            }
+                          }
+                        } else {
+                          if (snapshot.hasError) {
+                            cont = Text('Error: ${snapshot.error}');
+                          }
+                        }
+                        return cont;
+                      },
                 );
               },
             ),

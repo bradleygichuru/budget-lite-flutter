@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/models/auth.dart';
 import 'package:flutter_application_1/models/categories.dart';
+import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CategoryWithClickState extends Category {
   bool clicked = false;
@@ -156,7 +159,7 @@ class SetupBudgetState extends State<SetupBudget> {
           title: Column(
             children: [
               Padding(
-                padding: EdgeInsets.all(7),
+                padding: EdgeInsets.all(2),
                 child: Text(
                   style: TextStyle(
                     fontSize: 24,
@@ -468,7 +471,28 @@ class SetupBudgetState extends State<SetupBudget> {
                         shadowColor: Colors.transparent,
                         fixedSize: Size.fromWidth(60),
                       ),
-                      onPressed: () {},
+                      onPressed: () async {
+                        SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
+                        insertCategories(categories).then((ids) {
+                          if (ids.length == categories.length) {
+                            if (context.mounted) {
+                              prefs.setBool("isNewUser", false);
+                              Provider.of<AuthModel>(
+                                context,
+                                listen: false,
+                              ).refreshAuth();
+
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginForm(),
+                                ),
+                              );
+                            }
+                          }
+                        });
+                      },
                       child: Row(
                         children: [
                           Icon(Icons.add),

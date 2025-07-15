@@ -84,6 +84,7 @@ Future<List<TransactionObj>> getTxById(int id) async {
 }
 
 Future<List<TransactionObj>> getUncategorizedTx() async {
+  List<TransactionObj> x = [];
   final db = await openDatabase(
     // Set the path to the database. Note: Using the `join` function from the
     // `path` package is best practice to ensure the path is correctly
@@ -112,26 +113,33 @@ Future<List<TransactionObj>> getUncategorizedTx() async {
       ).toString(),
     );
   });
+  if (transactionMaps.isNotEmpty) {
+    [
+      for (final {
+            'id': id as int,
+            'type': type as String,
+            'date': date as String,
+            'amount': amount as double,
+            'source': source as String,
+            'category': category as String?,
+          }
+          in transactionMaps)
+        {
+          x.add(
+            TransactionObj(
+              id: id,
+              type: type,
+              amount: amount,
+              source: source,
+              date: date,
+              category: category,
+            ),
+          ),
+        },
+    ];
+  }
 
-  return [
-    for (final {
-          'id': id as int,
-          'type': type as String,
-          'date': date as String,
-          'amount': amount as double,
-          'source': source as String,
-          'category': category as String?,
-        }
-        in transactionMaps)
-      TransactionObj(
-        id: id,
-        type: type,
-        amount: amount,
-        source: source,
-        date: date,
-        category: category,
-      ),
-  ];
+  return x;
 }
 
 Future<int> insertTransaction(TransactionObj transaction) async {
@@ -167,6 +175,7 @@ reset() async {
 }
 
 Future<List<TransactionObj>> getTransactions() async {
+  List<TransactionObj> x = [];
   final db = await openDatabase(
     // Set the path to the database. Note: Using the `join` function from the
     // `path` package is best practice to ensure the path is correctly
@@ -195,7 +204,7 @@ Future<List<TransactionObj>> getTransactions() async {
       ).toString(),
     );
   });
-  return [
+  if (transactionMaps.isNotEmpty) {
     for (final {
           'id': id as int,
           'type': type as String,
@@ -204,16 +213,20 @@ Future<List<TransactionObj>> getTransactions() async {
           'source': source as String,
           'category': category as String?,
         }
-        in transactionMaps)
-      TransactionObj(
-        id: id,
-        type: type,
-        amount: amount,
-        source: source,
-        date: date,
-        category: category,
-      ),
-  ];
+        in transactionMaps) {
+      x.add(
+        TransactionObj(
+          id: id,
+          type: type,
+          amount: amount,
+          source: source,
+          date: date,
+          category: category,
+        ),
+      );
+    }
+  }
+  return x;
 }
 
 Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {

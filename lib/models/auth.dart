@@ -19,6 +19,8 @@ class AuthModel extends ChangeNotifier {
   );
   void refreshAuth() {
     handleAuth = isSetLoggedIn();
+
+    getAuthToken();
     notifyListeners();
   }
 

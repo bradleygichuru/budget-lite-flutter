@@ -27,9 +27,31 @@ class CategoriesModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void refreshTx() {
+  void refreshCats() {
     categories = getCategories();
     notifyListeners();
+  }
+
+  Future<int> editCategoryBudget(Category category, double amount) async {
+    final db = await openDatabase(
+      // Set the path to the database. Note: Using the `join` function from the
+      // `path` package is best practice to ensure the path is correctly
+      // constructed for each platform.
+      join(await getDatabasesPath(), 'budget_lite_database.db'),
+
+      // When the database is first created, create a table to store dogs.
+      // Set the version. This executes the onCreate function and provides a
+      // path to perform database upgrades and downgrades.
+      version: 1,
+    );
+    int count = await db.rawUpdate(
+      'UPDATE categories SET budget = ? WHERE id = ?',
+      ['$amount', '${category.id}'],
+    );
+    refreshCats();
+    notifyListeners();
+
+    return count;
   }
 
   Future<int> handleCategoryAdd(Category category) async {
@@ -68,7 +90,7 @@ class CategoriesModel extends ChangeNotifier {
       'UPDATE categories SET spent = ? WHERE id = ?',
       ['$update', '${candidate.id}'],
     );
-    refreshTx();
+    refreshCats();
     notifyListeners();
     return count;
   }
@@ -154,7 +176,7 @@ Future<List<Category>> getCategories() async {
   ];
 }
 
-insertCategories(List<Category> categories) async {
+Future<List<int>> insertCategories(List<Category> categories) async {
   final db = await openDatabase(
     // Set the path to the database. Note: Using the `join` function from the
     // `path` package is best practice to ensure the path is correctly

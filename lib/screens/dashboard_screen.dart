@@ -195,7 +195,9 @@ class DashboardState extends State<Dashboard> {
                     } else {
                       if (snapshot.hasError) {
                         cont = SliverToBoxAdapter(
-                          child: Text('Error: ${snapshot.error}'),
+                          child: Center(
+                            child: Text('Error Occured fetching Transactions'),
+                          ),
                         );
                       } else {
                         if (snapshot.hasData) {

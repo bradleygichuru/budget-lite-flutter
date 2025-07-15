@@ -60,6 +60,7 @@ class LoginFormState extends State<LoginForm> {
         prefs.setBool('isLoggedIn', true);
         log(decodedResponse["response"]["Bearer"]);
         if (context.mounted) {
+          Provider.of<AuthModel>(context, listen: false).refreshAuth();
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const MyApp()),
