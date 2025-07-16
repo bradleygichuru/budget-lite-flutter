@@ -6,6 +6,13 @@ import 'package:flutter_application_1/models/categories.dart';
 import 'package:flutter_application_1/models/txs.dart';
 import 'package:provider/provider.dart';
 
+int getDaysRemaining(String date) {
+  DateTime today = DateTime.now();
+  DateTime goalDate = DateTime.parse(date);
+  var dif = goalDate.difference(today);
+  return dif.inDays;
+}
+
 Map<String, Color> getEnvelopecolor(Category cat) {
   Map<String, Color> y = {
     "textColor": Colors.green.shade600,
@@ -131,11 +138,11 @@ class DashboardState extends State<Dashboard> {
                   child: Center(child: CircularProgressIndicator()),
                 );
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  x = SliverToBoxAdapter(
+                  return SliverToBoxAdapter(
                     child: Center(child: CircularProgressIndicator()),
                   );
                 } else if (snapshot.hasError) {
-                  x = SliverToBoxAdapter(
+                  return SliverToBoxAdapter(
                     child: Center(
                       child: Text("Error occured fetching categories"),
                     ),
@@ -199,14 +206,14 @@ class DashboardState extends State<Dashboard> {
                         ),
                       );
                     }
-                    x = SliverGrid.count(
+                    return SliverGrid.count(
                       crossAxisCount: 2,
                       children: gridItems,
                     );
                   }
                 }
                 if ((snapshot.data ?? []).isEmpty) {
-                  x = SliverToBoxAdapter(
+                  return SliverToBoxAdapter(
                     child: Center(child: Text("No categories found")),
                   );
                 }

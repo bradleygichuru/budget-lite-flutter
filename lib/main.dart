@@ -106,7 +106,7 @@ Future<void> main() async {
       );
 
       db.execute(
-        "CREATE TABLE IF NOT EXISTS goals(id INTEGER PRIMARY KEY,name TEXT,target_amount REAL,target_date TEXT,initial_amount REAL)",
+        "CREATE TABLE IF NOT EXISTS goals(id INTEGER PRIMARY KEY,name TEXT,target_amount REAL,target_date TEXT,current_amount REAL)",
       );
     },
 
@@ -599,11 +599,6 @@ class MyAppState extends State<MyApp> {
                                         label: 'Goals',
                                       ),
                                       NavigationDestination(
-                                        icon: Icon(Icons.settings_outlined),
-                                        selectedIcon: Icon(Icons.settings),
-                                        label: 'Settings',
-                                      ),
-                                      NavigationDestination(
                                         selectedIcon: Icon(
                                           Icons.account_balance_wallet,
                                         ),
@@ -611,6 +606,12 @@ class MyAppState extends State<MyApp> {
                                           Icons.account_balance_wallet_outlined,
                                         ),
                                         label: 'Wallet',
+                                      ),
+
+                                      NavigationDestination(
+                                        icon: Icon(Icons.settings_outlined),
+                                        selectedIcon: Icon(Icons.settings),
+                                        label: 'Settings',
                                       ),
                                       // NavigationDestination(
                                       //   icon: Badge(

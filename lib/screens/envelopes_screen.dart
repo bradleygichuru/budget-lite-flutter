@@ -74,17 +74,17 @@ class EnvelopeViewState extends State<EnvelopesView> {
                                       );
                                       if (snapshot.connectionState ==
                                           ConnectionState.waiting) {
-                                        x = Center(
+                                        return Center(
                                           child: CircularProgressIndicator(),
                                         );
                                       } else if (snapshot.hasError) {
-                                        x = SliverToBoxAdapter(
+                                        return SliverToBoxAdapter(
                                           child: Text(
                                             "Error occured fetching value",
                                           ),
                                         );
                                       } else if (snapshot.hasData) {
-                                        x = Text(
+                                        return Text(
                                           "Ksh ${snapshot.data}",
                                           style: TextStyle(
                                             color: Colors.white,
@@ -288,11 +288,11 @@ class EnvelopeViewState extends State<EnvelopesView> {
                         child: Center(child: CircularProgressIndicator()),
                       );
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        x = SliverToBoxAdapter(
+                        return SliverToBoxAdapter(
                           child: Center(child: CircularProgressIndicator()),
                         );
                       } else if (snapshot.hasError) {
-                        x = SliverToBoxAdapter(
+                        return SliverToBoxAdapter(
                           child: Center(
                             child: Text("Error occured fetching categories"),
                           ),
@@ -300,7 +300,7 @@ class EnvelopeViewState extends State<EnvelopesView> {
                       }
                       if (snapshot.hasData) {
                         if ((snapshot.data ?? []).isNotEmpty) {
-                          x = SliverList.builder(
+                          return SliverList.builder(
                             itemCount: snapshot.data!.length,
                             itemBuilder: (context, index) {
                               TextEditingController budgetAmountController =
@@ -544,7 +544,7 @@ class EnvelopeViewState extends State<EnvelopesView> {
                         }
                       }
                       if ((snapshot.data ?? []).isEmpty) {
-                        x = SliverToBoxAdapter(
+                        return SliverToBoxAdapter(
                           child: Center(child: Text("No categories found")),
                         );
                       }

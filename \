@@ -59,13 +59,13 @@ Future<List<Goal>> getGoals() async {
   final List<Map<String, Object?>> goalMaps = await db.query('goals');
 
   log("found ${goalMaps.length} goals");
-  // log(goalMaps.toString());
+  log(goalMaps.toString());
   for (var goal in goalMaps) {
     log(
       Goal(
         currentAmount: goal["current_amount"] as double?,
         name: goal['name'] as String,
-        targetAmount: goal['target_amount'] as double,
+        targetAmount: goal['target_mount'] as double,
         targetDate: goal['target_date'] as String,
       ).toString(),
     );
@@ -96,30 +96,6 @@ class GoalModel extends ChangeNotifier {
   Future<List<Goal>> goals = Future.value([]);
   void initGoals() {
     goals = getGoals();
-  }
-
-  Future<int> addCurrentAmount(Goal goal, double credit) async {
-    final db = await openDatabase(
-      // Set the path to the database. Note: Using the `join` function from the
-      // `path` package is best practice to ensure the path is correctly
-      // constructed for each platform.
-      join(await getDatabasesPath(), 'budget_lite_database.db'),
-
-      // When the database is first created, create a table to store dogs.
-      // Set the version. This executes the onCreate function and provides a
-      // path to perform database upgrades and downgrades.
-      version: 1,
-    );
-    double update = goal.currentAmount != null
-        ? goal.currentAmount! + credit
-        : credit;
-    int count = await db.rawUpdate(
-      'UPDATE goals SET current_amount = ? WHERE id = ?',
-      ['$update', '${goal.id}'],
-    );
-    goals = getGoals();
-    notifyListeners();
-    return count;
   }
 
   Future<int?> insertGoal(Goal goal) async {
