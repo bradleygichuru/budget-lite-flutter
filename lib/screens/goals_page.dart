@@ -34,11 +34,12 @@ class GoalsPageState extends State<GoalsPage> {
 
   final _formKey = GlobalKey<FormState>();
   Future<void> _selectDate() async {
+    DateTime today = DateTime.now();
     final DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime(2021, 7, 25),
-      firstDate: DateTime(2021),
-      lastDate: DateTime(2022),
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(today.year + 100),
     );
 
     setState(() {
@@ -46,87 +47,86 @@ class GoalsPageState extends State<GoalsPage> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    Future<void> _dialogBuilder(BuildContext context, Goal goal) {
-      final formKey = GlobalKey<FormState>();
+  Future<void> dialogBuilder(BuildContext context, Goal goal) {
+    final formKey = GlobalKey<FormState>();
 
-      TextEditingController goalAmountController = TextEditingController();
-      return showDialog<void>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            actions: [
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  goalAmountController.text = '';
-                },
-                child: Text("Cancel"),
-              ),
+    TextEditingController goalAmountController = TextEditingController();
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          actions: [
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+                goalAmountController.text = '';
+              },
+              child: Text("Cancel"),
+            ),
 
-              FilledButton(
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    Provider.of<GoalModel>(context, listen: false)
-                        .addCurrentAmount(
-                          goal,
-                          double.parse(goalAmountController.text),
-                        )
-                        .then((count) {
-                          if (count == 1) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: const Text("Goal Updated")),
-                              );
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  Provider.of<GoalModel>(context, listen: false)
+                      .addCurrentAmount(
+                        goal,
+                        double.parse(goalAmountController.text),
+                      )
+                      .then((count) {
+                        if (count == 1) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: const Text("Goal Updated")),
+                            );
 
-                              Navigator.pop(context);
-                            }
-                            Navigator.of(context).pop();
-                          } else {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text("Error Updating Goal"),
-                                ),
-                              );
-
-                              Navigator.pop(context);
-                            }
+                            Navigator.pop(context);
                           }
-                        });
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text("Error Updating Goal"),
+                              ),
+                            );
+
+                            Navigator.pop(context);
+                          }
+                        }
+                      });
+                }
+              },
+              child: Text("Add"),
+            ),
+          ],
+          title: Text("Add money to goal"),
+          content: Form(
+            key: formKey,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
+              child: TextFormField(
+                keyboardType: TextInputType.number,
+                controller: goalAmountController,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter valid goal amount';
                   }
+                  return null;
                 },
-                child: Text("Add"),
-              ),
-            ],
-            title: Text("Add money to goal"),
-            content: Form(
-              key: formKey,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
-                child: TextFormField(
-                  keyboardType: TextInputType.number,
-                  controller: goalAmountController,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter valid goal amount';
-                    }
-                    return null;
-                  },
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: '1000',
-                    labelText: "Amount",
-                  ),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: '1000',
+                  labelText: "Amount",
                 ),
               ),
             ),
-          );
-        },
-      );
-    }
+          ),
+        );
+      },
+    );
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Consumer<GoalModel>(
       builder: (context, gM, child) {
         return MaterialApp(
@@ -621,7 +621,7 @@ class GoalsPageState extends State<GoalsPage> {
                                             ),
                                             FilledButton(
                                               onPressed: () {
-                                                _dialogBuilder(
+                                                dialogBuilder(
                                                   context,
                                                   snapshot.data![index],
                                                 );
