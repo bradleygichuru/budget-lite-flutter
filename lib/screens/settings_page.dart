@@ -22,12 +22,8 @@ class SettingsPageState extends State<SettingsPage> {
             return Column(
               children: [
                 FilledButton(
-                  onPressed: () async {
-                    SharedPreferences prefs =
-                        await SharedPreferences.getInstance();
-                    prefs.setBool("isLoggedIn", false);
-                    authM.removeAuthToken();
-                    authM.isSetLoggedIn();
+                  onPressed: () {
+                    authM.logout();
                   },
                   child: Text("logout"),
                 ),
@@ -36,7 +32,7 @@ class SettingsPageState extends State<SettingsPage> {
                     SharedPreferences prefs =
                         await SharedPreferences.getInstance();
                     prefs.setBool("isLoggedIn", false);
-
+                    prefs.remove("budget_lite_current_account_id");
                     prefs.setBool("isNewUser", true);
                     await deleteDatabase(
                       join(await getDatabasesPath(), 'budget_lite_database.db'),

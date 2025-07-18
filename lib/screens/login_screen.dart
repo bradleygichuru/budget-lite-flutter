@@ -56,6 +56,10 @@ class LoginFormState extends State<LoginForm> {
 
         log("setting auth token");
 
+        Provider.of<AuthModel>(
+          context,
+          listen: false,
+        ).setAccountId(emailController.value.text);
         SharedPreferences prefs = await SharedPreferences.getInstance();
         prefs.setBool('isLoggedIn', true);
         log(decodedResponse["response"]["Bearer"]);

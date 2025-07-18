@@ -3,7 +3,10 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data-models/transactions.dart';
+import 'package:flutter_application_1/db/db.dart';
+import 'package:flutter_application_1/models/auth.dart';
 import 'package:path/path.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
 class CategoriesModel extends ChangeNotifier {
@@ -33,20 +36,10 @@ class CategoriesModel extends ChangeNotifier {
   }
 
   Future<int> editCategoryBudget(Category category, double amount) async {
-    final db = await openDatabase(
-      // Set the path to the database. Note: Using the `join` function from the
-      // `path` package is best practice to ensure the path is correctly
-      // constructed for each platform.
-      join(await getDatabasesPath(), 'budget_lite_database.db'),
-
-      // When the database is first created, create a table to store dogs.
-      // Set the version. This executes the onCreate function and provides a
-      // path to perform database upgrades and downgrades.
-      version: 1,
-    );
+    final db = await getDb();
     int count = await db.rawUpdate(
-      'UPDATE categories SET budget = ? WHERE id = ?',
-      ['$amount', '${category.id}'],
+      'UPDATE categories SET budget = ? WHERE id = ? AND account_id = ?',
+      ['$amount', '${category.id}', '${getAccountId()}'],
     );
     refreshCats();
     notifyListeners();
@@ -55,10 +48,17 @@ class CategoriesModel extends ChangeNotifier {
   }
 
   Future<int> handleCategoryAdd(Category category) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
     var rowId;
+    final db = await getDb();
+    int? acid = await getAccountId();
     await insertCategory(category).then((rowID) {
-      categories = getCategories();
       rowId = rowID;
+      db.rawUpdate('UPDATE categories SET account_id = ? WHERE id = ?', [
+        '$acid',
+        '$rowID',
+      ]);
+      categories = getCategories();
     });
     notifyListeners();
     return rowId;
@@ -74,21 +74,11 @@ class CategoriesModel extends ChangeNotifier {
       update = candidate.spent + tx.amount;
     }
 
-    final db = await openDatabase(
-      // Set the path to the database. Note: Using the `join` function from the
-      // `path` package is best practice to ensure the path is correctly
-      // constructed for each platform.
-      join(await getDatabasesPath(), 'budget_lite_database.db'),
-
-      // When the database is first created, create a table to store dogs.
-      // Set the version. This executes the onCreate function and provides a
-      // path to perform database upgrades and downgrades.
-      version: 1,
-    );
+    final db = await getDb();
 
     int count = await db.rawUpdate(
-      'UPDATE categories SET spent = ? WHERE id = ?',
-      ['$update', '${candidate.id}'],
+      'UPDATE categories SET spent = ? WHERE id = ? AND account_id = ?',
+      ['$update', '${candidate.id},${getAccountId()}'],
     );
     refreshCats();
     notifyListeners();
@@ -96,17 +86,31 @@ class CategoriesModel extends ChangeNotifier {
   }
 }
 
+class CategoryWithClickState extends Category {
+  bool clicked = false;
+  CategoryWithClickState({
+    required this.clicked,
+    required super.categoryName,
+    required super.budget,
+    required super.spent,
+    required super.accountId,
+    super.id,
+  });
+}
+
 class Category {
   final int? id;
   final String categoryName;
   final double budget;
   final double spent;
+  final int? accountId;
 
   Category({
     this.id,
     required this.categoryName,
     required this.budget,
     required this.spent,
+    this.accountId,
   });
 
   Map<String, Object> toMap() {
@@ -115,49 +119,32 @@ class Category {
       "category_name": categoryName,
       "budget": budget,
       "spent": spent,
+      'account_id': ?accountId,
     };
   }
 
   @override
   String toString() {
-    return "Category{id:$id,category_name:$categoryName,budget:$budget,spent:$spent}";
+    return "Category{id:$id,category_name:$categoryName,budget:$budget,spent:$spent.account_id:$accountId}";
   }
 }
 
 Future<int> insertCategory(Category category) async {
-  final db = await openDatabase(
-    // Set the path to the database. Note: Using the `join` function from the
-    // `path` package is best practice to ensure the path is correctly
-    // constructed for each platform.
-    join(await getDatabasesPath(), 'budget_lite_database.db'),
-    onCreate: (db, version) {
-      // Run the CREATE TABLE statement on the database.
-      return db.execute(
-        'CREATE TABLE transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT)',
-      );
-    },
-
-    // When the database is first created, create a table to store dogs.
-    // Set the version. This executes the onCreate function and provides a
-    // path to perform database upgrades and downgrades.
-    version: 1,
-  );
-  return await db.insert("categories", category.toMap());
+  final db = await getDb();
+  int ctID = await db.insert("categories", category.toMap());
+  await db.rawUpdate('UPDATE categories SET account_id = ? WHERE id = ?', [
+    '${getAccountId()}',
+    '$ctID',
+  ]);
+  return ctID;
 }
 
 Future<List<Category>> getCategories() async {
-  final db = await openDatabase(
-    // Set the path to the database. Note: Using the `join` function from the
-    // `path` package is best practice to ensure the path is correctly
-    // constructed for each platform.
-    join(await getDatabasesPath(), 'budget_lite_database.db'),
-
-    // When the database is first created, create a table to store dogs.
-    // Set the version. This executes the onCreate function and provides a
-    // path to perform database upgrades and downgrades.
-    version: 1,
+  final db = await getDb();
+  final List<Map<String, Object?>> categoryMaps = await db.rawQuery(
+    "SELECT * FROM categories WHERE account_id = ?",
+    ['${getAccountId()}'],
   );
-  final List<Map<String, Object?>> categoryMaps = await db.query("categories");
   log("found ${categoryMaps.length} categories");
   return [
     for (final {
@@ -165,6 +152,7 @@ Future<List<Category>> getCategories() async {
           "category_name": categoryName as String,
           "budget": budget as double,
           "spent": spent as double,
+          'account_id': accountId as int,
         }
         in categoryMaps)
       Category(
@@ -172,28 +160,33 @@ Future<List<Category>> getCategories() async {
         budget: budget,
         spent: spent,
         id: id,
+        accountId: accountId,
       ),
   ];
 }
 
 Future<List<int>> insertCategories(List<Category> categories) async {
-  final db = await openDatabase(
-    // Set the path to the database. Note: Using the `join` function from the
-    // `path` package is best practice to ensure the path is correctly
-    // constructed for each platform.
-    join(await getDatabasesPath(), 'budget_lite_database.db'),
-
-    // When the database is first created, create a table to store dogs.
-    // Set the version. This executes the onCreate function and provides a
-    // path to perform database upgrades and downgrades.
-    version: 1,
-  );
+  final db = await getDb();
   List<int> rwIds = [];
-  await db.transaction((tx) async {
-    for (Category cat in categories) {
-      var rwid = await tx.insert("categories", cat.toMap());
-      rwIds.add(rwid);
-    }
-  });
+  int? acId = await getAccountId();
+  await db
+      .transaction((tx) async {
+        for (Category cat in categories) {
+          var rwid = await tx.insert("categories", cat.toMap());
+          rwIds.add(rwid);
+        }
+      })
+      .whenComplete(() async {
+        await db.transaction((tx) async {
+          for (int id in rwIds) {
+            // var rwid = await tx.("categories", cat.toMap());
+            await tx.rawUpdate(
+              'UPDATE categories SET account_id = ? WHERE id = ?',
+              ['$acId', '$id'],
+            );
+          }
+        });
+      });
+
   return rwIds;
 }

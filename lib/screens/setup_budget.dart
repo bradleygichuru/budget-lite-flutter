@@ -5,41 +5,21 @@ import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class CategoryWithClickState extends Category {
-  bool clicked = false;
-  CategoryWithClickState({
-    required this.clicked,
-    required super.categoryName,
-    required super.budget,
-    required super.spent,
-    super.id,
-  });
-}
-
 class SetupBudget extends StatefulWidget {
   const SetupBudget({super.key});
+
   @override
   SetupBudgetState createState() => SetupBudgetState();
 }
 
-class SetupBudgetState extends State<SetupBudget> {
-  final _formKey = GlobalKey<FormState>();
-
-  TextEditingController newCategoryNameController = TextEditingController();
-
-  TextEditingController newBudgetAmountController = TextEditingController();
-
-  List<Category> categories = [
-    Category(categoryName: "Groceries", budget: 8000, spent: 0),
-    Category(categoryName: "Rent", budget: 15000, spent: 0),
-    Category(categoryName: "Transport", budget: 3000, spent: 0),
-  ];
-  List<CategoryWithClickState> commonCategories = [
+List<CategoryWithClickState> getWithClickstate(int id) {
+  return [
     CategoryWithClickState(
       clicked: false,
       categoryName: "Entertainment",
       budget: 5000,
       spent: 0,
+      accountId: null,
     ),
 
     CategoryWithClickState(
@@ -47,6 +27,7 @@ class SetupBudgetState extends State<SetupBudget> {
       categoryName: "Airtime",
       budget: 1000,
       spent: 0,
+      accountId: null,
     ),
 
     CategoryWithClickState(
@@ -54,6 +35,7 @@ class SetupBudgetState extends State<SetupBudget> {
       categoryName: "Emergency Fund",
       budget: 5000,
       spent: 0,
+      accountId: null,
     ),
 
     CategoryWithClickState(
@@ -61,6 +43,7 @@ class SetupBudgetState extends State<SetupBudget> {
       categoryName: "Health",
       budget: 3000,
       spent: 0,
+      accountId: null,
     ),
 
     CategoryWithClickState(
@@ -68,6 +51,7 @@ class SetupBudgetState extends State<SetupBudget> {
       categoryName: "Education",
       budget: 2000,
       spent: 0,
+      accountId: null,
     ),
 
     CategoryWithClickState(
@@ -75,8 +59,39 @@ class SetupBudgetState extends State<SetupBudget> {
       categoryName: "Shopping",
       budget: 4000,
       spent: 0,
+      accountId: null,
     ),
   ];
+}
+
+List<Category> genInitCat(int id) {
+  return [
+    Category(
+      categoryName: "Groceries",
+      budget: 8000,
+      spent: 0,
+      accountId: null,
+    ),
+    Category(categoryName: "Rent", budget: 15000, spent: 0, accountId: null),
+    Category(
+      categoryName: "Transport",
+      budget: 3000,
+      spent: 0,
+      accountId: null,
+    ),
+  ];
+}
+
+class SetupBudgetState extends State<SetupBudget> {
+  final _formKey = GlobalKey<FormState>();
+  int currAccountId = 0;
+
+  TextEditingController newCategoryNameController = TextEditingController();
+
+  TextEditingController newBudgetAmountController = TextEditingController();
+
+  List<Category> categories = [];
+  List<CategoryWithClickState> commonCategories = [];
 
   List<Widget> generateCommonCategories() {
     List<Widget> x = [];
@@ -101,6 +116,10 @@ class SetupBudgetState extends State<SetupBudget> {
                       categoryName: cat.categoryName,
                       budget: cat.budget,
                       spent: cat.spent,
+                      accountId: Provider.of<AuthModel>(
+                        context,
+                        listen: false,
+                      ).accountId!,
                     ),
                   );
                 });
@@ -148,6 +167,21 @@ class SetupBudgetState extends State<SetupBudget> {
     }
 
     return x;
+  }
+
+  @override
+  void initState() {
+    setAccountId();
+    categories = genInitCat(currAccountId);
+    commonCategories = getWithClickstate(currAccountId);
+  }
+
+  void setAccountId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      currAccountId = prefs.getInt('budget_lite_current_account_id')!;
+    });
   }
 
   @override
@@ -394,6 +428,7 @@ class SetupBudgetState extends State<SetupBudget> {
                                               setState(() {
                                                 categories.add(
                                                   Category(
+                                                    accountId: currAccountId,
                                                     spent: 0,
                                                     categoryName:
                                                         newCategoryNameController

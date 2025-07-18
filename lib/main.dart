@@ -6,6 +6,8 @@ import 'package:another_telephony/telephony.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data-models/goals.dart';
 import 'package:flutter_application_1/data-models/transactions.dart';
+import 'package:flutter_application_1/data-models/wallet.dart';
+import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/models/auth.dart';
 import 'package:flutter_application_1/models/categories.dart';
 import 'package:flutter_application_1/models/txs.dart';
@@ -14,6 +16,7 @@ import 'package:flutter_application_1/screens/envelopes_screen.dart';
 import 'package:flutter_application_1/screens/goals_page.dart';
 import 'package:flutter_application_1/screens/settings_page.dart';
 import 'package:flutter_application_1/screens/setup_budget.dart';
+import 'package:flutter_application_1/screens/wallet-screen.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:path/path.dart';
 import 'package:provider/provider.dart';
@@ -26,25 +29,129 @@ backgroundMessageHandler(SmsMessage message) async {
   var transaction = parseMpesa(message);
   log('from:${message.address} message:${message.body}');
 
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  int? account_id = await getAccountId();
   log('background_transaction:$transaction');
-  if (transaction != null) {
-    insertTransaction(
-      TransactionObj(
-        type: transaction['type'],
-        source: transaction['source'],
-        amount: transaction['amount'],
-        date: transaction['date'],
-      ),
-    );
-    AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: 10,
-        channelKey: 'basic_channel',
-        actionType: ActionType.Default,
-        title: 'New transaction',
-        body: 'Click to set transaction category',
-      ),
-    );
+  if (transaction != null && account_id != null) {
+    if (transaction['type'] == 'credit') {
+      insertTransaction(
+        TransactionObj(
+          desc: transaction['desc'],
+          type: transaction['type'],
+          source: transaction['source'],
+          amount: transaction['amount'],
+          date: transaction['date'],
+          category: 'credit',
+          accountId: account_id,
+        ),
+      );
+      creditDefaultWallet(
+        TransactionObj(
+          desc: transaction['desc'],
+          type: transaction['type'],
+          source: transaction['source'],
+          amount: transaction['amount'],
+          date: transaction['date'],
+          category: 'credit',
+          accountId: account_id,
+        ),
+      );
+
+      AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: 10,
+          channelKey: 'basic_channel',
+          actionType: ActionType.Default,
+          title: 'New transaction',
+          body: 'Mpesa account credited',
+        ),
+      );
+    } else if (transaction['type'] == "from saving") {
+      insertTransaction(
+        TransactionObj(
+          desc: transaction['desc'],
+          type: transaction['type'],
+          category: 'credit',
+          source: transaction['source'],
+          amount: transaction['amount'],
+          date: transaction['date'],
+          accountId: account_id,
+        ),
+      );
+      removeFromSavings(
+        TransactionObj(
+          desc: transaction['desc'],
+          type: transaction['type'],
+          source: transaction['source'],
+          category: 'credit',
+          amount: transaction['amount'],
+          date: transaction['date'],
+          accountId: account_id,
+        ),
+      );
+      AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: 10,
+          channelKey: 'basic_channel',
+          actionType: ActionType.Default,
+          title: 'New transaction',
+          body: 'transfered from Mshwari',
+        ),
+      );
+    } else if (transaction['type'] == "to saving") {
+      insertTransaction(
+        TransactionObj(
+          desc: transaction['desc'],
+          type: transaction['type'],
+          source: transaction['source'],
+          category: 'savings',
+          amount: transaction['amount'],
+          date: transaction['date'],
+          accountId: account_id,
+        ),
+      );
+      addToSavings(
+        TransactionObj(
+          desc: transaction['desc'],
+          type: transaction['type'],
+          source: transaction['source'],
+          category: 'savings',
+          amount: transaction['amount'],
+          date: transaction['date'],
+          accountId: account_id,
+        ),
+      );
+      AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: 10,
+          channelKey: 'basic_channel',
+          actionType: ActionType.Default,
+          title: 'New transaction',
+          body: 'transfered to Mshwari',
+        ),
+      );
+    } else {
+      insertTransaction(
+        TransactionObj(
+          desc: transaction['desc'],
+          type: transaction['type'],
+          source: transaction['source'],
+          amount: transaction['amount'],
+          date: transaction['date'],
+          accountId: account_id,
+        ),
+      );
+
+      AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: 10,
+          channelKey: 'basic_channel',
+          actionType: ActionType.Default,
+          title: 'New transaction',
+          body: 'Click to set transaction category',
+        ),
+      );
+    }
   }
 }
 
@@ -87,34 +194,13 @@ class NotificationController {
 Future<void> main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
-  final db = await openDatabase(
-    // Set the path to the database. Note: Using the `join` function from the
-    // `path` package is best practice to ensure the path is correctly
-    // constructed for each platform.
-    join(await getDatabasesPath(), 'budget_lite_database.db'),
-    onCreate: (db, version) {
-      // Run the CREATE TABLE statement on the database.
-      db.execute(
-        'CREATE TABLE IF NOT EXISTS transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT,category TEXT)',
-      );
-      db.execute(
-        "CREATE TABLE IF NOT EXISTS categories(id INTEGER PRIMARY KEY,budget REAL,category_name TEXT,spent REAL)",
-      );
 
-      db.execute(
-        "CREATE TABLE IF NOT EXISTS wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT)",
-      );
-
-      db.execute(
-        "CREATE TABLE IF NOT EXISTS goals(id INTEGER PRIMARY KEY,name TEXT,target_amount REAL,target_date TEXT,current_amount REAL)",
-      );
-    },
-
-    // When the database is first created, create a table to store dogs.
-    // Set the version. This executes the onCreate function and provides a
-    // path to perform database upgrades and downgrades.
-    version: 1,
-  );
+  // await deleteDatabase(
+  //   join(await getDatabasesPath(), 'budget_lite_database.db'),
+  // );
+  appDbInit();
+  // SharedPreferences prefs = await SharedPreferences.getInstance();
+  // prefs.remove("budget_lite_current_account_id");
 
   AwesomeNotifications().initialize(
     // set the icon to null if you want to use the default app icon
@@ -145,6 +231,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (context) => AuthModel()),
         ChangeNotifierProvider(create: (context) => CategoriesModel()),
         ChangeNotifierProvider(create: (context) => GoalModel()),
+        ChangeNotifierProvider(create: (context) => WalletModel()),
       ],
       child: const MyApp(),
     ),
@@ -249,16 +336,19 @@ class MyAppState extends State<MyApp> {
 
   void _onDetached() => log('detached');
 
-  void _onResumed() {
+  void _onResumed() async {
     log('resumed');
-    getUncategorizedTx().then((txs) {
-      if (txs.isNotEmpty) {
-        setState(() {
-          handleUncategorized = true;
-          unCategorizedTxs = Future.value(txs);
-        });
-      }
-    });
+    int? acId = await getAccountId();
+    if (acId != null) {
+      getUncategorizedTx().then((txs) {
+        if (txs.isNotEmpty) {
+          setState(() {
+            handleUncategorized = true;
+            unCategorizedTxs = Future.value(txs);
+          });
+        }
+      });
+    }
   }
 
   void _onInactive() => log('inactive');
@@ -266,18 +356,135 @@ class MyAppState extends State<MyApp> {
   void _onHidden() => log('hidden');
 
   void _onPaused() => log('paused');
+
   onMessage(SmsMessage message) async {
     log('from:${message.address} message:${message.body}');
     var transaction = parseMpesa(message);
 
     log('foreground_transaction:$transaction');
+
     if (transaction != null) {
-      Provider.of<TransactionsModel>(
-        context as BuildContext,
-        listen: false,
-      ).handleTxAdd(transaction).then((rwid) {
-        if (rwid != null) {}
-      });
+      if (transaction['type'] == 'credit') {
+        insertTransaction(
+          TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+            category: 'credit',
+            accountId: await getAccountId(),
+          ),
+        );
+        creditDefaultWallet(
+          TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+            category: 'credit',
+            accountId: await getAccountId(),
+          ),
+        );
+
+        AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: 10,
+            channelKey: 'basic_channel',
+            actionType: ActionType.Default,
+            title: 'New transaction',
+            body: 'Mpesa account credited',
+          ),
+        );
+      } else if (transaction['type'] == "from saving") {
+        insertTransaction(
+          TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            category: 'credit',
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+            accountId: await getAccountId(),
+          ),
+        );
+        removeFromSavings(
+          TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            category: 'credit',
+            amount: transaction['amount'],
+            date: transaction['date'],
+            accountId: await getAccountId(),
+          ),
+        );
+
+        AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: 10,
+            channelKey: 'basic_channel',
+            actionType: ActionType.Default,
+            title: 'New transaction',
+            body: 'transfered from Mshwari',
+          ),
+        );
+      } else if (transaction['type'] == "to saving") {
+        insertTransaction(
+          TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            category: 'savings',
+            amount: transaction['amount'],
+            date: transaction['date'],
+            accountId: await getAccountId(),
+          ),
+        );
+        addToSavings(
+          TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            category: 'savings',
+            amount: transaction['amount'],
+            date: transaction['date'],
+            accountId: await getAccountId(),
+          ),
+        );
+
+        AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: 10,
+            channelKey: 'basic_channel',
+            actionType: ActionType.Default,
+            title: 'New transaction',
+            body: 'transfered to Mshwari',
+          ),
+        );
+      } else {
+        insertTransaction(
+          TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+            accountId: await getAccountId(),
+          ),
+        );
+
+        AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: 10,
+            channelKey: 'basic_channel',
+            actionType: ActionType.Default,
+            title: 'New transaction',
+            body: 'Click to set transaction category',
+          ),
+        );
+      }
 
       // AwesomeNotifications().createNotification(
       //   content: NotificationContent(
@@ -630,79 +837,7 @@ class MyAppState extends State<MyApp> {
                                     EnvelopesView(),
                                     GoalsPage(),
 
-                                    /// Messages page
-                                    ListView.builder(
-                                      reverse: true,
-                                      itemCount: 2,
-                                      itemBuilder:
-                                          (BuildContext context, int index) {
-                                            if (index == 0) {
-                                              return Align(
-                                                alignment:
-                                                    Alignment.centerRight,
-                                                child: Container(
-                                                  margin: const EdgeInsets.all(
-                                                    8.0,
-                                                  ),
-                                                  padding: const EdgeInsets.all(
-                                                    8.0,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: theme
-                                                        .colorScheme
-                                                        .primary,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8.0,
-                                                        ),
-                                                  ),
-                                                  child: Text(
-                                                    'Hello',
-                                                    style: theme
-                                                        .textTheme
-                                                        .bodyLarge!
-                                                        .copyWith(
-                                                          color: theme
-                                                              .colorScheme
-                                                              .onPrimary,
-                                                        ),
-                                                  ),
-                                                ),
-                                              );
-                                            }
-                                            return Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: Container(
-                                                margin: const EdgeInsets.all(
-                                                  8.0,
-                                                ),
-                                                padding: const EdgeInsets.all(
-                                                  8.0,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color:
-                                                      theme.colorScheme.primary,
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        8.0,
-                                                      ),
-                                                ),
-                                                child: Text(
-                                                  'Hi!',
-                                                  style: theme
-                                                      .textTheme
-                                                      .bodyLarge!
-                                                      .copyWith(
-                                                        color: theme
-                                                            .colorScheme
-                                                            .onPrimary,
-                                                      ),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                    ),
-                                    SettingsPage(),
+                                    WalletScreen(),
 
                                     SettingsPage(),
                                   ][currentPageIndex],

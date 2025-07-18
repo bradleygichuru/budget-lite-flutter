@@ -3,9 +3,11 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/models/auth.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:flutter_application_1/screens/select_region_screen.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 
 class SignupForm extends StatefulWidget {
   const SignupForm({super.key});
@@ -47,6 +49,10 @@ class SignUpFormState extends State<SignupForm> {
       var decodedResponse = jsonDecode(response.body) as Map;
       if (decodedResponse["success"]) {
         log("request successful");
+        Provider.of<AuthModel>(
+          context,
+          listen: false,
+        ).createAccount(Account(email: emailController.value.text));
         if (context.mounted) {
           Navigator.push(
             context,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/models/auth.dart';
 import 'package:flutter_application_1/models/categories.dart';
 import 'package:flutter_application_1/models/txs.dart';
 import 'package:flutter_application_1/screens/dashboard_screen.dart';
@@ -226,6 +227,7 @@ class EnvelopeViewState extends State<EnvelopesView> {
                                                     ctM
                                                         .handleCategoryAdd(
                                                           Category(
+                                                            accountId: null,
                                                             spent: 0,
                                                             categoryName:
                                                                 newCategoryNameController

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data-models/goals.dart';
+import 'package:flutter_application_1/models/auth.dart';
 import 'package:provider/provider.dart';
 import 'dart:developer';
 
@@ -299,49 +300,77 @@ class GoalsPageState extends State<GoalsPage> {
                                                   onPressed: () {
                                                     if (_formKey.currentState!
                                                         .validate()) {
-                                                      gM
-                                                          .insertGoal(
-                                                            Goal(
-                                                              targetDate:
-                                                                  selectedDate
-                                                                      .toString(),
-                                                              currentAmount:
-                                                                  newCurrentAmountController
-                                                                      .text
-                                                                      .isNotEmpty
-                                                                  ? double.parse(
-                                                                      newCurrentAmountController
-                                                                          .text,
-                                                                    )
-                                                                  : 0,
-                                                              name:
-                                                                  newGoalNameController
-                                                                      .text,
-                                                              targetAmount:
-                                                                  double.parse(
-                                                                    newGoalAmountController
+                                                      if (selectedDate !=
+                                                              null &&
+                                                          Provider.of<
+                                                                    AuthModel
+                                                                  >(
+                                                                    context,
+                                                                    listen:
+                                                                        false,
+                                                                  )
+                                                                  .accountId !=
+                                                              null) {
+                                                        gM
+                                                            .insertGoal(
+                                                              Goal(
+                                                                accountId:
+                                                                    Provider.of<AuthModel>(
+                                                                      context,
+                                                                      listen:
+                                                                          false,
+                                                                    ).accountId!,
+                                                                targetDate:
+                                                                    selectedDate
+                                                                        .toString(),
+                                                                currentAmount:
+                                                                    newCurrentAmountController
+                                                                        .text
+                                                                        .isNotEmpty
+                                                                    ? double.parse(
+                                                                        newCurrentAmountController
+                                                                            .text,
+                                                                      )
+                                                                    : 0,
+                                                                name:
+                                                                    newGoalNameController
                                                                         .text,
+                                                                targetAmount:
+                                                                    double.parse(
+                                                                      newGoalAmountController
+                                                                          .text,
+                                                                    ),
+                                                              ),
+                                                            )
+                                                            .then((_) {
+                                                              if (mounted) {
+                                                                ScaffoldMessenger.of(
+                                                                  context,
+                                                                ).showSnackBar(
+                                                                  SnackBar(
+                                                                    content:
+                                                                        const Text(
+                                                                          "Goal created",
+                                                                        ),
                                                                   ),
-                                                            ),
-                                                          )
-                                                          .then((_) {
-                                                            if (mounted) {
-                                                              ScaffoldMessenger.of(
-                                                                context,
-                                                              ).showSnackBar(
-                                                                SnackBar(
-                                                                  content:
-                                                                      const Text(
-                                                                        "Goal created",
-                                                                      ),
-                                                                ),
-                                                              );
+                                                                );
 
-                                                              Navigator.pop(
-                                                                context,
-                                                              );
-                                                            }
-                                                          });
+                                                                Navigator.pop(
+                                                                  context,
+                                                                );
+                                                              }
+                                                            });
+                                                      } else {
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          SnackBar(
+                                                            content: const Text(
+                                                              "No date selected or account id missing",
+                                                            ),
+                                                          ),
+                                                        );
+                                                      }
                                                     }
                                                   },
                                                   child: Text(
