@@ -39,7 +39,7 @@ class CategoriesModel extends ChangeNotifier {
     final db = await getDb();
     int count = await db.rawUpdate(
       'UPDATE categories SET budget = ? WHERE id = ? AND account_id = ?',
-      ['$amount', '${category.id}', '${getAccountId()}'],
+      ['$amount', '${category.id}', '${await getAccountId()}'],
     );
     refreshCats();
     notifyListeners();
@@ -78,7 +78,7 @@ class CategoriesModel extends ChangeNotifier {
 
     int count = await db.rawUpdate(
       'UPDATE categories SET spent = ? WHERE id = ? AND account_id = ?',
-      ['$update', '${candidate.id},${getAccountId()}'],
+      ['$update', '${candidate.id},${await getAccountId()}'],
     );
     refreshCats();
     notifyListeners();
@@ -133,7 +133,7 @@ Future<int> insertCategory(Category category) async {
   final db = await getDb();
   int ctID = await db.insert("categories", category.toMap());
   await db.rawUpdate('UPDATE categories SET account_id = ? WHERE id = ?', [
-    '${getAccountId()}',
+    '${await getAccountId()}',
     '$ctID',
   ]);
   return ctID;
@@ -143,7 +143,7 @@ Future<List<Category>> getCategories() async {
   final db = await getDb();
   final List<Map<String, Object?>> categoryMaps = await db.rawQuery(
     "SELECT * FROM categories WHERE account_id = ?",
-    ['${getAccountId()}'],
+    ['${await getAccountId()}'],
   );
   log("found ${categoryMaps.length} categories");
   return [

@@ -95,8 +95,14 @@ class GoalModel extends ChangeNotifier {
     initGoals();
   }
   Future<List<Goal>> goals = Future.value([]);
-  void initGoals() {
-    goals = getGoals();
+  List<String> knownGoalNames = [];
+  void initGoals() async {
+    final goals = await getGoals();
+    if (goals.isNotEmpty) {
+      goals.forEach((goal) => this.knownGoalNames.add(goal.name));
+    }
+    this.goals = Future.value(goals);
+    notifyListeners();
   }
 
   Future<int> addCurrentAmount(Goal goal, double credit) async {
@@ -108,11 +114,30 @@ class GoalModel extends ChangeNotifier {
         : credit;
     int count = await db.rawUpdate(
       'UPDATE goals SET current_amount = ? WHERE id = ?,account_id ',
-      ['$update', '${goal.id}', '${getAccountId()}'],
+      ['$update', '${goal.id}', '${await getAccountId()}'],
     );
     goals = getGoals();
     notifyListeners();
     return count;
+  }
+
+  Future<int> deductCurrentAmount(Goal goal, double amount) async {
+    final db = await getDb();
+    if (goal.currentAmount != 0 && amount <= goal.currentAmount!) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      double update = goal.currentAmount != null
+          ? goal.currentAmount! + amount
+          : amount;
+      int count = await db.rawUpdate(
+        'UPDATE goals SET current_amount = ? WHERE id = ?,account_id ',
+        ['$update', '${goal.id}', '${await getAccountId()}'],
+      );
+      goals = getGoals();
+      notifyListeners();
+      return count;
+    } else {
+      throw GoalAmountError();
+    }
   }
 
   Future<int?> insertGoal(Goal goal) async {
@@ -127,3 +152,5 @@ class GoalModel extends ChangeNotifier {
     return rowId;
   }
 }
+
+class GoalAmountError implements Exception {}

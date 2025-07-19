@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_application_1/data-models/transactions.dart';
@@ -9,13 +10,13 @@ class Wallet {
   final int? id;
   final String name;
   final double balance;
-  final double? savings;
+  final double savings;
   final int? accountId;
 
   Wallet({
     required this.accountId,
     this.id,
-    this.savings,
+    required this.savings,
     required this.name,
     required this.balance,
   });
@@ -26,7 +27,7 @@ class Wallet {
       "name": name,
       "balance": balance,
       'account_id': ?accountId,
-      'savings': ?savings,
+      'savings': savings,
     };
   }
 
@@ -56,8 +57,10 @@ Future<int> creditDefaultWallet(TransactionObj tx) async {
 Future<int> addToSavings(TransactionObj tx) async {
   final db = await getDb();
   Wallet accountWallet = await getAccountWallet();
-  double newSavings = accountWallet.savings ?? 0 + tx.amount;
-  double balance = (accountWallet.balance) == 0
+
+  log('Adding  ${tx.toString()} to ${accountWallet.toString()}');
+  double newSavings = accountWallet.savings + tx.amount;
+  double balance = accountWallet.balance == 0.0
       ? 0
       : accountWallet.balance - tx.amount;
   int count = await db.rawUpdate(
@@ -70,7 +73,7 @@ Future<int> addToSavings(TransactionObj tx) async {
 Future<int> removeFromSavings(TransactionObj tx) async {
   final db = await getDb();
   Wallet accountWallet = await getAccountWallet();
-  double newSavings = accountWallet.savings ?? 0 - tx.amount;
+  double newSavings = accountWallet.savings - tx.amount;
   double balance = accountWallet.balance + tx.amount;
   int count = await db.rawUpdate(
     "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ?",
@@ -98,7 +101,6 @@ Future<Wallet> getAccountWallet() async {
 class WalletModel extends ChangeNotifier {
   Future<double> totalBalance = Future.value(0);
   Future<double> savings = Future.value(0);
-  Future<double> cash = Future.value(0);
   WalletModel() {
     initWallet();
   }
@@ -106,7 +108,6 @@ class WalletModel extends ChangeNotifier {
     final init = await getAccountWallet();
     totalBalance = Future.value(init.balance);
     savings = Future.value(init.savings);
-    cash = Future.value(init.balance - init.savings!);
   }
 
   void initWallet() async {
@@ -114,7 +115,6 @@ class WalletModel extends ChangeNotifier {
     log(init.toString());
     totalBalance = Future.value(init.balance);
     savings = Future.value(init.savings);
-    cash = Future.value(init.balance - init.savings!);
   }
 
   Future<Wallet> getAccountWallet() async {
@@ -132,4 +132,93 @@ class WalletModel extends ChangeNotifier {
       savings: walletMap.first['savings'] as double,
     );
   }
+
+  Future<int> creditDefaultWallet(TransactionObj tx) async {
+    final db = await getDb();
+    Wallet accountWallet = await getAccountWallet();
+
+    insertTransaction(tx);
+    double newBalance = accountWallet.balance + tx.amount;
+    int count = await db
+        .rawUpdate(
+          "UPDATE wallets SET balance = ? WHERE account_id = ?,name = ?",
+          ['$newBalance', '${await getAccountId()}', 'default'],
+        )
+        .whenComplete(() async {
+          final newWalletState = await getAccountWallet();
+          log(newWalletState.toString());
+          totalBalance = Future.value(newWalletState.balance);
+          savings = Future.value(newWalletState.savings);
+        });
+    notifyListeners();
+
+    return count;
+  }
+
+  Future<int> debitDefaultWallet(TransactionObj tx) async {
+    final db = await getDb();
+    var count;
+    Wallet accountWallet = await getAccountWallet();
+    if (accountWallet.balance > 0 && tx.amount <= accountWallet.balance) {
+      insertTransaction(tx);
+      double newBalance = accountWallet.balance - tx.amount;
+      count = await db
+          .rawUpdate(
+            "UPDATE wallets SET balance = ? WHERE account_id = ?,name = ?",
+            ['$newBalance', '${await getAccountId()}', 'default'],
+          )
+          .whenComplete(() async {
+            final newWalletState = await getAccountWallet();
+            log(newWalletState.toString());
+            totalBalance = Future.value(newWalletState.balance);
+            savings = Future.value(newWalletState.savings);
+          });
+      notifyListeners();
+    } else {
+      throw NotEnoughException();
+    }
+    return count;
+  }
+
+  Future<int> addToSavings(TransactionObj tx) async {
+    final db = await getDb();
+    Wallet accountWallet = await getAccountWallet();
+
+    log('Adding to ${accountWallet.toString()}');
+    double newSavings = accountWallet.savings + tx.amount;
+    double balance = accountWallet.balance == 0.0
+        ? 0
+        : accountWallet.balance - tx.amount;
+    int count = await db.rawUpdate(
+      "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ?",
+      ['$balance', '$newSavings', '${await getAccountId()}'],
+    );
+    return count;
+  }
+
+  Future<int?> removeFromSavings(TransactionObj tx) async {
+    final db = await getDb();
+    var count;
+    insertTransaction(tx);
+    Wallet accountWallet = await getAccountWallet();
+    if (accountWallet.savings >= tx.amount) {
+      double newSavings = accountWallet.savings - tx.amount;
+      double balance = accountWallet.balance + tx.amount;
+      count = await db.rawUpdate(
+        "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ?",
+        ['$balance', '$newSavings', '${await getAccountId()}'],
+      );
+      return count;
+    } else {
+      throw NotEnoughSavingsException();
+    }
+  }
+}
+
+class NotEnoughException implements Exception {
+  String errMsg() => "Not enough balance";
+}
+
+class NotEnoughSavingsException implements Exception {
+  String errMsg() => "Not enough balance";
 }

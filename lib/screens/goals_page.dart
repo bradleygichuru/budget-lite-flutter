@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data-models/goals.dart';
 import 'package:flutter_application_1/models/auth.dart';
+import 'package:flutter_application_1/screens/handle_savings.dart';
 import 'package:provider/provider.dart';
 import 'dart:developer';
 
@@ -297,29 +298,19 @@ class GoalsPageState extends State<GoalsPage> {
                                                           Color
                                                         >(Colors.blue.shade600),
                                                   ),
-                                                  onPressed: () {
+                                                  onPressed: () async {
                                                     if (_formKey.currentState!
                                                         .validate()) {
+                                                      int? accountId =
+                                                          await getAccountId();
                                                       if (selectedDate !=
                                                               null &&
-                                                          Provider.of<
-                                                                    AuthModel
-                                                                  >(
-                                                                    context,
-                                                                    listen:
-                                                                        false,
-                                                                  )
-                                                                  .accountId !=
-                                                              null) {
+                                                          accountId != null) {
                                                         gM
                                                             .insertGoal(
                                                               Goal(
                                                                 accountId:
-                                                                    Provider.of<AuthModel>(
-                                                                      context,
-                                                                      listen:
-                                                                          false,
-                                                                    ).accountId!,
+                                                                    accountId,
                                                                 targetDate:
                                                                     selectedDate
                                                                         .toString(),
@@ -650,9 +641,12 @@ class GoalsPageState extends State<GoalsPage> {
                                             ),
                                             FilledButton(
                                               onPressed: () {
-                                                dialogBuilder(
+                                                Navigator.push(
                                                   context,
-                                                  snapshot.data![index],
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        const HandleSavings(),
+                                                  ),
                                                 );
                                               },
 
