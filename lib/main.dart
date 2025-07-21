@@ -4,190 +4,121 @@ import 'dart:developer';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:another_telephony/telephony.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/data-models/goals.dart';
-import 'package:flutter_application_1/data-models/transactions.dart';
-import 'package:flutter_application_1/data-models/wallet.dart';
+import 'package:flutter_application_1/data_models/auth_data_model.dart';
+import 'package:flutter_application_1/data_models/transactions.dart';
+import 'package:flutter_application_1/data_models/wallet_data_model.dart';
+import 'package:flutter_application_1/screens/initial_balance.dart';
+import 'package:flutter_application_1/screens/wallet_screen.dart';
+import 'package:flutter_application_1/services/notification_controller.dart';
 import 'package:flutter_application_1/db/db.dart';
-import 'package:flutter_application_1/models/auth.dart';
-import 'package:flutter_application_1/models/categories.dart';
-import 'package:flutter_application_1/models/txs.dart';
 import 'package:flutter_application_1/screens/dashboard_screen.dart';
 import 'package:flutter_application_1/screens/envelopes_screen.dart';
 import 'package:flutter_application_1/screens/goals_page.dart';
 import 'package:flutter_application_1/screens/settings_page.dart';
-import 'package:flutter_application_1/screens/setup_budget.dart';
-import 'package:flutter_application_1/screens/wallet-screen.dart';
+import 'package:flutter_application_1/view_models/auth.dart';
+import 'package:flutter_application_1/view_models/categories.dart';
+import 'package:flutter_application_1/view_models/goals.dart';
+import 'package:flutter_application_1/view_models/txs.dart';
+import 'package:flutter_application_1/view_models/wallet.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:path/path.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite/sqflite.dart';
 
 @pragma('vm:entry-point')
 backgroundMessageHandler(SmsMessage message) async {
   //Handle background message
-  var transaction = parseMpesa(message);
-  log('from:${message.address} message:${message.body}');
+  String? currentRegion = await AuthModel().getRegion();
+  if (currentRegion == Country.kenya.name) {
+    var transaction = parseMpesa(message);
+    log('from:${message.address} message:${message.body}');
 
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  int? account_id = await getAccountId();
-  log('background_transaction:$transaction');
-  if (transaction != null && account_id != null) {
-    if (transaction['type'] == 'credit') {
-      insertTransaction(
-        TransactionObj(
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int? account_id = await getAccountId();
+    log('background_transaction:$transaction');
+    if (transaction != null && account_id != null) {
+      if (transaction['type'] == TxType.credit.val) {
+        TransactionObj tx = TransactionObj(
           desc: transaction['desc'],
           type: transaction['type'],
           source: transaction['source'],
           amount: transaction['amount'],
           date: transaction['date'],
           category: 'credit',
-          accountId: account_id,
-        ),
-      );
-      creditDefaultWallet(
-        TransactionObj(
-          desc: transaction['desc'],
-          type: transaction['type'],
-          source: transaction['source'],
-          amount: transaction['amount'],
-          date: transaction['date'],
-          category: 'credit',
-          accountId: account_id,
-        ),
-      );
+        );
 
-      AwesomeNotifications().createNotification(
-        content: NotificationContent(
-          id: 10,
-          channelKey: 'basic_channel',
-          actionType: ActionType.Default,
-          title: 'New transaction',
-          body: 'Mpesa account credited',
-        ),
-      );
-    } else if (transaction['type'] == "from saving") {
-      insertTransaction(
-        TransactionObj(
+        insertTransaction(tx);
+        creditDefaultWallet(tx);
+
+        AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: 10,
+            channelKey: 'basic_channel',
+            actionType: ActionType.Default,
+            title: 'New transaction',
+            body: 'Mpesa account credited',
+          ),
+        );
+      } else if (transaction['type'] == TxType.fromSaving.val) {
+        TransactionObj tx = TransactionObj(
           desc: transaction['desc'],
           type: transaction['type'],
           category: 'credit',
           source: transaction['source'],
           amount: transaction['amount'],
           date: transaction['date'],
-          accountId: account_id,
-        ),
-      );
-      removeFromSavings(
-        TransactionObj(
-          desc: transaction['desc'],
-          type: transaction['type'],
-          source: transaction['source'],
-          category: 'credit',
-          amount: transaction['amount'],
-          date: transaction['date'],
-          accountId: account_id,
-        ),
-      );
-      AwesomeNotifications().createNotification(
-        content: NotificationContent(
-          id: 10,
-          channelKey: 'basic_channel',
-          actionType: ActionType.Default,
-          title: 'New transaction',
-          body: 'transfered from Mshwari',
-        ),
-      );
-    } else if (transaction['type'] == "to saving") {
-      insertTransaction(
-        TransactionObj(
+        );
+        insertTransaction(tx);
+        removeFromSavings(tx);
+        AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: 10,
+            channelKey: 'basic_channel',
+            actionType: ActionType.Default,
+            title: 'New transaction',
+            body: 'transfered from Mshwari',
+          ),
+        );
+      } else if (transaction['type'] == TxType.toSaving.val) {
+        TransactionObj tx = TransactionObj(
           desc: transaction['desc'],
           type: transaction['type'],
           source: transaction['source'],
           category: 'savings',
           amount: transaction['amount'],
           date: transaction['date'],
-          accountId: account_id,
-        ),
-      );
-      addToSavings(
-        TransactionObj(
-          desc: transaction['desc'],
-          type: transaction['type'],
-          source: transaction['source'],
-          category: 'savings',
-          amount: transaction['amount'],
-          date: transaction['date'],
-          accountId: account_id,
-        ),
-      );
-      AwesomeNotifications().createNotification(
-        content: NotificationContent(
-          id: 10,
-          channelKey: 'basic_channel',
-          actionType: ActionType.Default,
-          title: 'New transaction',
-          body: 'transfered to Mshwari',
-        ),
-      );
-    } else {
-      insertTransaction(
-        TransactionObj(
+        );
+        insertTransaction(tx);
+        addToSavings(tx);
+        AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: 10,
+            channelKey: 'basic_channel',
+            actionType: ActionType.Default,
+            title: 'New transaction',
+            body: 'transfered to Mshwari',
+          ),
+        );
+      } else {
+        TransactionObj tx = TransactionObj(
           desc: transaction['desc'],
           type: transaction['type'],
           source: transaction['source'],
           amount: transaction['amount'],
           date: transaction['date'],
-          accountId: account_id,
-        ),
-      );
+        );
+        insertTransaction(tx);
 
-      AwesomeNotifications().createNotification(
-        content: NotificationContent(
-          id: 10,
-          channelKey: 'basic_channel',
-          actionType: ActionType.Default,
-          title: 'New transaction',
-          body: 'Click to set transaction category',
-        ),
-      );
+        AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: 10,
+            channelKey: 'basic_channel',
+            actionType: ActionType.Default,
+            title: 'New transaction',
+            body: 'Click to set transaction category',
+          ),
+        );
+      }
     }
-  }
-}
-
-class NotificationController {
-  /// Use this method to detect when a new notification or a schedule is created
-  @pragma("vm:entry-point")
-  static Future<void> onNotificationCreatedMethod(
-    ReceivedNotification receivedNotification,
-  ) async {
-    // Your code goes here
-  }
-
-  /// Use this method to detect every time that a new notification is displayed
-  @pragma("vm:entry-point")
-  static Future<void> onNotificationDisplayedMethod(
-    ReceivedNotification receivedNotification,
-  ) async {
-    // Your code goes here
-  }
-
-  /// Use this method to detect if the user dismissed a notification
-  @pragma("vm:entry-point")
-  static Future<void> onDismissActionReceivedMethod(
-    ReceivedAction receivedAction,
-  ) async {
-    // Your code goes here
-  }
-
-  /// Use this method to detect when the user taps on a notification or action button
-  @pragma("vm:entry-point")
-  static Future<void> onActionReceivedMethod(
-    ReceivedAction receivedAction,
-  ) async {
-    // Your code goes here
-
-    // Navigate into pages, avoiding to open the notification details page over another details page already opened
   }
 }
 
@@ -198,7 +129,7 @@ Future<void> main() async {
   // await deleteDatabase(
   //   join(await getDatabasesPath(), 'budget_lite_database.db'),
   // );
-  appDbInit();
+  await appDbInit();
   // SharedPreferences prefs = await SharedPreferences.getInstance();
   // prefs.remove("budget_lite_current_account_id");
 
@@ -229,6 +160,7 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (context) => TransactionsModel()),
         ChangeNotifierProvider(create: (context) => AuthModel()),
+
         ChangeNotifierProvider(create: (context) => CategoriesModel()),
         ChangeNotifierProvider(create: (context) => GoalModel()),
         ChangeNotifierProvider(create: (context) => WalletModel()),
@@ -306,14 +238,15 @@ class MyAppState extends State<MyApp> {
     // If the widget was removed from the tree while the asynchronous platform
     // message was in flight, we want to discard the reply rather than calling
     // setState to update our non-existent appearance.
+    if (await AuthModel().getRegion() == Country.kenya.name) {
+      final bool? result = await telephony.requestPhoneAndSmsPermissions;
 
-    final bool? result = await telephony.requestPhoneAndSmsPermissions;
-
-    if (result != null && result) {
-      telephony.listenIncomingSms(
-        onNewMessage: onMessage,
-        onBackgroundMessage: backgroundMessageHandler,
-      );
+      if (result != null && result) {
+        telephony.listenIncomingSms(
+          onNewMessage: onMessage,
+          onBackgroundMessage: backgroundMessageHandler,
+        );
+      }
     }
 
     if (!mounted) return;
@@ -349,6 +282,14 @@ class MyAppState extends State<MyApp> {
         }
       });
     }
+    if (mounted) {
+      Provider.of<TransactionsModel>(context, listen: false).refreshTx();
+      Provider.of<WalletModel>(context, listen: false).refresh();
+      Provider.of<CategoriesModel>(context, listen: false).refreshCats();
+      Provider.of<GoalModel>(context, listen: false).refreshGoals();
+
+      log('Refresh Models');
+    }
   }
 
   void _onInactive() => log('inactive');
@@ -358,147 +299,105 @@ class MyAppState extends State<MyApp> {
   void _onPaused() => log('paused');
 
   onMessage(SmsMessage message) async {
-    log('from:${message.address} message:${message.body}');
-    var transaction = parseMpesa(message);
+    String? currentRegion = await Provider.of<AuthModel>(
+      context,
+      listen: false,
+    ).getRegion();
+    if (currentRegion == Country.kenya.name) {
+      log('from:${message.address} message:${message.body}');
+      var transaction = parseMpesa(message);
 
-    log('foreground_transaction:$transaction');
-
-    if (transaction != null) {
-      if (transaction['type'] == 'credit') {
-        insertTransaction(
-          TransactionObj(
+      log('foreground_transaction:$transaction');
+      int? account_id = await getAccountId();
+      if (transaction != null && account_id != null) {
+        if (transaction['type'] == TxType.credit.val) {
+          TransactionObj tx = TransactionObj(
             desc: transaction['desc'],
             type: transaction['type'],
             source: transaction['source'],
             amount: transaction['amount'],
             date: transaction['date'],
             category: 'credit',
-            accountId: await getAccountId(),
-          ),
-        );
-        creditDefaultWallet(
-          TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-            category: 'credit',
-            accountId: await getAccountId(),
-          ),
-        );
+          );
 
-        AwesomeNotifications().createNotification(
-          content: NotificationContent(
-            id: 10,
-            channelKey: 'basic_channel',
-            actionType: ActionType.Default,
-            title: 'New transaction',
-            body: 'Mpesa account credited',
-          ),
-        );
-      } else if (transaction['type'] == "from saving") {
-        insertTransaction(
-          TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            category: 'credit',
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-            accountId: await getAccountId(),
-          ),
-        );
-        removeFromSavings(
-          TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            category: 'credit',
-            amount: transaction['amount'],
-            date: transaction['date'],
-            accountId: await getAccountId(),
-          ),
-        );
+          insertTransaction(tx);
+          creditDefaultWallet(tx);
 
-        AwesomeNotifications().createNotification(
-          content: NotificationContent(
-            id: 10,
-            channelKey: 'basic_channel',
-            actionType: ActionType.Default,
-            title: 'New transaction',
-            body: 'transfered from Mshwari',
-          ),
-        );
-      } else if (transaction['type'] == "to saving") {
-        insertTransaction(
-          TransactionObj(
+          AwesomeNotifications().createNotification(
+            content: NotificationContent(
+              id: 10,
+              channelKey: 'basic_channel',
+              actionType: ActionType.Default,
+              title: 'New transaction',
+              body: 'Mpesa account credited',
+            ),
+          );
+        } else if (transaction['type'] == TxType.fromSaving.val) {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            category: 'credit',
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          insertTransaction(tx);
+          removeFromSavings(tx);
+          AwesomeNotifications().createNotification(
+            content: NotificationContent(
+              id: 10,
+              channelKey: 'basic_channel',
+              actionType: ActionType.Default,
+              title: 'New transaction',
+              body: 'transfered from Mshwari',
+            ),
+          );
+        } else if (transaction['type'] == TxType.toSaving.val) {
+          TransactionObj tx = TransactionObj(
             desc: transaction['desc'],
             type: transaction['type'],
             source: transaction['source'],
             category: 'savings',
             amount: transaction['amount'],
             date: transaction['date'],
-            accountId: await getAccountId(),
-          ),
-        );
-        addToSavings(
-          TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            category: 'savings',
-            amount: transaction['amount'],
-            date: transaction['date'],
-            accountId: await getAccountId(),
-          ),
-        );
-
-        AwesomeNotifications().createNotification(
-          content: NotificationContent(
-            id: 10,
-            channelKey: 'basic_channel',
-            actionType: ActionType.Default,
-            title: 'New transaction',
-            body: 'transfered to Mshwari',
-          ),
-        );
-      } else {
-        insertTransaction(
-          TransactionObj(
+          );
+          insertTransaction(tx);
+          addToSavings(tx);
+          AwesomeNotifications().createNotification(
+            content: NotificationContent(
+              id: 10,
+              channelKey: 'basic_channel',
+              actionType: ActionType.Default,
+              title: 'New transaction',
+              body: 'transfered to Mshwari',
+            ),
+          );
+        } else {
+          TransactionObj tx = TransactionObj(
             desc: transaction['desc'],
             type: transaction['type'],
             source: transaction['source'],
             amount: transaction['amount'],
             date: transaction['date'],
-            accountId: await getAccountId(),
-          ),
-        );
+          );
+          insertTransaction(tx);
 
-        AwesomeNotifications().createNotification(
-          content: NotificationContent(
-            id: 10,
-            channelKey: 'basic_channel',
-            actionType: ActionType.Default,
-            title: 'New transaction',
-            body: 'Click to set transaction category',
-          ),
-        );
+          AwesomeNotifications().createNotification(
+            content: NotificationContent(
+              id: 10,
+              channelKey: 'basic_channel',
+              actionType: ActionType.Default,
+              title: 'New transaction',
+              body: 'Click to set transaction category',
+            ),
+          );
+        }
       }
+      if (mounted) {
+        Provider.of<TransactionsModel>(context, listen: false).refreshTx();
 
-      // AwesomeNotifications().createNotification(
-      //   content: NotificationContent(
-      //     id: 10,
-      //     channelKey: 'basic_channel',
-      //     actionType: ActionType.Default,
-      //     title: 'New transaction',
-      //     body: 'Click to set transaction category',
-      //   ),
-      // );
-
-      // setState(() {
-      //   initComposed = handleInsert(transaction);
-      // });
+        Provider.of<WalletModel>(context, listen: false).refresh();
+      }
     }
   }
 
@@ -590,13 +489,15 @@ class MyAppState extends State<MyApp> {
                                   bool categorizing = false;
 
                                   final String sign =
-                                      snapshot.data?[index].type == "spend"
+                                      snapshot.data?[index].type ==
+                                          TxType.spend.val
                                       ? '-'
                                       : '+';
                                   final double amount =
                                       snapshot.data![index].amount;
                                   Icon iconsToUse =
-                                      snapshot.data![index].type == "spend"
+                                      snapshot.data![index].type ==
+                                          TxType.spend.val
                                       ? Icon(
                                           size: 15,
                                           Icons.outbound,
@@ -633,7 +534,7 @@ class MyAppState extends State<MyApp> {
                                                           snapshot
                                                                   .data![index]
                                                                   .type ==
-                                                              "spend"
+                                                              TxType.spend.val
                                                           ? Colors.red
                                                           : Colors.green,
                                                     ),
@@ -820,26 +721,15 @@ class MyAppState extends State<MyApp> {
                                         selectedIcon: Icon(Icons.settings),
                                         label: 'Settings',
                                       ),
-                                      // NavigationDestination(
-                                      //   icon: Badge(
-                                      //     label: Text(''),
-                                      //     child: Icon(Icons.settings),
-                                      //   ),
-                                      //   label: 'Setup budget',
-                                      // ),
                                     ],
                                   ),
                                   body: <Widget>[
-                                    /// Home page
                                     Dashboard(),
-
-                                    /// Notifications page
                                     EnvelopesView(),
                                     GoalsPage(),
-
                                     WalletScreen(),
-
                                     SettingsPage(),
+                                    InitialBalance(),
                                   ][currentPageIndex],
                                 ),
                               );

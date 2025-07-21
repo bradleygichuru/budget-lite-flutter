@@ -270,19 +270,24 @@ class Landing extends StatelessWidget {
                   ),
                   Padding(
                     padding: EdgeInsets.all(20),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 100,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        fixedSize: Size.fromWidth(double.infinity),
+                      ),
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SignupForm(),
+                          ),
+                        );
+                      },
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 100,
 
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SignupForm(),
-                            ),
-                          );
-                        },
                         child: Card(
                           color: Colors.white,
                           child: Container(

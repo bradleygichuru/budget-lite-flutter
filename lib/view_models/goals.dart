@@ -1,7 +1,9 @@
 import 'dart:developer';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/goal_data_model.dart';
+import 'package:flutter_application_1/data_models/wallet_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,32 +37,53 @@ class GoalModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<int> addCurrentAmount(Goal goal, double credit) async {
-    final db = await getDb();
+  Future<int?> addCurrentAmount(String goalName, double credit) async {
+    try {
+      final db = await getDb();
+      List<Goal> goalsN = await getGoals();
+      double totalAllocatedToGoals = 0;
+      for (final goal in goalsN) {
+        totalAllocatedToGoals = totalAllocatedToGoals + goal.currentAmount;
+      }
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    double update = goal.currentAmount != null
-        ? goal.currentAmount! + credit
-        : credit;
-    int count = await db.rawUpdate(
-      'UPDATE goals SET current_amount = ? WHERE id = ?,account_id ',
-      ['$update', '${goal.id}', '${await getAccountId()}'],
-    );
-    goals = getGoals();
-    notifyListeners();
-    return count;
+      Wallet? currentWallet = await getAccountWallet();
+      if (currentWallet != null) {
+        if (currentWallet.savings > 0) {
+          if (credit > (currentWallet.savings - totalAllocatedToGoals)) {
+            throw ExceedsUnallocated();
+          } else {
+            Goal candidate = goalsN.firstWhere((goal) => goal.name == goalName);
+
+            double update = candidate.currentAmount + credit;
+            int count = await db.rawUpdate(
+              'UPDATE goals SET current_amount = ? WHERE id = ? AND account_id ',
+              ['$update', '${candidate.id}', '${await getAccountId()}'],
+            );
+            goals = getGoals();
+            notifyListeners();
+            return count;
+          }
+        } else {
+          throw NotEnoughSavingsException();
+        }
+      } else {
+        throw AccountWalletNotFoundException();
+      }
+    } catch (e) {
+      log('Error adding to goal:$e');
+    }
   }
 
-  Future<int> deductCurrentAmount(Goal goal, double amount) async {
+  Future<int> deductCurrentAmount(String goalName, double amount) async {
     final db = await getDb();
-    if (goal.currentAmount != 0 && amount <= goal.currentAmount!) {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      double update = goal.currentAmount != null
-          ? goal.currentAmount! + amount
-          : amount;
+
+    List<Goal> goalsN = await getGoals();
+    Goal candidate = goalsN.firstWhere((goal) => goal.name == goalName);
+    if (amount <= candidate.currentAmount) {
+      double update = candidate.currentAmount - amount;
       int count = await db.rawUpdate(
-        'UPDATE goals SET current_amount = ? WHERE id = ?,account_id ',
-        ['$update', '${goal.id}', '${await getAccountId()}'],
+        'UPDATE goals SET current_amount = ? WHERE id = ? AND account_id ',
+        ['$update', '${candidate.id}', '${await getAccountId()}'],
       );
       goals = getGoals();
       notifyListeners();

@@ -27,8 +27,17 @@ class CategoriesModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void refreshCats() {
-    categories = getCategories();
+  void refreshCats() async {
+    final categoriesRet = await getCategories();
+
+    if (categoriesRet.isEmpty) {
+      categories = Future.value([]);
+    } else {
+      List<String> newList = [];
+      categoriesRet.forEach((cat) => newList.add(cat.categoryName));
+      knownCategoryEntries = newList;
+      categories = Future.value(categoriesRet);
+    }
     notifyListeners();
   }
 
@@ -62,23 +71,30 @@ class CategoriesModel extends ChangeNotifier {
   }
 
   handleCatBalanceCompute(String cat, TransactionObj tx) async {
-    double update = 0;
-    List<Category> cts = await categories;
-    Category candidate = cts.firstWhere(
-      (category) => category.categoryName == cat,
-    );
-    if (tx.type == TxType.spend.val) {
-      update = candidate.spent + tx.amount;
+    try {
+      double update = 0;
+      List<Category> cts = await categories;
+      Category candidate = cts.firstWhere(
+        (category) => category.categoryName == cat,
+      );
+      if (tx.type == TxType.spend.val) {
+        update = candidate.spent + tx.amount;
+      } else {
+        update = candidate.spent;
+      }
+
+      final db = await getDb();
+
+      int count = await db.rawUpdate(
+        'UPDATE categories SET spent = ? WHERE id = ? AND account_id = ?',
+        ['$update', '${candidate.id},${await getAccountId()}'],
+      );
+      refreshCats();
+      notifyListeners();
+      return count;
+    } catch (e) {
+      log('Error computing new spent :$e');
+      rethrow;
     }
-
-    final db = await getDb();
-
-    int count = await db.rawUpdate(
-      'UPDATE categories SET spent = ? WHERE id = ? AND account_id = ?',
-      ['$update', '${candidate.id},${await getAccountId()}'],
-    );
-    refreshCats();
-    notifyListeners();
-    return count;
   }
 }

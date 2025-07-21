@@ -20,7 +20,7 @@ class AuthModel extends ChangeNotifier {
   late bool isLoggedIn;
   late bool isNewUser;
   late String? authToken;
-  late String? region;
+  late String region;
 
   Widget authWidget = SafeArea(
     child: Center(child: CircularProgressIndicator()),
@@ -53,9 +53,15 @@ class AuthModel extends ChangeNotifier {
         'SELECT * FROM accounts WHERE id = ?',
         ['${await getAccountId()}'],
       );
-      return accounts[0]['region'] as String;
+
+      log('Found ${accounts.length} Accounts');
+      for (final ac in accounts) {
+        log("Account:${ac.toString()}");
+      }
+      return accounts[0]['country'] as String;
     } catch (e) {
       log('Error getting region:$e');
+      rethrow;
     }
   }
 

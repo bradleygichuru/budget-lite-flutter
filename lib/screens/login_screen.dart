@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/models/auth.dart';
 import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/screens/signup_screen.dart';
+import 'package:flutter_application_1/view_models/auth.dart';
 
 import 'dart:developer';
 import 'package:http/http.dart' as http;
@@ -35,46 +35,6 @@ class LoginFormState extends State<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
-    Future<void> loginUser() async {
-      Uri url = Uri.parse("http://192.168.0.5:8000/api/v1/login");
-      final payload = <String, dynamic>{};
-      payload["email"] = emailController.value.text;
-      payload["password"] = passwordController.value.text;
-      payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
-      http.Response response = await http.post(url, body: payload);
-      log("resp:${response.body}");
-
-      var decodedResponse = jsonDecode(response.body) as Map;
-
-      if (decodedResponse["success"]) {
-        log("request successful");
-
-        Provider.of<AuthModel>(
-          context,
-          listen: false,
-        ).setAuthToken(decodedResponse["response"]["Bearer"]);
-
-        log("setting auth token");
-
-        Provider.of<AuthModel>(
-          context,
-          listen: false,
-        ).setAccountId(emailController.value.text);
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.setBool('isLoggedIn', true);
-        log(decodedResponse["response"]["Bearer"]);
-        if (context.mounted) {
-          Provider.of<AuthModel>(context, listen: false).refreshAuth();
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const MyApp()),
-          );
-        }
-      } else {
-        log("request failed");
-      }
-    }
-
     return MaterialApp(
       theme: ThemeData(
         colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
@@ -176,7 +136,43 @@ class LoginFormState extends State<LoginForm> {
                         onPressed: () {
                           if (_formKey.currentState!.validate()) {
                             log("signing user in");
-                            loginUser();
+                            Provider.of<AuthModel>(context, listen: false)
+                                .loginUser(
+                                  emailController.value.text,
+                                  passwordController.value.text,
+                                )
+                                .then((id) {
+                                  if (id != null) {
+                                    if (context.mounted) {
+                                      Provider.of<AuthModel>(
+                                        context,
+                                        listen: false,
+                                      ).refreshAuth();
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const MyApp(),
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text("Error Login in"),
+                                      ),
+                                    );
+                                  }
+                                })
+                                .catchError((e) {
+                                  log('Login Error:$e');
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text("Error Loging in"),
+                                      ),
+                                    );
+                                  }
+                                });
                           }
                         },
                         child: Row(

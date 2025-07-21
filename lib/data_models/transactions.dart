@@ -1,15 +1,23 @@
 import 'dart:developer';
 
 import 'package:another_telephony/telephony.dart';
+import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
-import 'package:flutter_application_1/models/auth.dart';
-import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 
 const String received = "received";
 const String paid = "paid to";
 const String sent = "sent to";
 const String transferred = "transferred";
+
+enum TxType {
+  spend('spend'),
+  credit('credit'),
+  fromSaving('from saving'),
+  toSaving("to saving");
+
+  const TxType(this.val);
+  final String val;
+}
 
 class TransactionObj {
   final int? id;
@@ -89,7 +97,7 @@ Future<List<TransactionObj>> getUncategorizedTx() async {
   final db = await getDb();
   final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
     "SELECT * from transactions WHERE category is null AND account_id = ?",
-    ['${getAccountId()}'],
+    ['${await getAccountId()}'],
   );
   log("found ${transactionMaps.length} uncategorized transaction");
   transactionMaps.forEach((tx) {
@@ -163,7 +171,7 @@ Future<List<TransactionObj>> getTransactions() async {
   log("Getting Transactions");
   final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
     'SELECT * FROM transactions WHERE account_id = ?',
-    ['${getAccountId()}'],
+    ['${await getAccountId()}'],
   );
   log("found ${transactionMaps.length} transaction");
   transactionMaps.forEach((tx) {
@@ -230,7 +238,7 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
 
       transaction['date'] = message.split(" on ")[1].split("at")[0].trim();
       transaction["amount"] = double.parse(amount);
-      transaction["type"] = "credit";
+      transaction["type"] = TxType.credit.val;
       transaction['desc'] = receivedArray[1].split('from')[1].split('at')[0];
 
       return transaction;
@@ -242,7 +250,7 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
 
       transaction["date"] = message.split(" on ")[1].split("at")[0];
       transaction["amount"] = double.parse(amount);
-      transaction["type"] = "spend";
+      transaction["type"] = TxType.spend.val;
       transaction['desc'] = paidArray[1].split('on')[0].trim();
 
       return transaction;
@@ -253,7 +261,7 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
 
       transaction["amount"] = double.parse(amount);
       transaction['date'] = message.split(" on ")[1].split("at")[0].trim();
-      transaction["type"] = "spend";
+      transaction["type"] = TxType.spend.val;
       transaction['desc'] = sentArray[1].split('at')[0].trim();
 
       return transaction;
@@ -262,9 +270,9 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
     if (message.contains(transferred)) {
       List<String> transferredArray = message.split(transferred);
       if (transferredArray[1].trim().split(' ')[0] == 'from') {
-        transaction["type"] = "from saving";
+        transaction["type"] = TxType.fromSaving.val;
       } else if (transferredArray[1].trim().split(' ')[0] == 'to') {
-        transaction["type"] = "to saving";
+        transaction["type"] = TxType.toSaving.val;
       }
       String amount = transferredArray[0]
           .split("Ksh")[1]

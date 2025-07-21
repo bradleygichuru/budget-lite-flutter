@@ -23,6 +23,22 @@ class WalletModel extends ChangeNotifier {
       totalBalance = Future.value(0);
       savings = Future.value(0);
     }
+    notifyListeners();
+  }
+
+  Future<int?> onBoaringWalletInit(double savings, double balance) async {
+    try {
+      final db = await getDb();
+      int updated = await db.rawUpdate(
+        'UPDATE wallets SET balance = ? , savings = ? WHERE account_id = ?',
+        [balance.toString(), savings.toString(), await getAccountId()],
+      );
+      notifyListeners();
+      return updated;
+    } catch (e) {
+      log('Error Performing Inital budget Init: $e');
+      rethrow;
+    }
   }
 
   void initWallet() async {

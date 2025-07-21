@@ -3,9 +3,9 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/models/auth.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:flutter_application_1/screens/select_region_screen.dart';
+import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
@@ -16,6 +16,7 @@ class SignupForm extends StatefulWidget {
 }
 
 class SignUpFormState extends State<SignupForm> {
+  final GlobalKey<ScaffoldState> signUpScaffoldKey = GlobalKey<ScaffoldState>();
   TextEditingController emailController = TextEditingController();
 
   TextEditingController passwordController = TextEditingController();
@@ -29,47 +30,13 @@ class SignUpFormState extends State<SignupForm> {
 
   @override
   Widget build(BuildContext context) {
-    Future<void> registerUser() async {
-      Uri url = Uri(
-        scheme: "http",
-        host: "192.168.0.5",
-        path: "api/v1/register",
-        port: 8000,
-      );
-      final payload = <String, dynamic>{};
-      payload["name"] = fullNameController.value.text;
-      payload["email"] = emailController.value.text;
-      payload["password"] = passwordController.value.text;
-      payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
-      payload["phone"] = phoneNumberController.value.text;
-      payload["password_confirmation"] = confirmPasswordController.value.text;
-
-      http.Response response = await http.post(url, body: payload);
-      log("resp:${response.body}");
-      var decodedResponse = jsonDecode(response.body) as Map;
-      if (decodedResponse["success"]) {
-        log("request successful");
-        Provider.of<AuthModel>(
-          context,
-          listen: false,
-        ).createAccount(Account(email: emailController.value.text));
-        if (context.mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SelectRegion()),
-          );
-        }
-      } else {
-        log("request failed");
-      }
-    }
-
     return MaterialApp(
       theme: ThemeData(
         colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
       ),
       home: SafeArea(
         child: Scaffold(
+          key: signUpScaffoldKey,
           body: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -223,7 +190,49 @@ class SignUpFormState extends State<SignupForm> {
                         onPressed: () {
                           if (_formKey.currentState!.validate()) {
                             log("registering user");
-                            registerUser();
+                            Provider.of<AuthModel>(context, listen: false)
+                                .registerUser(
+                                  fullNameController.value.text,
+                                  passwordController.value.text,
+                                  emailController.value.text,
+                                  phoneNumberController.value.text,
+                                  confirmPasswordController.value.text,
+                                )
+                                .then((acid) {
+                                  if (acid != null) {
+                                    if (context.mounted) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const SelectRegion(),
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: const Text(
+                                            "Error Signing Up",
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                })
+                                .catchError((e) {
+                                  log('SignUp Error:$e');
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text("Error Signing Up"),
+                                      ),
+                                    );
+                                  }
+                                });
                           }
                         },
                         child: Row(

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/models/auth.dart';
-import 'package:flutter_application_1/models/categories.dart';
+import 'package:flutter_application_1/data_models/categories_data_model.dart';
+import 'package:flutter_application_1/screens/initial_balance.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
+import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -174,6 +175,7 @@ class SetupBudgetState extends State<SetupBudget> {
     setAccountId();
     categories = genInitCat(currAccountId);
     commonCategories = getWithClickstate(currAccountId);
+    super.initState();
   }
 
   void setAccountId() async {
@@ -521,7 +523,7 @@ class SetupBudgetState extends State<SetupBudget> {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const LoginForm(),
+                                  builder: (context) => const InitialBalance(),
                                 ),
                               );
                             }
@@ -532,7 +534,7 @@ class SetupBudgetState extends State<SetupBudget> {
                         children: [
                           Icon(Icons.add),
                           Text(
-                            "Continue to App with (${categories.length} categories)",
+                            "Continue with (${categories.length} categories)",
                             style: TextStyle(color: Colors.white),
                           ),
                         ],
