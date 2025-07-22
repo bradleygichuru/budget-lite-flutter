@@ -62,6 +62,19 @@ Future<List<Category>> getCategories() async {
     ['${await getAccountId()}'],
   );
   log("found ${categoryMaps.length} categories");
+
+  categoryMaps.forEach((cat) {
+    log(
+      Category(
+        categoryName: cat['category_name'] as String,
+        budget: cat['budget'] as double,
+        spent: cat['spent'] as double,
+        id: cat['id'] as int,
+        accountId: cat['account_id'] as int,
+      ).toString(),
+    );
+  });
+
   return [
     for (final {
           "id": id as int,
@@ -105,4 +118,8 @@ Future<List<int>> insertCategories(List<Category> categories) async {
       });
 
   return rwIds;
+}
+
+class CategoryNotFoundError implements Exception {
+  String errMsg() => "Category not found";
 }

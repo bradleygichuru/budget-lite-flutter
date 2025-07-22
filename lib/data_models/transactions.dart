@@ -174,20 +174,20 @@ Future<List<TransactionObj>> getTransactions() async {
     ['${await getAccountId()}'],
   );
   log("found ${transactionMaps.length} transaction");
-  transactionMaps.forEach((tx) {
-    log(
-      TransactionObj(
-        id: tx["id"] as int,
-        type: tx["type"] as String,
-        amount: tx["amount"] as double,
-        source: tx["source"] as String,
-        date: tx["date"] as String,
-        category: tx["category"] as String?,
-        accountId: tx["account_id"] as int,
-        desc: tx['desc'] as String,
-      ).toString(),
-    );
-  });
+  // transactionMaps.forEach((tx) {
+  //   log(
+  //     TransactionObj(
+  //       id: tx["id"] as int,
+  //       type: tx["type"] as String,
+  //       amount: tx["amount"] as double,
+  //       source: tx["source"] as String,
+  //       date: tx["date"] as String,
+  //       category: tx["category"] as String?,
+  //       accountId: tx["account_id"] as int,
+  //       desc: tx['desc'] as String,
+  //     ).toString(),
+  //   );
+  // });
   if (transactionMaps.isNotEmpty) {
     for (final {
           'id': id as int,
@@ -288,3 +288,5 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
   }
   return null;
 }
+
+class TransactionCreationFailed implements Exception {}

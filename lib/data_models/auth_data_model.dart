@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum Country {
@@ -24,6 +26,9 @@ class Account {
 
 Future<int?> getAccountId() async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
+  log(
+    'Account id:${prefs.getInt("budget_lite_current_account_id").toString()}',
+  );
   return prefs.getInt("budget_lite_current_account_id");
 }
 

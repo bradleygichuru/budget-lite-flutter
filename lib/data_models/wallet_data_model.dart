@@ -125,7 +125,7 @@ class NotEnoughException implements Exception {
 }
 
 class NotEnoughSavingsException implements Exception {
-  String errMsg() => "Not enough balance";
+  String errMsg() => "Not enough savings";
 }
 
 class AccountWalletNotFoundException implements Exception {
