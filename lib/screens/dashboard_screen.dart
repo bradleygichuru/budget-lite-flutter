@@ -89,7 +89,7 @@ class DashboardState extends State<Dashboard> {
                           child: FutureBuilder<double>(
                             future: Provider.of<WalletModel>(
                               context,
-                              listen: false,
+                              listen: true,
                             ).totalBalance,
                             builder: (context, snapshot) {
                               if (snapshot.connectionState ==
@@ -181,60 +181,80 @@ class DashboardState extends State<Dashboard> {
                                 child: Card.outlined(
                                   color: Colors.white,
 
-                                  child: Column(
-                                    children: [
-                                      ListTile(
-                                        trailing: Icon(
-                                          Icons.category,
-                                          size: 15,
-                                        ),
-                                        title: Text(
-                                          x.categoryName,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w500,
+                                  child: Padding(
+                                    padding: EdgeInsets.all(6),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        ListTile(
+                                          trailing: Icon(
+                                            Icons.category,
+                                            size: 15,
                                           ),
-                                        ),
-                                        subtitle: Text(
-                                          'Ksh ${x.budget - x.spent} left',
-                                          style: TextStyle(
-                                            color: Colors.grey.shade600,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: EdgeInsets.symmetric(
-                                          vertical: 0,
-                                          horizontal: 10,
-                                        ),
-                                        child: LinearProgressIndicator(
-                                          borderRadius: BorderRadius.circular(
-                                            2,
-                                          ),
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                Colors.green.shade600,
-                                              ),
-                                          value: (x.spent / x.budget),
-                                        ),
-                                      ),
-                                      SafeArea(
-                                        child: ListTile(
-                                          subtitle: Text(
+                                          title: Text(
+                                            x.categoryName,
                                             style: TextStyle(
-                                              fontSize: 12,
-                                              backgroundColor: getEnvelopecolor(
-                                                x,
-                                              )["backgroundColor"],
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          subtitle: Text(
+                                            'Ksh ${x.budget - x.spent} left',
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: 0,
+                                            horizontal: 10,
+                                          ),
+                                          child: LinearProgressIndicator(
+                                            borderRadius: BorderRadius.circular(
+                                              2,
+                                            ),
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.green.shade600,
+                                                ),
+                                            value: (x.spent / x.budget),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: 5,
+                                            horizontal: 10,
+                                          ),
+                                          child: Container(
+                                            height: 25,
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
                                               color: getEnvelopecolor(
                                                 x,
-                                              )['textColor'],
+                                              )["backgroundColor"],
                                             ),
-                                            "${((x.budget - x.spent) / x.budget * 100)}% remaining",
+                                            child: Padding(
+                                              padding: EdgeInsets.all(3),
+                                              child: Text(
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  // backgroundColor: getEnvelopecolor(
+                                                  //   x,
+                                                  // )["backgroundColor"],
+                                                  color: getEnvelopecolor(
+                                                    x,
+                                                  )['textColor'],
+                                                ),
+                                                "${((x.budget - x.spent) / x.budget * 100)}% remaining",
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
