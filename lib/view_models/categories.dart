@@ -16,23 +16,20 @@ class CategoriesModel extends ChangeNotifier {
   Future<void> initCategories() async {
     final categoriesRet = await getCategories();
 
-    if (categoriesRet.isEmpty) {
-      categories = Future.value([]);
-    } else {
+    if (categoriesRet.isNotEmpty) {
       List<String> newList = [];
       categoriesRet.forEach((cat) => newList.add(cat.categoryName));
       knownCategoryEntries = newList;
       categories = Future.value(categoriesRet);
     }
+
     notifyListeners();
   }
 
   void refreshCats() async {
     final categoriesRet = await getCategories();
 
-    if (categoriesRet.isEmpty) {
-      categories = Future.value([]);
-    } else {
+    if (categoriesRet.isNotEmpty) {
       List<String> newList = [];
       categoriesRet.forEach((cat) => newList.add(cat.categoryName));
       knownCategoryEntries = newList;
@@ -70,27 +67,31 @@ class CategoriesModel extends ChangeNotifier {
     return rowId;
   }
 
-  handleCatBalanceCompute(String cat, TransactionObj tx) async {
+  Future<int?> handleCatBalanceCompute(String cat, TransactionObj tx) async {
     try {
-      double update = 0;
+      int? count;
       List<Category> cts = await categories;
-      Category candidate = cts.firstWhere(
+      Category? candidate = cts.firstWhere(
         (category) => category.categoryName == cat,
       );
-      if (tx.type == TxType.spend.val) {
-        update = candidate.spent + tx.amount;
+      if (candidate != null) {
+        if (tx.type == TxType.spend.val) {
+          log('deducting from category ${candidate.toString()}');
+          double update = candidate.spent + tx.amount;
+          log('new spent: $update');
+          final db = await getDb();
+
+          count = await db.rawUpdate(
+            'UPDATE categories SET spent = ? WHERE id = ? AND account_id = ?',
+            ['$update', '${candidate.id},${await getAccountId()}'],
+          );
+          refreshCats();
+          notifyListeners();
+          return count;
+        }
       } else {
-        update = candidate.spent;
+        throw CategoryNotFoundError();
       }
-
-      final db = await getDb();
-
-      int count = await db.rawUpdate(
-        'UPDATE categories SET spent = ? WHERE id = ? AND account_id = ?',
-        ['$update', '${candidate.id},${await getAccountId()}'],
-      );
-      refreshCats();
-      notifyListeners();
       return count;
     } catch (e) {
       log('Error computing new spent :$e');

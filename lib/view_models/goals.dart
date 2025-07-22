@@ -5,9 +5,7 @@ import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/goal_data_model.dart';
 import 'package:flutter_application_1/data_models/wallet_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
-import 'package:path/path.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:flutter_application_1/util/result_wraper.dart';
 
 class GoalModel extends ChangeNotifier {
   GoalModel() {
@@ -18,9 +16,11 @@ class GoalModel extends ChangeNotifier {
   void initGoals() async {
     final goals = await getGoals();
     if (goals.isNotEmpty) {
+      List<String> x = [];
       for (Goal goal in goals) {
-        knownGoalNames.add(goal.name);
+        x.add(goal.name);
       }
+      knownGoalNames = x;
     }
     this.goals = Future.value(goals);
     notifyListeners();
@@ -29,16 +29,20 @@ class GoalModel extends ChangeNotifier {
   void refreshGoals() async {
     final goals = await getGoals();
     if (goals.isNotEmpty) {
+      List<String> x = [];
       for (Goal goal in goals) {
-        knownGoalNames.add(goal.name);
+        x.add(goal.name);
       }
+
+      knownGoalNames = x;
     }
     this.goals = Future.value(goals);
     notifyListeners();
   }
 
-  Future<int?> addCurrentAmount(String goalName, double credit) async {
+  Future<Result<int>> addCurrentAmount(String goalName, double credit) async {
     try {
+      int? count;
       final db = await getDb();
       List<Goal> goalsN = await getGoals();
       double totalAllocatedToGoals = 0;
@@ -50,46 +54,54 @@ class GoalModel extends ChangeNotifier {
       if (currentWallet != null) {
         if (currentWallet.savings > 0) {
           if (credit > (currentWallet.savings - totalAllocatedToGoals)) {
-            throw ExceedsUnallocated();
+            return Result.error(ExceedsUnallocated());
           } else {
             Goal candidate = goalsN.firstWhere((goal) => goal.name == goalName);
 
             double update = candidate.currentAmount + credit;
-            int count = await db.rawUpdate(
-              'UPDATE goals SET current_amount = ? WHERE id = ? AND account_id ',
+            count = await db.rawUpdate(
+              'UPDATE goals SET current_amount = ? WHERE id = ? AND account_id = ?',
               ['$update', '${candidate.id}', '${await getAccountId()}'],
             );
             goals = getGoals();
             notifyListeners();
-            return count;
+            return Result.ok(count);
           }
         } else {
-          throw NotEnoughSavingsException();
+          return Result.error(NotEnoughSavingsException());
         }
       } else {
-        throw AccountWalletNotFoundException();
+        return Result.error(AccountWalletNotFoundException());
       }
-    } catch (e) {
-      log('Error adding to goal:$e');
+    } on Exception catch (e) {
+      log('error occured adding ammount to goal', error: e);
+      return Result.error(e);
     }
   }
 
-  Future<int> deductCurrentAmount(String goalName, double amount) async {
-    final db = await getDb();
+  Future<Result<int>> deductCurrentAmount(
+    String goalName,
+    double amount,
+  ) async {
+    try {
+      final db = await getDb();
 
-    List<Goal> goalsN = await getGoals();
-    Goal candidate = goalsN.firstWhere((goal) => goal.name == goalName);
-    if (amount <= candidate.currentAmount) {
-      double update = candidate.currentAmount - amount;
-      int count = await db.rawUpdate(
-        'UPDATE goals SET current_amount = ? WHERE id = ? AND account_id ',
-        ['$update', '${candidate.id}', '${await getAccountId()}'],
-      );
-      goals = getGoals();
-      notifyListeners();
-      return count;
-    } else {
-      throw GoalAmountError();
+      List<Goal> goalsN = await getGoals();
+      Goal candidate = goalsN.firstWhere((goal) => goal.name == goalName);
+      if (amount <= candidate.currentAmount) {
+        double update = candidate.currentAmount - amount;
+        int count = await db.rawUpdate(
+          'UPDATE goals SET current_amount = ? WHERE id = ? AND account_id=? ',
+          ['$update', '${candidate.id}', '${await getAccountId()}'],
+        );
+        goals = getGoals();
+        notifyListeners();
+        return Result.ok(count);
+      } else {
+        throw Result.error(GoalAmountError());
+      }
+    } on Exception catch (e) {
+      return Result.error(e);
     }
   }
 
