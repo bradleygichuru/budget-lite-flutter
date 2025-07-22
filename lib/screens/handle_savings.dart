@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data_models/goal_data_model.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
 import 'package:flutter_application_1/data_models/wallet_data_model.dart';
+import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/goals.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
@@ -27,9 +28,9 @@ class HandleBalanceState extends State<HandleSavings>
     with TickerProviderStateMixin {
   late final TabController _tabController;
 
-  final _creditfFormKey = GlobalKey<FormState>();
+  final _addFormKey = GlobalKey<FormState>();
 
-  final _debitfFormKey = GlobalKey<FormState>();
+  final _deductFormKey = GlobalKey<FormState>();
 
   TextEditingController amountController = TextEditingController();
 
@@ -625,7 +626,7 @@ class HandleBalanceState extends State<HandleSavings>
                                 child: Card.outlined(
                                   color: Colors.white,
                                   child: Form(
-                                    key: _creditfFormKey,
+                                    key: _addFormKey,
                                     child: Padding(
                                       padding: EdgeInsets.all(5),
                                       child: Column(
@@ -730,12 +731,13 @@ class HandleBalanceState extends State<HandleSavings>
                                                           Colors.black,
                                                         ),
                                                   ),
-                                                  onPressed: () {
-                                                    if (_debitfFormKey
-                                                        .currentState!
-                                                        .validate()) {
+                                                  onPressed: () async {
+                                                    if (_addFormKey
+                                                            .currentState!
+                                                            .validate() &&
+                                                        goal.isNotEmpty) {
                                                       try {
-                                                        gM
+                                                        Result add = await gM
                                                             .addCurrentAmount(
                                                               goal,
                                                               double.parse(
@@ -743,18 +745,20 @@ class HandleBalanceState extends State<HandleSavings>
                                                                     .value
                                                                     .text,
                                                               ),
-                                                            )
-                                                            .then((updateCols) {
-                                                              if (updateCols !=
+                                                            );
+                                                        switch (add) {
+                                                          case Ok():
+                                                            {
+                                                              if (add.value !=
                                                                   null) {
                                                                 Provider.of<
-                                                                      TransactionsModel
+                                                                      WalletModel
                                                                     >(
                                                                       context,
                                                                       listen:
                                                                           false,
                                                                     )
-                                                                    .refreshTx();
+                                                                    .refresh();
                                                                 ScaffoldMessenger.of(
                                                                   context,
                                                                 ).showSnackBar(
@@ -765,21 +769,64 @@ class HandleBalanceState extends State<HandleSavings>
                                                                         ),
                                                                   ),
                                                                 );
+                                                                break;
                                                               }
-                                                            });
-                                                      } on NotEnoughSavingsException {
-                                                        ScaffoldMessenger.of(
-                                                          context,
-                                                        ).showSnackBar(
-                                                          SnackBar(
-                                                            content: const Text(
-                                                              "Not enough savings in wallet",
-                                                            ),
-                                                          ),
-                                                        );
+                                                            }
+                                                          case Error<int>():
+                                                            {
+                                                              switch (add
+                                                                  .error) {
+                                                                case NotEnoughSavingsException():
+                                                                  {
+                                                                    ScaffoldMessenger.of(
+                                                                      context,
+                                                                    ).showSnackBar(
+                                                                      SnackBar(
+                                                                        content:
+                                                                            const Text(
+                                                                              "Not enough savings in wallet",
+                                                                            ),
+                                                                      ),
+                                                                    );
+                                                                    break;
+                                                                  }
+                                                                case ExceedsUnallocated():
+                                                                  {
+                                                                    ScaffoldMessenger.of(
+                                                                      context,
+                                                                    ).showSnackBar(
+                                                                      SnackBar(
+                                                                        content:
+                                                                            const Text(
+                                                                              "No savings to allocate All savings have been allocated to goals",
+                                                                            ),
+                                                                      ),
+                                                                    );
+                                                                    break;
+                                                                  }
+
+                                                                default:
+                                                                  {}
+                                                              }
+                                                            }
+                                                          default:
+                                                            {
+                                                              ScaffoldMessenger.of(
+                                                                context,
+                                                              ).showSnackBar(
+                                                                SnackBar(
+                                                                  content:
+                                                                      const Text(
+                                                                        "Error Occured",
+                                                                      ),
+                                                                ),
+                                                              );
+                                                            }
+                                                        }
                                                       } catch (e) {
                                                         log(
-                                                          'Error ${e.toString()}',
+                                                          'Error updating goal',
+                                                          error: e,
                                                         );
 
                                                         ScaffoldMessenger.of(
@@ -827,7 +874,7 @@ class HandleBalanceState extends State<HandleSavings>
                                 child: Card.outlined(
                                   color: Colors.white,
                                   child: Form(
-                                    key: _debitfFormKey,
+                                    key: _deductFormKey,
                                     child: Padding(
                                       padding: EdgeInsets.all(5),
                                       child: Column(
@@ -932,12 +979,13 @@ class HandleBalanceState extends State<HandleSavings>
                                                           Colors.black,
                                                         ),
                                                   ),
-                                                  onPressed: () {
-                                                    if (_debitfFormKey
-                                                        .currentState!
-                                                        .validate()) {
+                                                  onPressed: () async {
+                                                    if (_deductFormKey
+                                                            .currentState!
+                                                            .validate() &&
+                                                        goal.isNotEmpty) {
                                                       try {
-                                                        gM
+                                                        Result deduct = await gM
                                                             .deductCurrentAmount(
                                                               goal,
                                                               double.parse(
@@ -945,9 +993,12 @@ class HandleBalanceState extends State<HandleSavings>
                                                                     .value
                                                                     .text,
                                                               ),
-                                                            )
-                                                            .then((updateCols) {
-                                                              if (updateCols !=
+                                                            );
+                                                        switch (deduct) {
+                                                          case Ok():
+                                                            {
+                                                              if (deduct
+                                                                      .value !=
                                                                   null) {
                                                                 ScaffoldMessenger.of(
                                                                   context,
@@ -960,17 +1011,59 @@ class HandleBalanceState extends State<HandleSavings>
                                                                   ),
                                                                 );
                                                               }
-                                                            });
-                                                      } on GoalAmountError {
-                                                        ScaffoldMessenger.of(
-                                                          context,
-                                                        ).showSnackBar(
-                                                          SnackBar(
-                                                            content: const Text(
-                                                              "Not enough balance in wallet",
-                                                            ),
-                                                          ),
-                                                        );
+                                                              break;
+                                                            }
+                                                          case Error<int>():
+                                                            {
+                                                              switch (deduct
+                                                                  .error) {
+                                                                case GoalAmountError():
+                                                                  {
+                                                                    ScaffoldMessenger.of(
+                                                                      context,
+                                                                    ).showSnackBar(
+                                                                      SnackBar(
+                                                                        content:
+                                                                            const Text(
+                                                                              "Not enough balance in wallet",
+                                                                            ),
+                                                                      ),
+                                                                    );
+                                                                    break;
+                                                                  }
+
+                                                                default:
+                                                                  {
+                                                                    ScaffoldMessenger.of(
+                                                                      context,
+                                                                    ).showSnackBar(
+                                                                      SnackBar(
+                                                                        content:
+                                                                            const Text(
+                                                                              "Error Occured",
+                                                                            ),
+                                                                      ),
+                                                                    );
+                                                                    break;
+                                                                  }
+                                                              }
+                                                            }
+
+                                                          default:
+                                                            {
+                                                              ScaffoldMessenger.of(
+                                                                context,
+                                                              ).showSnackBar(
+                                                                SnackBar(
+                                                                  content:
+                                                                      const Text(
+                                                                        "Error Occured",
+                                                                      ),
+                                                                ),
+                                                              );
+                                                              break;
+                                                            }
+                                                        }
                                                       } catch (e) {
                                                         log(
                                                           'Error ${e.toString()}',
