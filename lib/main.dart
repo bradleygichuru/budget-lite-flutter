@@ -6,8 +6,6 @@ import 'package:another_telephony/telephony.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
-import 'package:flutter_application_1/data_models/wallet_data_model.dart';
-import 'package:flutter_application_1/screens/initial_balance.dart';
 import 'package:flutter_application_1/screens/wallet_screen.dart';
 import 'package:flutter_application_1/services/notification_controller.dart';
 import 'package:flutter_application_1/db/db.dart';
@@ -21,21 +19,22 @@ import 'package:flutter_application_1/view_models/goals.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:watch_it/watch_it.dart';
 
 @pragma('vm:entry-point')
 backgroundMessageHandler(SmsMessage message) async {
   //Handle background message
-  String? currentRegion = await AuthModel().getRegion();
+
+  TransactionsModel txM = di.get<TransactionsModel>();
+  WalletModel wM = di.get<WalletModel>();
+  String? currentRegion = await di.get<AuthModel>().getRegion();
   if (currentRegion == Country.kenya.name) {
     var transaction = parseMpesa(message);
     log('from:${message.address} message:${message.body}');
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int? account_id = await getAccountId();
+    int? accountId = await di.get<AuthModel>().getAccountId();
     log('background_transaction:$transaction');
-    if (transaction != null && account_id != null) {
+    if (transaction != null && accountId != null) {
       if (transaction['type'] == TxType.credit.val) {
         TransactionObj tx = TransactionObj(
           desc: transaction['desc'],
@@ -45,10 +44,7 @@ backgroundMessageHandler(SmsMessage message) async {
           date: transaction['date'],
           category: 'credit',
         );
-
-        insertTransaction(tx);
-        creditDefaultWallet(tx);
-
+        wM.creditDefaultWallet(tx);
         AwesomeNotifications().createNotification(
           content: NotificationContent(
             id: 10,
@@ -67,8 +63,7 @@ backgroundMessageHandler(SmsMessage message) async {
           amount: transaction['amount'],
           date: transaction['date'],
         );
-        insertTransaction(tx);
-        removeFromSavings(tx);
+        wM.removeFromSavings(tx);
         AwesomeNotifications().createNotification(
           content: NotificationContent(
             id: 10,
@@ -87,8 +82,7 @@ backgroundMessageHandler(SmsMessage message) async {
           amount: transaction['amount'],
           date: transaction['date'],
         );
-        insertTransaction(tx);
-        addToSavings(tx);
+        wM.addToSavings(tx);
         AwesomeNotifications().createNotification(
           content: NotificationContent(
             id: 10,
@@ -106,7 +100,7 @@ backgroundMessageHandler(SmsMessage message) async {
           amount: transaction['amount'],
           date: transaction['date'],
         );
-        insertTransaction(tx);
+        txM.insertTransaction(tx);
 
         AwesomeNotifications().createNotification(
           content: NotificationContent(
@@ -120,6 +114,19 @@ backgroundMessageHandler(SmsMessage message) async {
       }
     }
   }
+}
+
+void setup() {
+  //intialize changenotifier singletons
+  di.registerSingleton<TransactionsModel>(TransactionsModel());
+
+  di.registerSingleton<AuthModel>(AuthModel());
+
+  di.registerSingleton<CategoriesModel>(CategoriesModel());
+
+  di.registerSingleton<GoalModel>(GoalModel());
+
+  di.registerSingleton<WalletModel>(WalletModel());
 }
 
 Future<void> main() async {
@@ -155,19 +162,9 @@ Future<void> main() async {
     ],
     debug: true,
   );
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => TransactionsModel()),
-        ChangeNotifierProvider(create: (context) => AuthModel()),
 
-        ChangeNotifierProvider(create: (context) => CategoriesModel()),
-        ChangeNotifierProvider(create: (context) => GoalModel()),
-        ChangeNotifierProvider(create: (context) => WalletModel()),
-      ],
-      child: const MyApp(),
-    ),
-  );
+  setup();
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
@@ -186,6 +183,9 @@ class MyAppState extends State<MyApp> {
   late Timer pollingTx;
   late final AppLifecycleListener _listener;
   bool handleUncategorized = false;
+  AuthModel authM = di.get<AuthModel>();
+  CategoriesModel ctm = di.get<CategoriesModel>();
+  TransactionsModel txM = di.get<TransactionsModel>();
 
   @override
   void didChangeDependencies() {
@@ -238,7 +238,7 @@ class MyAppState extends State<MyApp> {
     // If the widget was removed from the tree while the asynchronous platform
     // message was in flight, we want to discard the reply rather than calling
     // setState to update our non-existent appearance.
-    if (await AuthModel().getRegion() == Country.kenya.name) {
+    if (await di.get<AuthModel>().getRegion() == Country.kenya.name) {
       final bool? result = await telephony.requestPhoneAndSmsPermissions;
 
       if (result != null && result) {
@@ -271,9 +271,9 @@ class MyAppState extends State<MyApp> {
 
   void _onResumed() async {
     log('resumed');
-    int? acId = await getAccountId();
+    int? acId = await di.get<AuthModel>().getAccountId();
     if (acId != null) {
-      getUncategorizedTx().then((txs) {
+      di.get<TransactionsModel>().getUncategorizedTx().then((txs) {
         if (txs.isNotEmpty) {
           setState(() {
             handleUncategorized = true;
@@ -283,10 +283,10 @@ class MyAppState extends State<MyApp> {
       });
     }
     if (mounted) {
-      Provider.of<TransactionsModel>(context, listen: false).refreshTx();
-      Provider.of<WalletModel>(context, listen: false).refresh();
-      Provider.of<CategoriesModel>(context, listen: false).refreshCats();
-      Provider.of<GoalModel>(context, listen: false).refreshGoals();
+      di.get<TransactionsModel>().refreshTx();
+      di.get<WalletModel>().refresh();
+      di.get<CategoriesModel>().refreshCats();
+      di.get<GoalModel>().refreshGoals();
 
       log('Refresh Models');
     }
@@ -299,17 +299,16 @@ class MyAppState extends State<MyApp> {
   void _onPaused() => log('paused');
 
   onMessage(SmsMessage message) async {
-    String? currentRegion = await Provider.of<AuthModel>(
-      context,
-      listen: false,
-    ).getRegion();
+    TransactionsModel txM = di.get<TransactionsModel>();
+    WalletModel wM = di.get<WalletModel>();
+    String? currentRegion = await di.get<AuthModel>().getRegion();
     if (currentRegion == Country.kenya.name) {
-      log('from:${message.address} message:${message.body}');
       var transaction = parseMpesa(message);
+      log('from:${message.address} message:${message.body}');
 
-      log('foreground_transaction:$transaction');
-      int? account_id = await getAccountId();
-      if (transaction != null && account_id != null) {
+      int? accountId = await di.get<AuthModel>().getAccountId();
+      log('background_transaction:$transaction');
+      if (transaction != null && accountId != null) {
         if (transaction['type'] == TxType.credit.val) {
           TransactionObj tx = TransactionObj(
             desc: transaction['desc'],
@@ -319,10 +318,7 @@ class MyAppState extends State<MyApp> {
             date: transaction['date'],
             category: 'credit',
           );
-
-          insertTransaction(tx);
-          creditDefaultWallet(tx);
-
+          wM.creditDefaultWallet(tx);
           AwesomeNotifications().createNotification(
             content: NotificationContent(
               id: 10,
@@ -341,8 +337,7 @@ class MyAppState extends State<MyApp> {
             amount: transaction['amount'],
             date: transaction['date'],
           );
-          insertTransaction(tx);
-          removeFromSavings(tx);
+          wM.removeFromSavings(tx);
           AwesomeNotifications().createNotification(
             content: NotificationContent(
               id: 10,
@@ -361,8 +356,7 @@ class MyAppState extends State<MyApp> {
             amount: transaction['amount'],
             date: transaction['date'],
           );
-          insertTransaction(tx);
-          addToSavings(tx);
+          wM.addToSavings(tx);
           AwesomeNotifications().createNotification(
             content: NotificationContent(
               id: 10,
@@ -380,7 +374,7 @@ class MyAppState extends State<MyApp> {
             amount: transaction['amount'],
             date: transaction['date'],
           );
-          insertTransaction(tx);
+          txM.insertTransaction(tx);
 
           AwesomeNotifications().createNotification(
             content: NotificationContent(
@@ -393,19 +387,11 @@ class MyAppState extends State<MyApp> {
           );
         }
       }
-      if (mounted) {
-        Provider.of<TransactionsModel>(context, listen: false).refreshTx();
-
-        Provider.of<WalletModel>(context, listen: false).refresh();
-      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = ThemeData(
-      colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
-    );
     return handleUncategorized
         ? MaterialApp(
             theme: ThemeData(
@@ -460,199 +446,187 @@ class MyAppState extends State<MyApp> {
                   ],
                 ),
               ),
-              body: Consumer2<CategoriesModel, TransactionsModel>(
-                builder: (context, ctM, txsM, child) {
+              body: FutureBuilder<List<TransactionObj>>(
+                future: unCategorizedTxs,
+                builder: (context, snapshot) {
                   final List<DropdownMenuEntry<String>> menuEntries =
                       UnmodifiableListView<DropdownMenuEntry<String>>(
-                        ctM.knownCategoryEntries.map<DropdownMenuEntry<String>>(
+                        ctm.knownCategoryEntries.map<DropdownMenuEntry<String>>(
                           (String name) => DropdownMenuEntry<String>(
                             value: name,
                             label: name,
                           ),
                         ),
                       );
+                  Widget x = CircularProgressIndicator();
+                  if (snapshot.connectionState == ConnectionState.done &&
+                      snapshot.hasData) {
+                    x = SafeArea(
+                      child: CustomScrollView(
+                        slivers: [
+                          SliverList.builder(
+                            itemCount: snapshot.data?.length,
+                            //shrinkWrap: true,
+                            itemBuilder: (context, index) {
+                              String category = '';
+                              bool categorizing = false;
 
-                  return FutureBuilder<List<TransactionObj>>(
-                    future: unCategorizedTxs,
-                    builder: (context, snapshot) {
-                      Widget x = CircularProgressIndicator();
-                      if (snapshot.connectionState == ConnectionState.done &&
-                          snapshot.hasData) {
-                        x = SafeArea(
-                          child: CustomScrollView(
-                            slivers: [
-                              SliverList.builder(
-                                itemCount: snapshot.data?.length,
-                                //shrinkWrap: true,
-                                itemBuilder: (context, index) {
-                                  String category = '';
-                                  bool categorizing = false;
+                              final String sign =
+                                  snapshot.data?[index].type == TxType.spend.val
+                                  ? '-'
+                                  : '+';
+                              final double amount =
+                                  snapshot.data![index].amount;
+                              Icon iconsToUse =
+                                  snapshot.data![index].type == TxType.spend.val
+                                  ? Icon(
+                                      size: 15,
+                                      Icons.outbound,
+                                      color: Colors.red,
+                                    )
+                                  : Icon(
+                                      size: 15,
+                                      Icons.call_received,
+                                      color: Colors.green,
+                                    );
 
-                                  final String sign =
-                                      snapshot.data?[index].type ==
-                                          TxType.spend.val
-                                      ? '-'
-                                      : '+';
-                                  final double amount =
-                                      snapshot.data![index].amount;
-                                  Icon iconsToUse =
-                                      snapshot.data![index].type ==
-                                          TxType.spend.val
-                                      ? Icon(
-                                          size: 15,
-                                          Icons.outbound,
-                                          color: Colors.red,
-                                        )
-                                      : Icon(
-                                          size: 15,
-                                          Icons.call_received,
-                                          color: Colors.green,
-                                        );
+                              return Card(
+                                color: Colors.white,
+                                child: Column(
+                                  children: [
+                                    SizedBox(
+                                      child: Card.filled(
+                                        color: Colors.white,
 
-                                  return Card(
-                                    color: Colors.white,
-                                    child: Column(
-                                      children: [
-                                        SizedBox(
-                                          child: Card.filled(
-                                            color: Colors.white,
-
-                                            child: Column(
-                                              children: [
-                                                ListTile(
-                                                  leading: iconsToUse,
-                                                  title: Text(
-                                                    snapshot
-                                                            .data![index]
-                                                            .category ??
-                                                        'Pending Category',
-                                                  ),
-                                                  subtitle: Text(
-                                                    '$sign KSh $amount',
-                                                    style: TextStyle(
-                                                      color:
-                                                          snapshot
-                                                                  .data![index]
-                                                                  .type ==
-                                                              TxType.spend.val
-                                                          ? Colors.red
-                                                          : Colors.green,
-                                                    ),
-                                                  ),
+                                        child: Column(
+                                          children: [
+                                            ListTile(
+                                              leading: iconsToUse,
+                                              title: Text(
+                                                snapshot
+                                                        .data![index]
+                                                        .category ??
+                                                    'Pending Category',
+                                              ),
+                                              subtitle: Text(
+                                                '$sign KSh $amount',
+                                                style: TextStyle(
+                                                  color:
+                                                      snapshot
+                                                              .data![index]
+                                                              .type ==
+                                                          TxType.spend.val
+                                                      ? Colors.red
+                                                      : Colors.green,
                                                 ),
-                                              ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsets.all(10),
+                                      child: Column(
+                                        children: [
+                                          Padding(
+                                            padding: EdgeInsets.all(8),
+                                            child: Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: Text(
+                                                "Select Category",
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        Padding(
-                                          padding: EdgeInsets.all(10),
-                                          child: Column(
-                                            children: [
-                                              Padding(
-                                                padding: EdgeInsets.all(8),
-                                                child: Align(
-                                                  alignment:
-                                                      Alignment.centerLeft,
-                                                  child: Text(
-                                                    "Select Category",
-                                                    style: TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              Padding(
-                                                padding: EdgeInsets.all(8),
-                                                child: DropdownMenu<String>(
-                                                  width: double.infinity,
-                                                  hintText: "select category",
-                                                  onSelected: (value) {
-                                                    if (value != null) {
-                                                      category = value;
-                                                    }
-                                                    // This is called when the user selects an item.
+                                          Padding(
+                                            padding: EdgeInsets.all(8),
+                                            child: DropdownMenu<String>(
+                                              width: double.infinity,
+                                              hintText: "select category",
+                                              onSelected: (value) {
+                                                if (value != null) {
+                                                  category = value;
+                                                }
+                                                // This is called when the user selects an item.
 
-                                                    log(
-                                                      "selected_category:$category",
-                                                    );
-                                                  },
-                                                  dropdownMenuEntries:
-                                                      menuEntries,
-                                                ),
-                                              ),
-                                              FilledButton(
-                                                style: ButtonStyle(
-                                                  backgroundColor:
-                                                      WidgetStatePropertyAll<
-                                                        Color
-                                                      >(Colors.black),
-                                                ),
-                                                onPressed: () {
-                                                  if (!categorizing) {
-                                                    if (category.isNotEmpty &&
+                                                log(
+                                                  "selected_category:$category",
+                                                );
+                                              },
+                                              dropdownMenuEntries: menuEntries,
+                                            ),
+                                          ),
+                                          FilledButton(
+                                            style: ButtonStyle(
+                                              backgroundColor:
+                                                  WidgetStatePropertyAll<Color>(
+                                                    Colors.black,
+                                                  ),
+                                            ),
+                                            onPressed: () {
+                                              if (!categorizing) {
+                                                if (category.isNotEmpty &&
+                                                    snapshot.data![index].id !=
+                                                        null) {
+                                                  txM
+                                                      .setTxCategory(
+                                                        category,
                                                         snapshot
-                                                                .data![index]
-                                                                .id !=
-                                                            null) {
-                                                      txsM
-                                                          .setTxCategory(
+                                                            .data![index]
+                                                            .id!,
+                                                      )
+                                                      .then((count) async {
+                                                        if (count > 0) {
+                                                          ctm.handleCatBalanceCompute(
                                                             category,
                                                             snapshot
-                                                                .data![index]
-                                                                .id!,
-                                                          )
-                                                          .then((count) async {
-                                                            if (count > 0) {
-                                                              ctM.handleCatBalanceCompute(
-                                                                category,
-                                                                snapshot
-                                                                    .data![index],
-                                                              );
-                                                              unCategorizedTxs =
-                                                                  getUncategorizedTx();
-                                                              txsM.refreshTx();
-                                                            }
-                                                          });
-                                                    }
-                                                  }
-                                                },
-                                                child: Text(
-                                                  "Categorize Transaction",
-                                                ),
-                                              ),
-
-                                              OutlinedButton(
-                                                style: ButtonStyle(
-                                                  backgroundColor:
-                                                      WidgetStatePropertyAll<
-                                                        Color
-                                                      >(Colors.white),
-                                                ),
-                                                onPressed: () {},
-                                                child: Text(
-                                                  "Cancel",
-                                                  style: TextStyle(
-                                                    color: Colors.black,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
+                                                                .data![index],
+                                                          );
+                                                          unCategorizedTxs = txM
+                                                              .getUncategorizedTx();
+                                                          txM.refreshTx();
+                                                        }
+                                                      });
+                                                }
+                                              }
+                                            },
+                                            child: Text(
+                                              "Categorize Transaction",
+                                            ),
                                           ),
-                                        ),
-                                      ],
+
+                                          OutlinedButton(
+                                            style: ButtonStyle(
+                                              backgroundColor:
+                                                  WidgetStatePropertyAll<Color>(
+                                                    Colors.white,
+                                                  ),
+                                            ),
+                                            onPressed: () {},
+                                            child: Text(
+                                              "Cancel",
+                                              style: TextStyle(
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  );
-                                },
-                              ),
-                            ],
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      }
-                      return x;
-                    },
-                  );
+                        ],
+                      ),
+                    );
+                  }
+                  return x;
                 },
               ),
             ),
@@ -661,88 +635,81 @@ class MyAppState extends State<MyApp> {
             theme: ThemeData(
               colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
             ),
-            home: Consumer<AuthModel>(
-              builder: (context, authM, child) {
-                return FutureBuilder<bool>(
-                  future: authM.handleAuth,
-                  builder:
-                      (BuildContext context, AsyncSnapshot<bool> snapshot) {
-                        Widget cont = Text("");
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          cont = SafeArea(
-                            child: Center(child: CircularProgressIndicator()),
-                          );
-                        }
-                        if (snapshot.connectionState == ConnectionState.done) {
-                          if (snapshot.hasData) {
-                            if (snapshot.requireData) {
-                              cont = authM.authWidget;
-                            } else {
-                              cont = SafeArea(
-                                child: Scaffold(
-                                  bottomNavigationBar: NavigationBar(
-                                    onDestinationSelected: (int index) {
-                                      setState(() {
-                                        currentPageIndex = index;
-                                      });
-                                    },
-                                    indicatorColor: Color(0xFFE0F2FE),
-                                    selectedIndex: currentPageIndex,
-                                    destinations: const <Widget>[
-                                      NavigationDestination(
-                                        selectedIcon: Icon(Icons.home),
+            home: FutureBuilder<bool>(
+              future: authM.handleAuth,
+              builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+                Widget cont = Text("");
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  cont = SafeArea(
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (snapshot.connectionState == ConnectionState.done) {
+                  if (snapshot.hasData) {
+                    if (snapshot.requireData) {
+                      cont = authM.authWidget;
+                    } else {
+                      cont = SafeArea(
+                        child: Scaffold(
+                          bottomNavigationBar: NavigationBar(
+                            onDestinationSelected: (int index) {
+                              setState(() {
+                                currentPageIndex = index;
+                              });
+                            },
+                            indicatorColor: Color(0xFFE0F2FE),
+                            selectedIndex: currentPageIndex,
+                            destinations: const <Widget>[
+                              NavigationDestination(
+                                selectedIcon: Icon(Icons.home),
 
-                                        icon: Icon(Icons.home_outlined),
-                                        label: 'DashBoard',
-                                      ),
-                                      NavigationDestination(
-                                        selectedIcon: Icon(Icons.mail),
-                                        icon: Icon(Icons.mail_outlined),
-                                        label: 'Budget',
-                                      ),
-                                      NavigationDestination(
-                                        selectedIcon: Icon(Icons.crisis_alert),
-                                        icon: Icon(Icons.crisis_alert_outlined),
-                                        label: 'Goals',
-                                      ),
-                                      NavigationDestination(
-                                        selectedIcon: Icon(
-                                          Icons.account_balance_wallet,
-                                        ),
-                                        icon: Icon(
-                                          Icons.account_balance_wallet_outlined,
-                                        ),
-                                        label: 'Wallet',
-                                      ),
-
-                                      NavigationDestination(
-                                        icon: Icon(Icons.settings_outlined),
-                                        selectedIcon: Icon(Icons.settings),
-                                        label: 'Settings',
-                                      ),
-                                    ],
-                                  ),
-                                  body: <Widget>[
-                                    Dashboard(),
-                                    EnvelopesView(),
-                                    GoalsPage(),
-                                    WalletScreen(),
-                                    SettingsPage(),
-                                    InitialBalance(),
-                                  ][currentPageIndex],
+                                icon: Icon(Icons.home_outlined),
+                                label: 'DashBoard',
+                              ),
+                              NavigationDestination(
+                                selectedIcon: Icon(Icons.mail),
+                                icon: Icon(Icons.mail_outlined),
+                                label: 'Budget',
+                              ),
+                              NavigationDestination(
+                                selectedIcon: Icon(Icons.crisis_alert),
+                                icon: Icon(Icons.crisis_alert_outlined),
+                                label: 'Goals',
+                              ),
+                              NavigationDestination(
+                                selectedIcon: Icon(
+                                  Icons.account_balance_wallet,
                                 ),
-                              );
-                            }
-                          }
-                        } else {
-                          if (snapshot.hasError) {
-                            cont = Text('Error: ${snapshot.error}');
-                          }
-                        }
-                        return cont;
-                      },
-                );
+                                icon: Icon(
+                                  Icons.account_balance_wallet_outlined,
+                                ),
+                                label: 'Wallet',
+                              ),
+
+                              NavigationDestination(
+                                icon: Icon(Icons.settings_outlined),
+                                selectedIcon: Icon(Icons.settings),
+                                label: 'Settings',
+                              ),
+                            ],
+                          ),
+                          body: <Widget>[
+                            Dashboard(),
+                            EnvelopesView(),
+                            GoalsPage(),
+                            WalletScreen(),
+                            SettingsPage(),
+                          ][currentPageIndex],
+                        ),
+                      );
+                    }
+                  }
+                } else {
+                  if (snapshot.hasError) {
+                    cont = Text('Error: ${snapshot.error}');
+                  }
+                }
+                return cont;
               },
             ),
           );

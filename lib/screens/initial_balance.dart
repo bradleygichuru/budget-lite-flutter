@@ -1,11 +1,10 @@
 import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
-import 'package:provider/provider.dart';
+import 'package:watch_it/watch_it.dart';
 
-class InitialBalance extends StatefulWidget {
+class InitialBalance extends StatefulWidget with WatchItStatefulWidgetMixin {
   const InitialBalance({super.key});
   @override
   InitialBalanceState createState() => InitialBalanceState();
@@ -204,7 +203,8 @@ class InitialBalanceState extends State<InitialBalance> {
                         fixedSize: Size.fromWidth(double.infinity),
                       ),
                       onPressed: () {
-                        Provider.of<WalletModel>(context, listen: false)
+                        di
+                            .get<WalletModel>()
                             .onBoaringWalletInit(
                               double.parse(savingsEC.value.text) ?? 0,
                               double.parse(balanceEC.value.text) ?? 0,

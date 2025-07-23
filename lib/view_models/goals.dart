@@ -6,6 +6,10 @@ import 'package:flutter_application_1/data_models/goal_data_model.dart';
 import 'package:flutter_application_1/data_models/wallet_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
+import 'package:flutter_application_1/view_models/auth.dart';
+import 'package:flutter_application_1/view_models/wallet.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:watch_it/watch_it.dart';
 
 class GoalModel extends ChangeNotifier {
   GoalModel() {
@@ -50,7 +54,9 @@ class GoalModel extends ChangeNotifier {
         totalAllocatedToGoals = totalAllocatedToGoals + goal.currentAmount;
       }
 
-      Wallet? currentWallet = await getAccountWallet();
+      Wallet? currentWallet = await GetIt.I
+          .get<WalletModel>()
+          .getAccountWallet();
       if (currentWallet != null) {
         if (currentWallet.savings > 0) {
           if (credit > (currentWallet.savings - totalAllocatedToGoals)) {
@@ -61,9 +67,14 @@ class GoalModel extends ChangeNotifier {
             double update = candidate.currentAmount + credit;
             count = await db.rawUpdate(
               'UPDATE goals SET current_amount = ? WHERE id = ? AND account_id = ?',
-              ['$update', '${candidate.id}', '${await getAccountId()}'],
+              [
+                '$update',
+                '${candidate.id}',
+                '${await GetIt.I.get<AuthModel>().getAccountId()}',
+              ],
             );
             goals = getGoals();
+            refreshGoals();
             notifyListeners();
             return Result.ok(count);
           }
@@ -92,9 +103,15 @@ class GoalModel extends ChangeNotifier {
         double update = candidate.currentAmount - amount;
         int count = await db.rawUpdate(
           'UPDATE goals SET current_amount = ? WHERE id = ? AND account_id=? ',
-          ['$update', '${candidate.id}', '${await getAccountId()}'],
+          [
+            '$update',
+            '${candidate.id}',
+            '${await GetIt.I.get<AuthModel>().getAccountId()}',
+          ],
         );
         goals = getGoals();
+
+        refreshGoals();
         notifyListeners();
         return Result.ok(count);
       } else {
@@ -103,6 +120,50 @@ class GoalModel extends ChangeNotifier {
     } on Exception catch (e) {
       return Result.error(e);
     }
+  }
+
+  Future<List<Goal>> getGoals() async {
+    List<Goal> x = [];
+
+    final db = await getDb();
+    final List<Map<String, Object?>> goalMaps = await db.rawQuery(
+      'SELECT * FROM goals WHERE account_id = ?',
+      ['${await GetIt.I.get<AuthModel>().getAccountId()}'],
+    );
+
+    log("found ${goalMaps.length} goals");
+    // log(goalMaps.toString());
+    for (var goal in goalMaps) {
+      log(
+        Goal(
+          id: goal['id'] as int?,
+          currentAmount: goal["current_amount"] as double,
+          name: goal['name'] as String,
+          targetAmount: goal['target_amount'] as double,
+          targetDate: goal['target_date'] as String,
+          accountId: goal['account_id'] as int,
+        ).toString(),
+      );
+    }
+    return [
+      for (final {
+            'id': id as int?,
+            'name': name as String,
+            'target_amount': targetAmount as double,
+            'target_date': targetDate as String,
+            'current_amount': currentAmount as double,
+            'account_id': accountId as int,
+          }
+          in goalMaps)
+        Goal(
+          id: id,
+          currentAmount: currentAmount,
+          name: name,
+          targetAmount: targetAmount,
+          targetDate: targetDate,
+          accountId: accountId,
+        ),
+    ];
   }
 
   Future<int?> insertGoal(Goal goal) async {
@@ -114,7 +175,7 @@ class GoalModel extends ChangeNotifier {
       goals = getGoals();
     });
     await db.rawUpdate('UPDATE goals SET account_id = ? WHERE id = ?', [
-      '${await getAccountId()}',
+      '${await GetIt.I.get<AuthModel>().getAccountId()}',
       '$rowId',
     ]);
 

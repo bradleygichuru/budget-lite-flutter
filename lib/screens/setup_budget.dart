@@ -3,8 +3,13 @@ import 'package:flutter_application_1/data_models/categories_data_model.dart';
 import 'package:flutter_application_1/screens/initial_balance.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_application_1/view_models/categories.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:watch_it/watch_it.dart';
+
+enum ResetDuration { annually, monthly }
+
+enum ResetAutomatic { auto, manual }
 
 class SetupBudget extends StatefulWidget {
   const SetupBudget({super.key});
@@ -86,7 +91,8 @@ List<Category> genInitCat(int id) {
 class SetupBudgetState extends State<SetupBudget> {
   final _formKey = GlobalKey<FormState>();
   int currAccountId = 0;
-
+  ResetDuration? _resetDuration = ResetDuration.monthly;
+  ResetAutomatic? _resetAutomatic = ResetAutomatic.auto;
   TextEditingController newCategoryNameController = TextEditingController();
 
   TextEditingController newBudgetAmountController = TextEditingController();
@@ -117,10 +123,7 @@ class SetupBudgetState extends State<SetupBudget> {
                       categoryName: cat.categoryName,
                       budget: cat.budget,
                       spent: cat.spent,
-                      accountId: Provider.of<AuthModel>(
-                        context,
-                        listen: false,
-                      ).accountId!,
+                      accountId: di.get<AuthModel>().accountId!,
                     ),
                   );
                 });
@@ -493,6 +496,105 @@ class SetupBudgetState extends State<SetupBudget> {
               SliverPadding(
                 padding: EdgeInsets.all(10),
                 sliver: SliverToBoxAdapter(
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      "Budget Settings",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.all(10),
+                sliver: SliverToBoxAdapter(
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: Card(
+                      color: Colors.grey.shade50,
+                      child: Column(
+                        children: [
+                          ListTile(
+                            title: Text('Monthly - Reset budget every month'),
+                            leading: Radio<ResetDuration>(
+                              value: ResetDuration.monthly,
+                              onChanged: (ResetDuration? value) {
+                                setState(() {
+                                  _resetDuration = value;
+                                });
+                              },
+                              groupValue: _resetDuration,
+                            ),
+                          ),
+
+                          ListTile(
+                            title: Text('Annually - Reset budget every year'),
+                            leading: Radio<ResetDuration>(
+                              value: ResetDuration.monthly,
+                              onChanged: (ResetDuration? value) {
+                                setState(() {
+                                  _resetDuration = value;
+                                });
+                              },
+                              groupValue: _resetDuration,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              SliverPadding(
+                padding: EdgeInsets.all(10),
+                sliver: SliverToBoxAdapter(
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: Card(
+                      color: Colors.grey.shade50,
+                      child: Column(
+                        children: [
+                          ListTile(
+                            title: Text(
+                              'Yes - Automatically reset all budgets',
+                            ),
+                            leading: Radio<ResetDuration>(
+                              value: ResetDuration.monthly,
+                              onChanged: (ResetDuration? value) {
+                                setState(() {
+                                  _resetDuration = value;
+                                });
+                              },
+                              groupValue: _resetDuration,
+                            ),
+                          ),
+
+                          ListTile(
+                            title: Text('No - Keep current spending amounts'),
+                            leading: Radio<ResetDuration>(
+                              value: ResetDuration.monthly,
+                              onChanged: (ResetDuration? value) {
+                                setState(() {
+                                  _resetDuration = value;
+                                });
+                              },
+                              groupValue: _resetDuration,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              SliverPadding(
+                padding: EdgeInsets.all(10),
+                sliver: SliverToBoxAdapter(
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.all(Radius.circular(4)),
@@ -511,24 +613,25 @@ class SetupBudgetState extends State<SetupBudget> {
                       onPressed: () async {
                         SharedPreferences prefs =
                             await SharedPreferences.getInstance();
-                        insertCategories(categories).then((ids) {
-                          if (ids.length == categories.length) {
-                            if (context.mounted) {
-                              prefs.setBool("isNewUser", false);
-                              Provider.of<AuthModel>(
-                                context,
-                                listen: false,
-                              ).refreshAuth();
+                        di
+                            .get<CategoriesModel>()
+                            .insertCategories(categories)
+                            .then((ids) {
+                              if (ids.length == categories.length) {
+                                if (context.mounted) {
+                                  prefs.setBool("isNewUser", false);
+                                  di.get<AuthModel>().refreshAuth();
 
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const InitialBalance(),
-                                ),
-                              );
-                            }
-                          }
-                        });
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const InitialBalance(),
+                                    ),
+                                  );
+                                }
+                              }
+                            });
                       },
                       child: Row(
                         children: [

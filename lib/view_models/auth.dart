@@ -8,6 +8,7 @@ import 'package:flutter_application_1/data_models/wallet_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/screens/landing.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
+import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
@@ -65,10 +66,9 @@ class AuthModel extends ChangeNotifier {
     }
   }
 
-  Future<int?> loginUser(String email, String password) async {
+  Future<Result<int>> loginUser(String email, String password) async {
     try {
       Uri url = Uri.parse("http://192.168.0.5:8000/api/v1/login");
-      int? id;
       final payload = <String, dynamic>{};
       payload["email"] = email;
       payload["password"] = password;
@@ -85,22 +85,32 @@ class AuthModel extends ChangeNotifier {
 
         log("setting auth token");
 
-        id = await setAccountId(email);
-        log('Login: setAccount id:$id');
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.setBool('isLoggedIn', true);
-        log(decodedResponse["response"]["Bearer"]);
-        return id;
+        Result getacid = await setAccountId(email);
+        switch (getacid) {
+          case Ok():
+            {
+              log('Login: setAccount id:${getacid.value}');
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              prefs.setBool('isLoggedIn', true);
+              log(decodedResponse["response"]["Bearer"]);
+              return Result.ok(getacid.value);
+            }
+          case Error():
+            {
+              return Result.error(getacid.error);
+            }
+        }
       } else {
         log("request failed");
+        return Result.error(ErrorLogginIn());
       }
-    } catch (e) {
+    } on Exception catch (e) {
       log('Login Error:$e');
-      rethrow;
+      return Result.error(e);
     }
   }
 
-  Future<int?> registerUser(
+  Future<Result<int>> registerUser(
     String name,
     String password,
     String email,
@@ -127,14 +137,24 @@ class AuthModel extends ChangeNotifier {
       var decodedResponse = jsonDecode(response.body) as Map;
       if (decodedResponse["success"]) {
         log("request successful");
-        var accountId = await createAccount(Account(email: email));
-        return accountId;
+        Result accountCreation = await createAccount(Account(email: email));
+        switch (accountCreation) {
+          case Ok():
+            {
+              return Result.ok(accountCreation.value);
+            }
+          case Error():
+            {
+              return Result.error(accountCreation.error);
+            }
+        }
       } else {
         log("request failed");
+        return Result.error(ErrorRegistering());
       }
-    } catch (e) {
+    } on Exception catch (e) {
       log('Signup Error :$e');
-      rethrow;
+      return Result.error(e);
     }
   }
 
@@ -182,7 +202,7 @@ class AuthModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<int?> createAccount(Account account) async {
+  Future<Result<int>> createAccount(Account account) async {
     try {
       final db = await getDb();
       log("Creating ${account.toString()}");
@@ -204,10 +224,10 @@ class AuthModel extends ChangeNotifier {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setInt("budget_lite_current_account_id", rowId);
       notifyListeners();
-      return rowId;
-    } catch (e) {
+      return Result.ok(rowId);
+    } on Exception catch (e) {
       log('Error creating account : $e');
-      rethrow;
+      return Result.error(e);
     }
   }
 
@@ -215,8 +235,9 @@ class AuthModel extends ChangeNotifier {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     prefs.setBool("isLoggedIn", false);
-    handleAuth = Future.value(true);
+
     removeAuthToken();
+    handleAuth = isSetLoggedIn();
 
     notifyListeners();
   }
@@ -238,9 +259,8 @@ class AuthModel extends ChangeNotifier {
     }
   }
 
-  Future<int?> setAccountId(String email) async {
+  Future<Result<int>> setAccountId(String email) async {
     try {
-      var id;
       final db = await getDb();
       final List<Map<String, Object?>> accounts = await db.rawQuery(
         "SELECT * FROM accounts WHERE email = ?",
@@ -257,18 +277,28 @@ class AuthModel extends ChangeNotifier {
             "budget_lite_current_account_id",
             accounts.first['id'] as int,
           );
-          accountId = accounts.first['id'] as int;
-          id = accountId;
-        } else {
-          throw AccountIdNullException();
-        }
-      }
+          int accountIdInner = accounts.first['id'] as int;
+          accountId = accountIdInner;
 
-      notifyListeners();
-      return id;
-    } catch (e) {
+          notifyListeners();
+          return Result.ok(accountIdInner);
+        } else {
+          return Result.error(AccountIdNullException());
+        }
+      } else {
+        return Result.error(NoAccountFound());
+      }
+    } on Exception catch (e) {
       log('SetAccountid:$e');
-      rethrow;
+      return Result.error(e);
     }
+  }
+
+  Future<int?> getAccountId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    log(
+      'Account id:${prefs.getInt("budget_lite_current_account_id").toString()}',
+    );
+    return prefs.getInt("budget_lite_current_account_id");
   }
 }

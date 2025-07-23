@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:developer';
-import 'package:another_telephony/telephony.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
 import 'package:flutter_application_1/data_models/wallet_data_model.dart';
-import 'package:flutter_application_1/data_models/categories_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
+import 'package:flutter_application_1/view_models/auth.dart';
+import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:watch_it/watch_it.dart';
 
 class WalletModel extends ChangeNotifier {
   Future<double> totalBalance = Future.value(0);
@@ -21,37 +21,6 @@ class WalletModel extends ChangeNotifier {
     if (init != null) {
       totalBalance = Future.value(init.balance);
       savings = Future.value(init.savings);
-    } else {
-      totalBalance = Future.value(0);
-      savings = Future.value(0);
-    }
-    notifyListeners();
-  }
-
-  Future<int?> onBoaringWalletInit(double savings, double balance) async {
-    try {
-      final db = await getDb();
-      int updated = await db.rawUpdate(
-        'UPDATE wallets SET balance = ? , savings = ? WHERE account_id = ?',
-        [balance.toString(), savings.toString(), await getAccountId()],
-      );
-      notifyListeners();
-      return updated;
-    } catch (e) {
-      log('Error Performing Inital budget Init: $e');
-      rethrow;
-    }
-  }
-
-  void initWallet() async {
-    Wallet? init = await getAccountWallet();
-    log(init.toString());
-    if (init != null) {
-      totalBalance = Future.value(init.balance);
-      savings = Future.value(init.savings);
-    } else {
-      totalBalance = Future.value(0);
-      savings = Future.value(0);
     }
     notifyListeners();
   }
@@ -62,9 +31,9 @@ class WalletModel extends ChangeNotifier {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       final List<Map<String, Object?>> walletMap = await db.rawQuery(
         "SELECT * FROM wallets WHERE account_id = ?",
-        ['${await getAccountId()}'],
+        [prefs.getInt("budget_lite_current_account_id")],
       );
-      int? accountId = await getAccountId();
+      int? accountId = await di.get<AuthModel>().getAccountId();
       var foundWalletMap = walletMap.firstWhere(
         (wallet) => wallet['account_id'] as int == accountId,
         orElse: () {
@@ -87,21 +56,53 @@ class WalletModel extends ChangeNotifier {
       );
     } catch (e) {
       log('Error getting account');
+    }
+  }
+
+  Future<int?> onBoaringWalletInit(double savings, double balance) async {
+    try {
+      final db = await getDb();
+      int updated = await db.rawUpdate(
+        'UPDATE wallets SET balance = ? , savings = ? WHERE account_id = ?',
+        [
+          balance.toString(),
+          savings.toString(),
+          await di.get<AuthModel>().getAccountId(),
+        ],
+      );
+      notifyListeners();
+      return updated;
+    } catch (e) {
+      log('Error Performing Inital budget Init: $e');
       rethrow;
     }
+  }
+
+  void initWallet() async {
+    Wallet? init = await getAccountWallet();
+    log(init.toString());
+    if (init != null) {
+      totalBalance = Future.value(init.balance);
+      savings = Future.value(init.savings);
+    }
+    notifyListeners();
   }
 
   Future<int?> creditDefaultWallet(TransactionObj tx) async {
     final db = await getDb();
     Wallet? accountWallet = await getAccountWallet();
 
-    insertTransaction(tx);
+    di.get<TransactionsModel>().insertTransaction(tx);
     if (accountWallet != null) {
       double newBalance = accountWallet.balance + tx.amount;
       int count = await db
           .rawUpdate(
             "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
-            ['$newBalance', '${await getAccountId()}', 'default'],
+            [
+              '$newBalance',
+              '${await di.get<AuthModel>().getAccountId()}',
+              'default',
+            ],
           )
           .whenComplete(() async {
             Wallet? newWalletState = await getAccountWallet();
@@ -111,6 +112,7 @@ class WalletModel extends ChangeNotifier {
               savings = Future.value(newWalletState.savings);
             }
           });
+      refresh();
       notifyListeners();
 
       return count;
@@ -130,11 +132,11 @@ class WalletModel extends ChangeNotifier {
             int txId = await txn.insert('transactions', tx.toMap());
             await txn.rawUpdate(
               'UPDATE transactions SET account_id = ? WHERE id = ? ',
-              ['${await getAccountId()}', '$txId'],
+              ['${await di.get<AuthModel>().getAccountId()}', '$txId'],
             );
             final List<Map<String, Object?>> categoryMaps = await txn.rawQuery(
               "SELECT * FROM categories WHERE account_id = ? AND category_name = ?",
-              ['${await getAccountId()}', tx.category],
+              ['${await di.get<AuthModel>().getAccountId()}', tx.category],
             );
             Map<String, Object?> y = categoryMaps.firstWhere(
               (cat) => cat['category_name'] as String == tx.category,
@@ -142,7 +144,11 @@ class WalletModel extends ChangeNotifier {
             double newBalance = accountWallet.balance - tx.amount;
             await txn.rawUpdate(
               "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
-              ['$newBalance', '${await getAccountId()}', 'default'],
+              [
+                '$newBalance',
+                '${await di.get<AuthModel>().getAccountId()}',
+                'default',
+              ],
             );
 
             double update = (y['spent'] as double) + tx.amount;
@@ -153,13 +159,14 @@ class WalletModel extends ChangeNotifier {
               [
                 '$update',
                 (y['id'] as int).toString(),
-                '${await getAccountId()}',
+                '${await di.get<AuthModel>().getAccountId()}',
               ],
             );
 
             log('Wallet debited');
             log('Wallet cols updated:$count');
             refresh();
+            notifyListeners();
             return count;
           });
         } else {
@@ -177,21 +184,27 @@ class WalletModel extends ChangeNotifier {
     }
   }
 
-  Future<int?> addToSavings(double amount) async {
+  Future<int?> addToSavings(TransactionObj tx) async {
     try {
       final db = await getDb();
       Wallet? accountWallet = await getAccountWallet();
+
+      di.get<TransactionsModel>().insertTransaction(tx);
       int? count;
       if (accountWallet != null) {
-        if (accountWallet.balance >= amount) {
+        if (accountWallet.balance >= tx.amount) {
           log('Adding to ${accountWallet.toString()}');
-          double newSavings = accountWallet.savings + amount;
+          double newSavings = accountWallet.savings + tx.amount;
           double balance = accountWallet.balance == 0.0
               ? 0
-              : accountWallet.balance - amount;
+              : accountWallet.balance - tx.amount;
           count = await db.rawUpdate(
             "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ?",
-            ['$balance', '$newSavings', '${await getAccountId()}'],
+            [
+              '$balance',
+              '$newSavings',
+              '${await di.get<AuthModel>().getAccountId()}',
+            ],
           );
           log('colums updated ($count)');
           refresh();
@@ -209,20 +222,25 @@ class WalletModel extends ChangeNotifier {
     }
   }
 
-  Future<int?> removeFromSavings(double amount) async {
+  Future<int?> removeFromSavings(TransactionObj tx) async {
     try {
       final db = await getDb();
       int? count;
+
+      di.get<TransactionsModel>().insertTransaction(tx);
       Wallet? accountWallet = await getAccountWallet();
       if (accountWallet != null) {
-        if (accountWallet.savings >= amount) {
-          double newSavings = accountWallet.savings - amount;
-          double balance = accountWallet.balance + amount;
+        if (accountWallet.savings >= tx.amount) {
+          double newSavings = accountWallet.savings - tx.amount;
+          double balance = accountWallet.balance + tx.amount;
           count = await db.rawUpdate(
             "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ?",
-            ['$balance', '$newSavings', '${await getAccountId()}'],
+            [
+              '$balance',
+              '$newSavings',
+              '${await di.get<AuthModel>().getAccountId()}',
+            ],
           );
-
           refresh();
           notifyListeners();
           return count;

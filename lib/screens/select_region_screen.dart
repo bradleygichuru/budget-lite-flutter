@@ -3,7 +3,7 @@ import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/screens/auto_import_info.dart';
 import 'package:flutter_application_1/screens/setup_budget.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
-import 'package:provider/provider.dart';
+import 'package:watch_it/watch_it.dart';
 
 class SelectRegion extends StatefulWidget {
   const SelectRegion({super.key});
@@ -12,6 +12,7 @@ class SelectRegion extends StatefulWidget {
 }
 
 class SelectRegionState extends State<SelectRegion> {
+  AuthModel aM = di.get<AuthModel>();
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -31,124 +32,118 @@ class SelectRegionState extends State<SelectRegion> {
             ),
             child: SingleChildScrollView(
               child: Center(
-                child: Consumer<AuthModel>(
-                  builder: (context, aM, child) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 16,
-                          ),
-                          child: Center(
-                            child: Icon(
-                              size: 50,
-                              Icons.chat_bubble,
-                              color: Color(0xFF2563EB),
-                            ),
-                          ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 16,
+                      ),
+                      child: Center(
+                        child: Icon(
+                          size: 50,
+                          Icons.chat_bubble,
+                          color: Color(0xFF2563EB),
                         ),
-                        Center(
-                          child: const Text(
-                            "Select Your Country",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 20,
-                            ),
-                          ),
+                      ),
+                    ),
+                    Center(
+                      child: const Text(
+                        "Select Your Country",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 20,
                         ),
+                      ),
+                    ),
 
-                        Center(
-                          child: const Text(
-                            "Choose your country to customize your experience",
-                          ),
-                        ),
+                    Center(
+                      child: const Text(
+                        "Choose your country to customize your experience",
+                      ),
+                    ),
 
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 16,
-                          ),
-                          child: Center(
-                            child: OutlinedButton(
-                              style: const ButtonStyle(
-                                backgroundColor: WidgetStatePropertyAll<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                              onPressed: () {
-                                aM.setRegion(Country.kenya.name).then((
-                                  updated,
-                                ) {
-                                  if (updated == 1) {
-                                    if (aM.region == Country.kenya.name) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              AutoImportInfoScreen(),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                });
-                                // Navigate back to first route when tapped.
-                              },
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Kenya  🇰🇪',
-                                    style: TextStyle(color: Colors.black),
-                                  ),
-                                ],
-                              ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 16,
+                      ),
+                      child: Center(
+                        child: OutlinedButton(
+                          style: const ButtonStyle(
+                            backgroundColor: WidgetStatePropertyAll<Color>(
+                              Colors.white,
                             ),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 16,
+                          onPressed: () {
+                            aM.setRegion(Country.kenya.name).then((updated) {
+                              if (updated == 1) {
+                                if (aM.region == Country.kenya.name) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          AutoImportInfoScreen(),
+                                    ),
+                                  );
+                                }
+                              }
+                            });
+                            // Navigate back to first route when tapped.
+                          },
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Kenya  🇰🇪',
+                                style: TextStyle(color: Colors.black),
+                              ),
+                            ],
                           ),
-                          child: Center(
-                            child: OutlinedButton(
-                              style: const ButtonStyle(
-                                backgroundColor: WidgetStatePropertyAll<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                              onPressed: () {
-                                // Navigate back to first route when tapped.
-                                aM.setRegion('other').then((updated) {
-                                  if (updated == 1) {
-                                    if (aM.region != Country.kenya.name) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => SetupBudget(),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                });
-                              },
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Other  🌍',
-                                    style: TextStyle(color: Colors.black),
-                                  ),
-                                ],
-                              ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 16,
+                      ),
+                      child: Center(
+                        child: OutlinedButton(
+                          style: const ButtonStyle(
+                            backgroundColor: WidgetStatePropertyAll<Color>(
+                              Colors.white,
                             ),
                           ),
+                          onPressed: () {
+                            // Navigate back to first route when tapped.
+                            aM.setRegion('other').then((updated) {
+                              if (updated == 1) {
+                                if (aM.region != Country.kenya.name) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SetupBudget(),
+                                    ),
+                                  );
+                                }
+                              }
+                            });
+                          },
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Other  🌍',
+                                style: TextStyle(color: Colors.black),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    );
-                  },
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

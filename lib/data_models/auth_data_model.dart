@@ -24,14 +24,22 @@ class Account {
   }
 }
 
-Future<int?> getAccountId() async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  log(
-    'Account id:${prefs.getInt("budget_lite_current_account_id").toString()}',
-  );
-  return prefs.getInt("budget_lite_current_account_id");
+class AccountIdNullException implements Exception {
+  @override
+  String toString() => "Account id null";
 }
 
-class AccountIdNullException implements Exception {
-  String errMsg() => "Account id null";
+class NoAccountFound implements Exception {
+  @override
+  String toString() => "Account id null";
+}
+
+class ErrorLogginIn implements Exception {
+  @override
+  String toString() => "Login error";
+}
+
+class ErrorRegistering implements Exception {
+  @override
+  String toString() => "Registering error";
 }

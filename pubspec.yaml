@@ -45,6 +45,8 @@ dependencies:
   awesome_notifications: ^0.10.1
   flutter_background_service: ^5.1.0
   google_fonts: ^6.2.1
+  get_it: ^8.0.3
+  watch_it: ^1.6.5
 
 dev_dependencies:
   flutter_test:
