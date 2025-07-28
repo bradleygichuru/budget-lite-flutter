@@ -46,6 +46,12 @@ class GoalModel extends ChangeNotifier {
 
   Future<Result<int>> addCurrentAmount(String goalName, double credit) async {
     try {
+      AuthModel aM;
+      if (!di.isRegistered<AuthModel>()) {
+        aM = AuthModel();
+      } else {
+        aM = di<AuthModel>();
+      }
       int? count;
       final db = await getDb();
       List<Goal> goalsN = await getGoals();
@@ -67,11 +73,7 @@ class GoalModel extends ChangeNotifier {
             double update = candidate.currentAmount + credit;
             count = await db.rawUpdate(
               'UPDATE goals SET current_amount = ? WHERE id = ? AND account_id = ?',
-              [
-                '$update',
-                '${candidate.id}',
-                '${await GetIt.I.get<AuthModel>().getAccountId()}',
-              ],
+              ['$update', '${candidate.id}', '${await aM.getAccountId()}'],
             );
             goals = getGoals();
             refreshGoals();
@@ -95,6 +97,12 @@ class GoalModel extends ChangeNotifier {
     double amount,
   ) async {
     try {
+      AuthModel aM;
+      if (!di.isRegistered<AuthModel>()) {
+        aM = AuthModel();
+      } else {
+        aM = di<AuthModel>();
+      }
       final db = await getDb();
 
       List<Goal> goalsN = await getGoals();
@@ -103,11 +111,7 @@ class GoalModel extends ChangeNotifier {
         double update = candidate.currentAmount - amount;
         int count = await db.rawUpdate(
           'UPDATE goals SET current_amount = ? WHERE id = ? AND account_id=? ',
-          [
-            '$update',
-            '${candidate.id}',
-            '${await GetIt.I.get<AuthModel>().getAccountId()}',
-          ],
+          ['$update', '${candidate.id}', '${await aM.getAccountId()}'],
         );
         goals = getGoals();
 
@@ -125,10 +129,16 @@ class GoalModel extends ChangeNotifier {
   Future<List<Goal>> getGoals() async {
     List<Goal> x = [];
 
+    AuthModel aM;
+    if (!di.isRegistered<AuthModel>()) {
+      aM = AuthModel();
+    } else {
+      aM = di<AuthModel>();
+    }
     final db = await getDb();
     final List<Map<String, Object?>> goalMaps = await db.rawQuery(
       'SELECT * FROM goals WHERE account_id = ?',
-      ['${await GetIt.I.get<AuthModel>().getAccountId()}'],
+      ['${await aM.getAccountId()}'],
     );
 
     log("found ${goalMaps.length} goals");
@@ -167,6 +177,12 @@ class GoalModel extends ChangeNotifier {
   }
 
   Future<int?> insertGoal(Goal goal) async {
+    AuthModel aM;
+    if (!di.isRegistered<AuthModel>()) {
+      aM = AuthModel();
+    } else {
+      aM = di<AuthModel>();
+    }
     var rowId;
     final db = await getDb();
     log("inserting goal ${goal.toString()}");
@@ -175,7 +191,7 @@ class GoalModel extends ChangeNotifier {
       goals = getGoals();
     });
     await db.rawUpdate('UPDATE goals SET account_id = ? WHERE id = ?', [
-      '${await GetIt.I.get<AuthModel>().getAccountId()}',
+      '${await aM.getAccountId()}',
       '$rowId',
     ]);
 

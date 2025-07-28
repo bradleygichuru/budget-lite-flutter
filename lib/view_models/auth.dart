@@ -9,6 +9,7 @@ import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/screens/landing.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
@@ -16,16 +17,37 @@ class AuthModel extends ChangeNotifier {
   AuthModel() {
     initAuth();
   }
+  String email = '';
   int? accountId;
+  late DateTime date;
   late Future<bool> handleAuth;
   late bool isLoggedIn;
   late bool isNewUser;
   late String? authToken;
-  late String region;
+  late String tier;
+  String region = 'not set';
 
   Widget authWidget = SafeArea(
     child: Center(child: CircularProgressIndicator()),
   );
+  void setAccountProfileInfo() async {
+    final db = await getDb();
+    try {
+      final List<Map<String, Object?>> accounts = await db.rawQuery(
+        'SELECT * FROM accounts WHERE id = ?',
+        ['${await getAccountId()}'],
+      );
+      date = DateTime.parse(accounts[0]['created_at'] as String);
+      email = accounts[0]['email'] as String;
+      tier = accounts[0]['account_tier'] as String;
+      notifyListeners();
+    } catch (e) {
+      log('Error Setting account profile', error: e);
+    } finally {
+      // db.close();
+    }
+  }
+
   void refreshAuth() async {
     handleAuth = isSetLoggedIn();
 
@@ -33,6 +55,7 @@ class AuthModel extends ChangeNotifier {
     if (regiontoset != null) {
       region = regiontoset;
     }
+    setAccountProfileInfo();
     getAuthToken();
     notifyListeners();
   }
@@ -40,35 +63,53 @@ class AuthModel extends ChangeNotifier {
   void initAuth() async {
     handleAuth = isSetLoggedIn();
     getAuthToken();
-    notifyListeners();
     String? regiontoset = await getRegion();
     if (regiontoset != null) {
       region = regiontoset;
     }
+
+    setAccountProfileInfo();
+
+    notifyListeners();
+  }
+
+  void completeOnboarding() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setBool("isNewUser", false);
+    refreshAuth();
+    notifyListeners();
   }
 
   Future<String?> getRegion() async {
+    final db = await getDb();
     try {
-      final db = await getDb();
       final List<Map<String, Object?>> accounts = await db.rawQuery(
         'SELECT * FROM accounts WHERE id = ?',
         ['${await getAccountId()}'],
       );
 
-      log('Found ${accounts.length} Accounts');
+      log('Region :${accounts.first['country']}');
       for (final ac in accounts) {
-        log("Account:${ac.toString()}");
+        log("Account:${jsonEncode(ac)}");
       }
-      return accounts[0]['country'] as String;
+      return accounts.first['country'] as String;
     } catch (e) {
       log('Error getting region:$e');
       rethrow;
+    } finally {
+      // await db.close();
     }
   }
 
   Future<Result<int>> loginUser(String email, String password) async {
     try {
-      Uri url = Uri.parse("http://192.168.0.5:8000/api/v1/login");
+      Uri url = Uri(
+        scheme: "http",
+        host: dotenv.env['BACKEND_ENDPOINT'],
+        path: "api/v1/login",
+        port: 8000,
+      );
+
       final payload = <String, dynamic>{};
       payload["email"] = email;
       payload["password"] = password;
@@ -85,7 +126,7 @@ class AuthModel extends ChangeNotifier {
 
         log("setting auth token");
 
-        Result getacid = await setAccountId(email);
+        Result getacid = await setAccountId(email.trim());
         switch (getacid) {
           case Ok():
             {
@@ -120,7 +161,7 @@ class AuthModel extends ChangeNotifier {
     try {
       Uri url = Uri(
         scheme: "http",
-        host: "192.168.0.5",
+        host: dotenv.env['BACKEND_ENDPOINT'],
         path: "api/v1/register",
         port: 8000,
       );
@@ -137,7 +178,13 @@ class AuthModel extends ChangeNotifier {
       var decodedResponse = jsonDecode(response.body) as Map;
       if (decodedResponse["success"]) {
         log("request successful");
-        Result accountCreation = await createAccount(Account(email: email));
+        Result accountCreation = await createAccount(
+          Account(
+            tier: 'Free',
+            createdAt: DateTime.now().toString(),
+            email: email,
+          ),
+        );
         switch (accountCreation) {
           case Ok():
             {
@@ -203,8 +250,8 @@ class AuthModel extends ChangeNotifier {
   }
 
   Future<Result<int>> createAccount(Account account) async {
+    final db = await getDb();
     try {
-      final db = await getDb();
       log("Creating ${account.toString()}");
       int rowId = await db.insert("accounts", account.toMap());
       accountId = rowId;
@@ -228,6 +275,8 @@ class AuthModel extends ChangeNotifier {
     } on Exception catch (e) {
       log('Error creating account : $e');
       return Result.error(e);
+    } finally {
+      // await db.close();
     }
   }
 
@@ -243,9 +292,9 @@ class AuthModel extends ChangeNotifier {
   }
 
   Future<int> setRegion(String r) async {
+    final db = await getDb();
     try {
       var count;
-      final db = await getDb();
       count = await db.rawUpdate(
         "UPDATE accounts SET country = ? WHERE id = ?",
         [r, '${await getAccountId()}'],
@@ -256,17 +305,19 @@ class AuthModel extends ChangeNotifier {
     } catch (e) {
       log('Error Setting Region:$e');
       rethrow;
+    } finally {
+      // await db.close();
     }
   }
 
   Future<Result<int>> setAccountId(String email) async {
+    final db = await getDb();
     try {
-      final db = await getDb();
       final List<Map<String, Object?>> accounts = await db.rawQuery(
         "SELECT * FROM accounts WHERE email = ?",
         [email.trim()],
       );
-      log('Found ${accounts.length} Accounts');
+      log('Found ${accounts.length} Accounts (auth.dart:310)');
       for (final ac in accounts) {
         log("Account:${ac.toString()}");
       }
@@ -291,6 +342,8 @@ class AuthModel extends ChangeNotifier {
     } on Exception catch (e) {
       log('SetAccountid:$e');
       return Result.error(e);
+    } finally {
+      // await db.close();
     }
   }
 

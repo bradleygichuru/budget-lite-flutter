@@ -1,7 +1,9 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
+import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:watch_it/watch_it.dart';
 
 class InitialBalance extends StatefulWidget with WatchItStatefulWidgetMixin {
@@ -253,8 +255,9 @@ class InitialBalanceState extends State<InitialBalance> {
                     style: ButtonStyle(
                       backgroundColor: WidgetStatePropertyAll(Colors.white),
                     ),
-                    onPressed: () {
+                    onPressed: () async {
                       try {
+                        di.get<AuthModel>().completeOnboarding();
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(

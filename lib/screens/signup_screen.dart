@@ -203,7 +203,9 @@ class SignUpFormState extends State<SignupForm> {
                             ),
                           ),
                           onPressed: () async {
-                            if (_formKey.currentState!.validate()) {
+                            if (_formKey.currentState!.validate() &&
+                                confirmPasswordController.value.text ==
+                                    passwordController.value.text) {
                               log("registering user");
                               try {
                                 Result userRegRes = await di
@@ -263,6 +265,15 @@ class SignUpFormState extends State<SignupForm> {
                                   );
                                 }
                               }
+                            } else {
+                              signUpScaffoldKey.currentState!.showSnackBar(
+                                SnackBar(
+                                  behavior: SnackBarBehavior.floating,
+                                  content: const Text(
+                                    "password and confirmed password might not be same",
+                                  ),
+                                ),
+                              );
                             }
                           },
                           child: Row(

@@ -1,7 +1,3 @@
-import 'dart:developer';
-
-import 'package:shared_preferences/shared_preferences.dart';
-
 enum Country {
   other('other'),
   kenya('kenya');
@@ -13,14 +9,33 @@ enum Country {
 class Account {
   final int? id;
   final String email;
-  Account({required this.email, this.id});
+  final String? country;
+  final String? budgetResetDate;
+
+  final String createdAt;
+  final String tier;
+  Account({
+    required this.email,
+    required this.createdAt,
+    this.id,
+    this.country,
+    this.budgetResetDate,
+    required this.tier,
+  });
   Map<String, Object> toMap() {
-    return {'id': ?id, 'email': email};
+    return {
+      'id': ?id,
+      'email': email,
+      'country': ?country,
+      'budget_reset_date': ?budgetResetDate,
+      'account_tier': tier,
+      'created_at': createdAt,
+    };
   }
 
   @override
   String toString() {
-    return 'Account{id:$id,email:$email}';
+    return 'Account{id:$id,email:$email,country:$country,budget_reset_date:$budgetResetDate,createdAt:$createdAt,tier:$tier}';
   }
 }
 

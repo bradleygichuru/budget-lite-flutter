@@ -19,100 +19,69 @@ import 'package:flutter_application_1/view_models/goals.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:watch_it/watch_it.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 @pragma('vm:entry-point')
 backgroundMessageHandler(SmsMessage message) async {
   //Handle background message
+  try {
+    TransactionsModel txM = TransactionsModel();
+    WalletModel wM = WalletModel();
+    AuthModel aM = AuthModel();
+    String? currentRegion = await aM.getRegion();
+    if (currentRegion == Country.kenya.name) {
+      var transaction = parseMpesa(message);
+      log('from:${message.address} message:${message.body}');
 
-  TransactionsModel txM = di.get<TransactionsModel>();
-  WalletModel wM = di.get<WalletModel>();
-  String? currentRegion = await di.get<AuthModel>().getRegion();
-  if (currentRegion == Country.kenya.name) {
-    var transaction = parseMpesa(message);
-    log('from:${message.address} message:${message.body}');
-
-    int? accountId = await di.get<AuthModel>().getAccountId();
-    log('background_transaction:$transaction');
-    if (transaction != null && accountId != null) {
-      if (transaction['type'] == TxType.credit.val) {
-        TransactionObj tx = TransactionObj(
-          desc: transaction['desc'],
-          type: transaction['type'],
-          source: transaction['source'],
-          amount: transaction['amount'],
-          date: transaction['date'],
-          category: 'credit',
-        );
-        wM.creditDefaultWallet(tx);
-        AwesomeNotifications().createNotification(
-          content: NotificationContent(
-            id: 10,
-            channelKey: 'basic_channel',
-            actionType: ActionType.Default,
-            title: 'New transaction',
-            body: 'Mpesa account credited',
-          ),
-        );
-      } else if (transaction['type'] == TxType.fromSaving.val) {
-        TransactionObj tx = TransactionObj(
-          desc: transaction['desc'],
-          type: transaction['type'],
-          category: 'credit',
-          source: transaction['source'],
-          amount: transaction['amount'],
-          date: transaction['date'],
-        );
-        wM.removeFromSavings(tx);
-        AwesomeNotifications().createNotification(
-          content: NotificationContent(
-            id: 10,
-            channelKey: 'basic_channel',
-            actionType: ActionType.Default,
-            title: 'New transaction',
-            body: 'transfered from Mshwari',
-          ),
-        );
-      } else if (transaction['type'] == TxType.toSaving.val) {
-        TransactionObj tx = TransactionObj(
-          desc: transaction['desc'],
-          type: transaction['type'],
-          source: transaction['source'],
-          category: 'savings',
-          amount: transaction['amount'],
-          date: transaction['date'],
-        );
-        wM.addToSavings(tx);
-        AwesomeNotifications().createNotification(
-          content: NotificationContent(
-            id: 10,
-            channelKey: 'basic_channel',
-            actionType: ActionType.Default,
-            title: 'New transaction',
-            body: 'transfered to Mshwari',
-          ),
-        );
-      } else {
-        TransactionObj tx = TransactionObj(
-          desc: transaction['desc'],
-          type: transaction['type'],
-          source: transaction['source'],
-          amount: transaction['amount'],
-          date: transaction['date'],
-        );
-        txM.insertTransaction(tx);
-
-        AwesomeNotifications().createNotification(
-          content: NotificationContent(
-            id: 10,
-            channelKey: 'basic_channel',
-            actionType: ActionType.Default,
-            title: 'New transaction',
-            body: 'Click to set transaction category',
-          ),
-        );
+      int? accountId = await aM.getAccountId();
+      log('background_transaction:$transaction');
+      if (transaction != null && accountId != null) {
+        if (transaction['type'] == TxType.credit.val) {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+            category: 'credit',
+          );
+          wM.creditDefaultWallet(tx);
+        } else if (transaction['type'] == TxType.fromSaving.val) {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            category: 'credit',
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          wM.removeFromSavings(tx);
+        } else if (transaction['type'] == TxType.toSaving.val) {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            category: 'savings',
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          wM.addToSavings(tx);
+        } else {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          txM.insertTransaction(tx);
+        }
       }
     }
+  } catch (e) {
+    log('Error in background message', error: e);
   }
 }
 
@@ -129,9 +98,17 @@ void setup() {
   di.registerSingleton<WalletModel>(WalletModel());
 }
 
+setUpNotificationIds() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  if (!prefs.containsKey('notification_id')) {
+    prefs.setInt('notification_id', 0);
+  }
+}
+
 Future<void> main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  await dotenv.load(fileName: ".env");
 
   // await deleteDatabase(
   //   join(await getDatabasesPath(), 'budget_lite_database.db'),
@@ -162,12 +139,12 @@ Future<void> main() async {
     ],
     debug: true,
   );
-
+  setUpNotificationIds();
   setup();
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatefulWidget with WatchItStatefulWidgetMixin {
   const MyApp({super.key});
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
@@ -183,7 +160,6 @@ class MyAppState extends State<MyApp> {
   late Timer pollingTx;
   late final AppLifecycleListener _listener;
   bool handleUncategorized = false;
-  AuthModel authM = di.get<AuthModel>();
   CategoriesModel ctm = di.get<CategoriesModel>();
   TransactionsModel txM = di.get<TransactionsModel>();
 
@@ -299,94 +275,62 @@ class MyAppState extends State<MyApp> {
   void _onPaused() => log('paused');
 
   onMessage(SmsMessage message) async {
-    TransactionsModel txM = di.get<TransactionsModel>();
-    WalletModel wM = di.get<WalletModel>();
-    String? currentRegion = await di.get<AuthModel>().getRegion();
-    if (currentRegion == Country.kenya.name) {
-      var transaction = parseMpesa(message);
-      log('from:${message.address} message:${message.body}');
+    try {
+      TransactionsModel txM = TransactionsModel();
+      WalletModel wM = WalletModel();
+      AuthModel aM = AuthModel();
+      String? currentRegion = await aM.getRegion();
+      if (currentRegion == Country.kenya.name) {
+        var transaction = parseMpesa(message);
+        log('from:${message.address} message:${message.body}');
 
-      int? accountId = await di.get<AuthModel>().getAccountId();
-      log('background_transaction:$transaction');
-      if (transaction != null && accountId != null) {
-        if (transaction['type'] == TxType.credit.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-            category: 'credit',
-          );
-          wM.creditDefaultWallet(tx);
-          AwesomeNotifications().createNotification(
-            content: NotificationContent(
-              id: 10,
-              channelKey: 'basic_channel',
-              actionType: ActionType.Default,
-              title: 'New transaction',
-              body: 'Mpesa account credited',
-            ),
-          );
-        } else if (transaction['type'] == TxType.fromSaving.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            category: 'credit',
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          wM.removeFromSavings(tx);
-          AwesomeNotifications().createNotification(
-            content: NotificationContent(
-              id: 10,
-              channelKey: 'basic_channel',
-              actionType: ActionType.Default,
-              title: 'New transaction',
-              body: 'transfered from Mshwari',
-            ),
-          );
-        } else if (transaction['type'] == TxType.toSaving.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            category: 'savings',
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          wM.addToSavings(tx);
-          AwesomeNotifications().createNotification(
-            content: NotificationContent(
-              id: 10,
-              channelKey: 'basic_channel',
-              actionType: ActionType.Default,
-              title: 'New transaction',
-              body: 'transfered to Mshwari',
-            ),
-          );
-        } else {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          txM.insertTransaction(tx);
-
-          AwesomeNotifications().createNotification(
-            content: NotificationContent(
-              id: 10,
-              channelKey: 'basic_channel',
-              actionType: ActionType.Default,
-              title: 'New transaction',
-              body: 'Click to set transaction category',
-            ),
-          );
+        int? accountId = await aM.getAccountId();
+        log('background_transaction:$transaction');
+        if (transaction != null && accountId != null) {
+          if (transaction['type'] == TxType.credit.val) {
+            TransactionObj tx = TransactionObj(
+              desc: transaction['desc'],
+              type: transaction['type'],
+              source: transaction['source'],
+              amount: transaction['amount'],
+              date: transaction['date'],
+              category: 'credit',
+            );
+            wM.creditDefaultWallet(tx);
+          } else if (transaction['type'] == TxType.fromSaving.val) {
+            TransactionObj tx = TransactionObj(
+              desc: transaction['desc'],
+              type: transaction['type'],
+              category: 'credit',
+              source: transaction['source'],
+              amount: transaction['amount'],
+              date: transaction['date'],
+            );
+            wM.removeFromSavings(tx);
+          } else if (transaction['type'] == TxType.toSaving.val) {
+            TransactionObj tx = TransactionObj(
+              desc: transaction['desc'],
+              type: transaction['type'],
+              source: transaction['source'],
+              category: 'savings',
+              amount: transaction['amount'],
+              date: transaction['date'],
+            );
+            wM.addToSavings(tx);
+          } else {
+            TransactionObj tx = TransactionObj(
+              desc: transaction['desc'],
+              type: transaction['type'],
+              source: transaction['source'],
+              amount: transaction['amount'],
+              date: transaction['date'],
+            );
+            txM.insertTransaction(tx);
+          }
         }
       }
+    } catch (e) {
+      log('Error in background message', error: e);
     }
   }
 
@@ -458,10 +402,9 @@ class MyAppState extends State<MyApp> {
                           ),
                         ),
                       );
-                  Widget x = CircularProgressIndicator();
                   if (snapshot.connectionState == ConnectionState.done &&
                       snapshot.hasData) {
-                    x = SafeArea(
+                    return SafeArea(
                       child: CustomScrollView(
                         slivers: [
                           SliverList.builder(
@@ -626,7 +569,7 @@ class MyAppState extends State<MyApp> {
                       ),
                     );
                   }
-                  return x;
+                  return Center(child: CircularProgressIndicator());
                 },
               ),
             ),
@@ -636,20 +579,20 @@ class MyAppState extends State<MyApp> {
               colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
             ),
             home: FutureBuilder<bool>(
-              future: authM.handleAuth,
-              builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+              future: di<AuthModel>().handleAuth,
+              builder: (context, snapshot) {
                 Widget cont = Text("");
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  cont = SafeArea(
+                  return SafeArea(
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
                 if (snapshot.connectionState == ConnectionState.done) {
                   if (snapshot.hasData) {
                     if (snapshot.requireData) {
-                      cont = authM.authWidget;
+                      return di<AuthModel>().authWidget;
                     } else {
-                      cont = SafeArea(
+                      return SafeArea(
                         child: Scaffold(
                           bottomNavigationBar: NavigationBar(
                             onDestinationSelected: (int index) {
@@ -706,7 +649,7 @@ class MyAppState extends State<MyApp> {
                   }
                 } else {
                   if (snapshot.hasError) {
-                    cont = Text('Error: ${snapshot.error}');
+                    return Text('Error: ${snapshot.error}');
                   }
                 }
                 return cont;

@@ -1,9 +1,11 @@
 import 'dart:developer';
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
 import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:watch_it/watch_it.dart';
 
 class TransactionsModel extends ChangeNotifier {
@@ -26,11 +28,17 @@ class TransactionsModel extends ChangeNotifier {
   }
 
   Future<int> setTxCategory(String category, int id) async {
+    AuthModel aM;
+    if (!di.isRegistered<AuthModel>()) {
+      aM = AuthModel();
+    } else {
+      aM = di<AuthModel>();
+    }
     final db = await getDb();
     log("categorizing tx of id:$id");
     int count = await db.rawUpdate(
       'UPDATE transactions SET category = ? WHERE id = ? AND account_id = ?',
-      [category, '$id', '${await di.get<AuthModel>().getAccountId()}'],
+      [category, '$id', '${await aM.getAccountId()}'],
     );
     notifyListeners();
     return count;
@@ -112,10 +120,17 @@ class TransactionsModel extends ChangeNotifier {
 
   Future<List<TransactionObj>> getUncategorizedTx() async {
     List<TransactionObj> x = [];
+
+    AuthModel aM;
+    if (!di.isRegistered<AuthModel>()) {
+      aM = AuthModel();
+    } else {
+      aM = di<AuthModel>();
+    }
     final db = await getDb();
     final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
       "SELECT * from transactions WHERE category is null AND account_id = ?",
-      ['${await di.get<AuthModel>().getAccountId()}'],
+      ['${await aM.getAccountId()}'],
     );
     log("found ${transactionMaps.length} uncategorized transaction");
     transactionMaps.forEach((tx) {
@@ -166,12 +181,18 @@ class TransactionsModel extends ChangeNotifier {
   }
 
   Future<List<TransactionObj>> getTransactions() async {
+    AuthModel aM;
+    if (!di.isRegistered<AuthModel>()) {
+      aM = AuthModel();
+    } else {
+      aM = di<AuthModel>();
+    }
     List<TransactionObj> x = [];
     final db = await getDb();
     log("Getting Transactions");
     final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
       'SELECT * FROM transactions WHERE account_id = ?',
-      ['${await di.get<AuthModel>().getAccountId()}'],
+      ['${await aM.getAccountId()}'],
     );
     log("found ${transactionMaps.length} transaction");
     // transactionMaps.forEach((tx) {
@@ -218,15 +239,89 @@ class TransactionsModel extends ChangeNotifier {
   }
 
   Future<int> insertTransaction(TransactionObj transaction) async {
+    AuthModel aM;
+    if (!di.isRegistered<AuthModel>()) {
+      aM = AuthModel();
+    } else {
+      aM = di<AuthModel>();
+    }
+
     final db = await getDb();
 
     log("Inserting transaction");
     int txId = await db.insert('transactions', transaction.toMap());
-    int? acId = await di.get<AuthModel>().getAccountId();
-    await db.rawUpdate('UPDATE transactions SET account_id = ? WHERE id = ? ', [
-      '$acId',
-      '$txId',
-    ]);
+    int? acId = await aM.getAccountId();
+    int updated = await db.rawUpdate(
+      'UPDATE transactions SET account_id = ? WHERE id = ? ',
+      ['$acId', '$txId'],
+    );
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int notiId = prefs.getInt('notification_id')!;
+    if (updated > 0) {
+      switch (transaction.type) {
+        case 'credit':
+          {
+            AwesomeNotifications().createNotification(
+              content: NotificationContent(
+                id: notiId,
+                displayOnForeground: true,
+                channelKey: 'basic_channel',
+                actionType: ActionType.Default,
+                title: 'New transaction',
+                body: 'Credited from ${transaction.source}',
+              ),
+            );
+            break;
+          }
+        case 'from saving':
+          {
+            AwesomeNotifications().createNotification(
+              content: NotificationContent(
+                id: notiId,
+                channelKey: 'basic_channel',
+                actionType: ActionType.Default,
+                title: 'New transaction',
+                body: 'transfered from Savings',
+              ),
+            );
+
+            break;
+          }
+        case 'to saving':
+          {
+            AwesomeNotifications().createNotification(
+              content: NotificationContent(
+                id: notiId,
+                channelKey: 'basic_channel',
+                actionType: ActionType.Default,
+                title: 'New transaction',
+                body: 'transfered to Savings',
+              ),
+            );
+
+            break;
+          }
+        case 'spend':
+          {
+            AwesomeNotifications().createNotification(
+              content: NotificationContent(
+                id: notiId,
+                channelKey: 'basic_channel',
+                actionType: ActionType.Default,
+                title: 'New transaction',
+                body: 'Click to set budget category',
+              ),
+            );
+
+            break;
+          }
+
+        default:
+          {}
+      }
+    }
+
+    prefs.setInt('notification_id', prefs.getInt('notification_id')! + 1);
     refreshTx();
     notifyListeners();
     return txId;

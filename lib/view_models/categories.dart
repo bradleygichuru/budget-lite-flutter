@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data_models/categories_data_model.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
 import 'package:flutter_application_1/db/db.dart';
+import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:watch_it/watch_it.dart';
@@ -28,6 +29,22 @@ class CategoriesModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Result<String>> addBudgetResetDate(String date) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString('budget_reset_date', date);
+
+      String? x = prefs.getString('budget_reset_date');
+      if (x != null) {
+        return Result.ok(x);
+      } else {
+        return Result.error(Exception('Error setting budget reset date'));
+      }
+    } on Exception catch (e) {
+      return Result.error(e);
+    }
+  }
+
   void refreshCats() async {
     final categoriesRet = await getCategories();
 
@@ -41,14 +58,16 @@ class CategoriesModel extends ChangeNotifier {
   }
 
   Future<int> editCategoryBudget(Category category, double amount) async {
+    AuthModel aM;
+    if (!di.isRegistered<AuthModel>()) {
+      aM = AuthModel();
+    } else {
+      aM = di<AuthModel>();
+    }
     final db = await getDb();
     int count = await db.rawUpdate(
       'UPDATE categories SET budget = ? WHERE id = ? AND account_id = ?',
-      [
-        '$amount',
-        '${category.id}',
-        '${await di.get<AuthModel>().getAccountId()}',
-      ],
+      ['$amount', '${category.id}', '${await aM.getAccountId()}'],
     );
     refreshCats();
     notifyListeners();
@@ -56,59 +75,17 @@ class CategoriesModel extends ChangeNotifier {
     return count;
   }
 
-  void categoryScheduleNotification(String name, bool isForeground) async {
-    List<Category> candidates = await categories;
-    Category candidate = candidates.firstWhere(
-      (cat) => cat.categoryName == name,
-    );
-    String localTimeZone = await AwesomeNotifications()
-        .getLocalTimeZoneIdentifier();
-    String utcTimeZone = await AwesomeNotifications()
-        .getLocalTimeZoneIdentifier();
-
-    await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: 10,
-        channelKey: 'basic_channel',
-        wakeUpScreen: true,
-        category: NotificationCategory.Alarm,
-        actionType: ActionType.Default,
-        title: 'Budget Alert',
-        body:
-            '${candidate.categoryName} Budget is ${((candidate.spent / candidate.budget) * 100).toStringAsFixed(1)}% spent',
-      ),
-
-      schedule: NotificationInterval(
-        interval: Duration(days: 1),
-        timeZone: localTimeZone,
-        repeats: true,
-      ),
-    );
-  }
-
-  void categoryUpdateNotification(String name, bool isForeground) async {
-    List<Category> candidates = await categories;
-    Category candidate = candidates.firstWhere(
-      (cat) => cat.categoryName == name,
-    );
-
-    AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: 10,
-        channelKey: 'basic_channel',
-        actionType: ActionType.Default,
-        title: 'Budget Alert',
-        body:
-            '${candidate.categoryName} Budget is ${((candidate.spent / candidate.budget) * 100).toStringAsFixed(1)}% spent',
-      ),
-    );
-  }
-
   Future<int> handleCategoryAdd(Category category) async {
+    AuthModel aM;
+    if (!di.isRegistered<AuthModel>()) {
+      aM = AuthModel();
+    } else {
+      aM = di<AuthModel>();
+    }
     SharedPreferences prefs = await SharedPreferences.getInstance();
     var rowId;
     final db = await getDb();
-    int? acid = await di.get<AuthModel>().getAccountId();
+    int? acid = await aM.getAccountId();
     await insertCategory(category).then((rowID) {
       rowId = rowID;
       db.rawUpdate('UPDATE categories SET account_id = ? WHERE id = ?', [
@@ -123,6 +100,12 @@ class CategoriesModel extends ChangeNotifier {
 
   Future<int?> handleCatBalanceCompute(String cat, TransactionObj tx) async {
     try {
+      AuthModel aM;
+      if (!di.isRegistered<AuthModel>()) {
+        aM = AuthModel();
+      } else {
+        aM = di<AuthModel>();
+      }
       int? count;
       List<Category> cts = await categories;
       Category? candidate = cts.firstWhere(
@@ -137,13 +120,35 @@ class CategoriesModel extends ChangeNotifier {
 
           count = await db.rawUpdate(
             'UPDATE categories SET spent = ? WHERE id = ? AND account_id = ?',
-            [
-              '$update',
-              '${candidate.id},${await di.get<AuthModel>().getAccountId()}',
-            ],
+            ['$update', '${candidate.id},${await aM.getAccountId()}'],
           );
+
           refreshCats();
           notifyListeners();
+          if (count > 0) {
+            List<Category> newCats = await categories;
+            Category candidate = newCats.firstWhere(
+              (category) => category.categoryName == cat,
+            );
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            AwesomeNotifications().createNotification(
+              content: NotificationContent(
+                id: prefs.getInt('notification_id')!,
+                displayOnForeground: true,
+                channelKey: 'basic_channel',
+                actionType: ActionType.Default,
+                title: 'Budget Alert',
+                body:
+                    '${candidate.categoryName} ${((candidate.spent / candidate.budget) * 100)}% used',
+              ),
+            );
+
+            prefs.setInt(
+              'notification_id',
+              prefs.getInt('notification_id')! + 1,
+            );
+          }
+
           return count;
         }
       } else {
@@ -157,10 +162,16 @@ class CategoriesModel extends ChangeNotifier {
   }
 
   Future<int> insertCategory(Category category) async {
+    AuthModel aM;
+    if (!di.isRegistered<AuthModel>()) {
+      aM = AuthModel();
+    } else {
+      aM = di<AuthModel>();
+    }
     final db = await getDb();
     int ctID = await db.insert("categories", category.toMap());
     await db.rawUpdate('UPDATE categories SET account_id = ? WHERE id = ?', [
-      '${await di.get<AuthModel>().getAccountId()}',
+      '${await aM.getAccountId()}',
       '$ctID',
     ]);
 
@@ -170,10 +181,16 @@ class CategoriesModel extends ChangeNotifier {
   }
 
   Future<List<Category>> getCategories() async {
+    AuthModel aM;
+    if (!di.isRegistered<AuthModel>()) {
+      aM = AuthModel();
+    } else {
+      aM = di<AuthModel>();
+    }
     final db = await getDb();
     final List<Map<String, Object?>> categoryMaps = await db.rawQuery(
       "SELECT * FROM categories WHERE account_id = ?",
-      ['${await di.get<AuthModel>().getAccountId()}'],
+      ['${await aM.getAccountId()}'],
     );
     log("found ${categoryMaps.length} categories");
 
@@ -209,9 +226,15 @@ class CategoriesModel extends ChangeNotifier {
   }
 
   Future<List<int>> insertCategories(List<Category> categories) async {
+    AuthModel aM;
+    if (!di.isRegistered<AuthModel>()) {
+      aM = AuthModel();
+    } else {
+      aM = di<AuthModel>();
+    }
     final db = await getDb();
     List<int> rwIds = [];
-    int? acId = await di.get<AuthModel>().getAccountId();
+    int? acId = await aM.getAccountId();
     await db
         .transaction((tx) async {
           for (Category cat in categories) {

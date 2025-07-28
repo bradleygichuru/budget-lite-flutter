@@ -13,7 +13,7 @@ Future<Database> getDb() async {
     },
     onCreate: (db, version) {
       db.execute(
-        "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT)",
+        "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT,budget_reset_date TEXT,account_tier TEXT,created_at TEXT)",
       );
 
       db.execute(
@@ -39,6 +39,9 @@ Future<Database> getDb() async {
 }
 
 appDbInit() async {
+  // await deleteDatabase(
+  //   join(await getDatabasesPath(), 'budget_lite_database.db'),
+  // );
   await openDatabase(
     join(await getDatabasesPath(), 'budget_lite_database.db'),
     onConfigure: (db) {
@@ -46,7 +49,7 @@ appDbInit() async {
     },
     onCreate: (db, version) {
       db.execute(
-        "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT)",
+        "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT,budget_reset_date TEXT,account_tier TEXT,created_at TEXT)",
       );
 
       db.execute(
