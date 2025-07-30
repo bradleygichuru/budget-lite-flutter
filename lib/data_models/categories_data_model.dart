@@ -48,3 +48,7 @@ class Category {
 class CategoryNotFoundError implements Exception {
   String errMsg() => "Category not found";
 }
+
+class ErrorUpdatingCategory implements Exception {
+  String errMsg() => "Category not updated";
+}

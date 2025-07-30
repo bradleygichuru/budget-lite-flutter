@@ -17,7 +17,7 @@ class SignUpFormState extends State<SignupForm> {
   final GlobalKey<ScaffoldMessengerState> signUpScaffoldKey =
       GlobalKey<ScaffoldMessengerState>();
   TextEditingController emailController = TextEditingController();
-
+  bool _isLoading = false;
   TextEditingController passwordController = TextEditingController();
 
   TextEditingController fullNameController = TextEditingController();
@@ -202,24 +202,77 @@ class SignUpFormState extends State<SignupForm> {
                               Color(0xFF2563EB),
                             ),
                           ),
-                          onPressed: () async {
-                            if (_formKey.currentState!.validate() &&
-                                confirmPasswordController.value.text ==
-                                    passwordController.value.text) {
-                              log("registering user");
-                              try {
-                                Result userRegRes = await di
-                                    .get<AuthModel>()
-                                    .registerUser(
-                                      fullNameController.value.text,
-                                      passwordController.value.text,
-                                      emailController.value.text,
-                                      phoneNumberController.value.text,
-                                      confirmPasswordController.value.text,
-                                    );
-                                switch (userRegRes) {
-                                  case Ok():
-                                    {
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                                  if (_formKey.currentState!.validate() &&
+                                      confirmPasswordController.value.text ==
+                                          passwordController.value.text) {
+                                    setState(() {
+                                      _isLoading = true;
+                                    });
+                                    log("registering user");
+                                    try {
+                                      Result userRegRes = await di
+                                          .get<AuthModel>()
+                                          .registerUser(
+                                            fullNameController.value.text,
+                                            passwordController.value.text,
+                                            emailController.value.text,
+                                            phoneNumberController.value.text,
+                                            confirmPasswordController
+                                                .value
+                                                .text,
+                                          );
+                                      switch (userRegRes) {
+                                        case Ok():
+                                          {
+                                            if (context.mounted) {
+                                              signUpScaffoldKey.currentState!
+                                                  .showSnackBar(
+                                                    SnackBar(
+                                                      behavior: SnackBarBehavior
+                                                          .floating,
+                                                      content: const Text(
+                                                        "Registration successful",
+                                                      ),
+                                                    ),
+                                                  );
+                                              setState(() {
+                                                _isLoading = false;
+                                              });
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const SelectRegion(),
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        case Error():
+                                          {
+                                            setState(() {
+                                              _isLoading = false;
+                                            });
+                                            signUpScaffoldKey.currentState!
+                                                .showSnackBar(
+                                                  SnackBar(
+                                                    behavior: SnackBarBehavior
+                                                        .floating,
+                                                    content: const Text(
+                                                      "Error Signing Up",
+                                                    ),
+                                                  ),
+                                                );
+                                          }
+                                      }
+                                    } catch (e) {
+                                      log('SignUp Error:$e');
+
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
                                       if (context.mounted) {
                                         signUpScaffoldKey.currentState!
                                             .showSnackBar(
@@ -227,55 +280,23 @@ class SignUpFormState extends State<SignupForm> {
                                                 behavior:
                                                     SnackBarBehavior.floating,
                                                 content: const Text(
-                                                  "Registration successful",
+                                                  "Error Signing Up",
                                                 ),
                                               ),
                                             );
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const SelectRegion(),
-                                          ),
-                                        );
                                       }
                                     }
-                                  case Error():
-                                    {
-                                      signUpScaffoldKey.currentState!
-                                          .showSnackBar(
-                                            SnackBar(
-                                              behavior:
-                                                  SnackBarBehavior.floating,
-                                              content: const Text(
-                                                "Error Signing Up",
-                                              ),
-                                            ),
-                                          );
-                                    }
-                                }
-                              } catch (e) {
-                                log('SignUp Error:$e');
-                                if (context.mounted) {
-                                  signUpScaffoldKey.currentState!.showSnackBar(
-                                    SnackBar(
-                                      behavior: SnackBarBehavior.floating,
-                                      content: const Text("Error Signing Up"),
-                                    ),
-                                  );
-                                }
-                              }
-                            } else {
-                              signUpScaffoldKey.currentState!.showSnackBar(
-                                SnackBar(
-                                  behavior: SnackBarBehavior.floating,
-                                  content: const Text(
-                                    "password and confirmed password might not be same",
-                                  ),
-                                ),
-                              );
-                            }
-                          },
+                                  } else {
+                                    signUpScaffoldKey.currentState!.showSnackBar(
+                                      SnackBar(
+                                        behavior: SnackBarBehavior.floating,
+                                        content: const Text(
+                                          "password and confirmed password might not be same",
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -302,26 +323,42 @@ class SignUpFormState extends State<SignupForm> {
                       ),
                       child: Center(
                         child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const LoginForm(),
-                              ),
-                            );
-                            // Navigate back to first route when tapped.
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 4),
-                                child: const Icon(Icons.person_add),
-                              ),
+                          onPressed: _isLoading
+                              ? null
+                              : () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const LoginForm(),
+                                    ),
+                                  );
+                                  // Navigate back to first route when tapped.
+                                },
+                          child: _isLoading
+                              ? Center(
+                                  child: SizedBox(
+                                    width: 24.0,
+                                    height: 24.0,
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      child: const Icon(Icons.person_add),
+                                    ),
 
-                              const Text('Sign In'),
-                            ],
-                          ),
+                                    const Text('Sign In'),
+                                  ],
+                                ),
                         ),
                       ),
                     ),

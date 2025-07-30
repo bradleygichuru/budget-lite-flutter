@@ -22,7 +22,7 @@ class LoginFormState extends State<LoginForm> {
   final GlobalKey<ScaffoldMessengerState> loginScaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
   TextEditingController passwordController = TextEditingController();
-
+  bool _isLoading = false;
   final _formKey = GlobalKey<FormState>();
   @override
   void dispose() {
@@ -143,91 +143,127 @@ class LoginFormState extends State<LoginForm> {
                                   Color(0xFF2563EB),
                                 ),
                               ),
-                              onPressed: () async {
-                                if (_formKey.currentState!.validate()) {
-                                  log("signing user in");
-                                  Result loginResult = await authM.loginUser(
-                                    emailController.value.text,
-                                    passwordController.value.text,
-                                  );
-                                  switch (loginResult) {
-                                    case Ok():
-                                      {
-                                        loginScaffoldMessengerKey.currentState!
-                                            .showSnackBar(
-                                              SnackBar(
-                                                behavior:
-                                                    SnackBarBehavior.floating,
-                                                content: const Text(
-                                                  "Login success",
+                              onPressed: _isLoading
+                                  ? null
+                                  : () async {
+                                      if (_formKey.currentState!.validate()) {
+                                        setState(() {
+                                          _isLoading = true;
+                                        });
+                                        log("signing user in");
+                                        Result loginResult = await authM
+                                            .loginUser(
+                                              emailController.value.text,
+                                              passwordController.value.text,
+                                            );
+                                        switch (loginResult) {
+                                          case Ok():
+                                            {
+                                              loginScaffoldMessengerKey
+                                                  .currentState!
+                                                  .showSnackBar(
+                                                    SnackBar(
+                                                      behavior: SnackBarBehavior
+                                                          .floating,
+                                                      content: const Text(
+                                                        "Login success",
+                                                      ),
+                                                    ),
+                                                  );
+
+                                              authM.refreshAuth();
+
+                                              setState(() {
+                                                _isLoading = false;
+                                              });
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const MyApp(),
                                                 ),
-                                              ),
-                                            );
+                                              );
 
-                                        authM.refreshAuth();
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => const MyApp(),
-                                          ),
-                                        );
-
-                                        break;
-                                      }
-                                    case Error():
-                                      {
-                                        switch (loginResult.error) {
-                                          case ErrorLogginIn():
-                                            {
-                                              loginScaffoldMessengerKey
-                                                  .currentState!
-                                                  .showSnackBar(
-                                                    SnackBar(
-                                                      behavior: SnackBarBehavior
-                                                          .floating,
-                                                      content: const Text(
-                                                        "Error Login in",
-                                                      ),
-                                                    ),
-                                                  );
+                                              break;
                                             }
-
-                                            break;
-                                          default:
-                                            log(
-                                              'Error login in ',
-                                              error: loginResult.error,
-                                            );
+                                          case Error():
                                             {
-                                              loginScaffoldMessengerKey
-                                                  .currentState!
-                                                  .showSnackBar(
-                                                    SnackBar(
-                                                      behavior: SnackBarBehavior
-                                                          .floating,
-                                                      content: const Text(
-                                                        "Error Login in",
-                                                      ),
-                                                    ),
+                                              switch (loginResult.error) {
+                                                case ErrorLogginIn():
+                                                  {
+                                                    setState(() {
+                                                      _isLoading = false;
+                                                    });
+                                                    loginScaffoldMessengerKey
+                                                        .currentState!
+                                                        .showSnackBar(
+                                                          SnackBar(
+                                                            behavior:
+                                                                SnackBarBehavior
+                                                                    .floating,
+                                                            content: const Text(
+                                                              "Error Login in",
+                                                            ),
+                                                          ),
+                                                        );
+                                                  }
+
+                                                  break;
+                                                default:
+                                                  log(
+                                                    'Error login in ',
+                                                    error: loginResult.error,
                                                   );
+                                                  {
+                                                    setState(() {
+                                                      _isLoading = false;
+                                                    });
+                                                    loginScaffoldMessengerKey
+                                                        .currentState!
+                                                        .showSnackBar(
+                                                          SnackBar(
+                                                            behavior:
+                                                                SnackBarBehavior
+                                                                    .floating,
+                                                            content: const Text(
+                                                              "Error Login in",
+                                                            ),
+                                                          ),
+                                                        );
+                                                  }
+                                              }
                                             }
                                         }
                                       }
-                                  }
-                                }
-                              },
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Text('Sign In'),
-                                  Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 4,
+                                    },
+                              child: _isLoading
+                                  ? Center(
+                                      child: SizedBox(
+                                        width: 24.0,
+                                        height: 24.0,
+                                        child: CircularProgressIndicator(
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Text('Sign In'),
+                                        Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                          ),
+                                          child: const Icon(
+                                            Icons.arrow_right_alt,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    child: const Icon(Icons.arrow_right_alt),
-                                  ),
-                                ],
-                              ),
                             ),
                           ),
                         ),
@@ -250,15 +286,18 @@ class LoginFormState extends State<LoginForm> {
                                 Colors.white,
                               ),
                             ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const SignupForm(),
-                                ),
-                              );
-                              // Navigate back to first route when tapped.
-                            },
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const SignupForm(),
+                                      ),
+                                    );
+                                    // Navigate back to first route when tapped.
+                                  },
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [

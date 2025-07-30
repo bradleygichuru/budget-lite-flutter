@@ -98,7 +98,10 @@ class CategoriesModel extends ChangeNotifier {
     return rowId;
   }
 
-  Future<int?> handleCatBalanceCompute(String cat, TransactionObj tx) async {
+  Future<Result<int>> handleCatBalanceCompute(
+    String cat,
+    TransactionObj tx,
+  ) async {
     try {
       AuthModel aM;
       if (!di.isRegistered<AuthModel>()) {
@@ -111,53 +114,46 @@ class CategoriesModel extends ChangeNotifier {
       Category? candidate = cts.firstWhere(
         (category) => category.categoryName == cat,
       );
-      if (candidate != null) {
-        if (tx.type == TxType.spend.val) {
-          log('deducting from category ${candidate.toString()}');
-          double update = candidate.spent + tx.amount;
-          log('new spent: $update');
-          final db = await getDb();
+      log('deducting from category ${candidate.toString()}');
+      double update = candidate.spent + tx.amount;
+      log('new spent: $update');
+      final db = await getDb();
+      count = await db.rawUpdate(
+        'UPDATE categories SET spent = ? WHERE id = ? AND account_id = ?',
+        ['$update', '${candidate.id},${await aM.getAccountId()}'],
+      );
 
-          count = await db.rawUpdate(
-            'UPDATE categories SET spent = ? WHERE id = ? AND account_id = ?',
-            ['$update', '${candidate.id},${await aM.getAccountId()}'],
-          );
+      if (count > 0) {
+        List<Category> newCats = await categories;
+        Category candidate = newCats.firstWhere(
+          (category) => category.categoryName == cat,
+        );
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: prefs.getInt('notification_id')!,
+            displayOnForeground: true,
+            channelKey: 'basic_channel',
+            actionType: ActionType.Default,
+            title: 'Budget Alert',
+            body:
+                '${candidate.categoryName} ${((candidate.spent / candidate.budget) * 100)}% used',
+          ),
+        );
 
-          refreshCats();
-          notifyListeners();
-          if (count > 0) {
-            List<Category> newCats = await categories;
-            Category candidate = newCats.firstWhere(
-              (category) => category.categoryName == cat,
-            );
-            SharedPreferences prefs = await SharedPreferences.getInstance();
-            AwesomeNotifications().createNotification(
-              content: NotificationContent(
-                id: prefs.getInt('notification_id')!,
-                displayOnForeground: true,
-                channelKey: 'basic_channel',
-                actionType: ActionType.Default,
-                title: 'Budget Alert',
-                body:
-                    '${candidate.categoryName} ${((candidate.spent / candidate.budget) * 100)}% used',
-              ),
-            );
+        prefs.setInt('notification_id', prefs.getInt('notification_id')! + 1);
 
-            prefs.setInt(
-              'notification_id',
-              prefs.getInt('notification_id')! + 1,
-            );
-          }
+        refreshCats();
+        notifyListeners();
 
-          return count;
-        }
+        return Result.ok(count);
       } else {
-        throw CategoryNotFoundError();
+        Result.error(ErrorUpdatingCategory());
       }
-      return count;
-    } catch (e) {
+      return Result.error(Exception('Uncaugh Error Occured'));
+    } on Exception catch (e) {
       log('Error computing new spent :$e');
-      rethrow;
+      return Result.error(e);
     }
   }
 

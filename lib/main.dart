@@ -13,6 +13,7 @@ import 'package:flutter_application_1/screens/dashboard_screen.dart';
 import 'package:flutter_application_1/screens/envelopes_screen.dart';
 import 'package:flutter_application_1/screens/goals_page.dart';
 import 'package:flutter_application_1/screens/settings_page.dart';
+import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/categories.dart';
 import 'package:flutter_application_1/view_models/goals.dart';
@@ -162,6 +163,8 @@ class MyAppState extends State<MyApp> {
   bool handleUncategorized = false;
   CategoriesModel ctm = di.get<CategoriesModel>();
   TransactionsModel txM = di.get<TransactionsModel>();
+
+  bool categorizing = false;
 
   @override
   void didChangeDependencies() {
@@ -362,9 +365,9 @@ class MyAppState extends State<MyApp> {
                           Widget x = CircularProgressIndicator();
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
-                            x = CircularProgressIndicator();
+                            return CircularProgressIndicator();
                           } else if (snapshot.hasError) {
-                            x = Text("Error occured fetching transactions");
+                            return Text("Error occured fetching transactions");
                           } else if (snapshot.connectionState ==
                                   ConnectionState.done &&
                               snapshot.hasData) {
@@ -373,7 +376,7 @@ class MyAppState extends State<MyApp> {
                                 handleUncategorized = false;
                               });
                             }
-                            x = Text(
+                            return Text(
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -412,7 +415,6 @@ class MyAppState extends State<MyApp> {
                             //shrinkWrap: true,
                             itemBuilder: (context, index) {
                               String category = '';
-                              bool categorizing = false;
 
                               final String sign =
                                   snapshot.data?[index].type == TxType.spend.val
@@ -510,51 +512,74 @@ class MyAppState extends State<MyApp> {
                                                     Colors.black,
                                                   ),
                                             ),
-                                            onPressed: () {
-                                              if (!categorizing) {
-                                                if (category.isNotEmpty &&
-                                                    snapshot.data![index].id !=
-                                                        null) {
-                                                  txM
-                                                      .setTxCategory(
-                                                        category,
+                                            onPressed: categorizing
+                                                ? null
+                                                : () {
+                                                    if (category.isNotEmpty &&
                                                         snapshot
-                                                            .data![index]
-                                                            .id!,
-                                                      )
-                                                      .then((count) async {
-                                                        if (count > 0) {
-                                                          ctm.handleCatBalanceCompute(
+                                                                .data![index]
+                                                                .id !=
+                                                            null) {
+                                                      setState(() {
+                                                        categorizing = true;
+                                                      });
+                                                      txM
+                                                          .setTxCategory(
                                                             category,
                                                             snapshot
-                                                                .data![index],
-                                                          );
-                                                          unCategorizedTxs = txM
-                                                              .getUncategorizedTx();
-                                                          txM.refreshTx();
-                                                        }
-                                                      });
-                                                }
-                                              }
-                                            },
+                                                                .data![index]
+                                                                .id!,
+                                                          )
+                                                          .then((count) async {
+                                                            if (count > 0) {
+                                                              Result
+                                                              res = await ctm
+                                                                  .handleCatBalanceCompute(
+                                                                    category,
+                                                                    snapshot
+                                                                        .data![index],
+                                                                  );
+                                                              switch (res) {
+                                                                case Ok():
+                                                                  {
+                                                                    unCategorizedTxs =
+                                                                        txM.getUncategorizedTx();
+                                                                    txM.refreshTx();
+                                                                    setState(() {
+                                                                      categorizing =
+                                                                          false;
+                                                                    });
+
+                                                                    break;
+                                                                  }
+
+                                                                default:
+                                                                  {
+                                                                    ScaffoldMessenger.of(
+                                                                      context,
+                                                                    ).showSnackBar(
+                                                                      SnackBar(
+                                                                        content: Text(
+                                                                          'error occured',
+                                                                          style: TextStyle(
+                                                                            color:
+                                                                                Colors.red,
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                    );
+                                                                    setState(() {
+                                                                      categorizing =
+                                                                          false;
+                                                                    });
+                                                                  }
+                                                              }
+                                                            }
+                                                          });
+                                                    }
+                                                  },
                                             child: Text(
                                               "Categorize Transaction",
-                                            ),
-                                          ),
-
-                                          OutlinedButton(
-                                            style: ButtonStyle(
-                                              backgroundColor:
-                                                  WidgetStatePropertyAll<Color>(
-                                                    Colors.white,
-                                                  ),
-                                            ),
-                                            onPressed: () {},
-                                            child: Text(
-                                              "Cancel",
-                                              style: TextStyle(
-                                                color: Colors.black,
-                                              ),
                                             ),
                                           ),
                                         ],
@@ -579,7 +604,7 @@ class MyAppState extends State<MyApp> {
               colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
             ),
             home: FutureBuilder<bool>(
-              future: di<AuthModel>().handleAuth,
+              future: watch(di<AuthModel>()).handleAuth,
               builder: (context, snapshot) {
                 Widget cont = Text("");
                 if (snapshot.connectionState == ConnectionState.waiting) {
