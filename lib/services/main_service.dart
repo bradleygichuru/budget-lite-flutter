@@ -1,0 +1,328 @@
+import 'dart:async';
+import 'dart:developer';
+import 'dart:io';
+import 'dart:ui';
+import 'package:another_telephony/telephony.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:cron/cron.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_application_1/data_models/categories_data_model.dart';
+import 'package:flutter_application_1/data_models/auth_data_model.dart';
+import 'package:flutter_application_1/data_models/goal_data_model.dart';
+import 'package:flutter_application_1/data_models/transactions.dart';
+import 'package:flutter_application_1/view_models/auth.dart';
+import 'package:flutter_application_1/view_models/categories.dart';
+import 'package:flutter_application_1/view_models/goals.dart';
+import 'package:flutter_application_1/view_models/txs.dart';
+import 'package:flutter_application_1/view_models/wallet.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+Future<void> initializeService() async {
+  final service = FlutterBackgroundService();
+  await service.configure(
+    androidConfiguration: AndroidConfiguration(
+      // this will be executed when app is in foreground or background in separated isolate
+      onStart: onStart,
+
+      // auto start service
+      autoStart: true,
+      isForegroundMode: true,
+
+      notificationChannelId: 'my_foreground',
+      initialNotificationTitle: 'AWESOME SERVICE',
+      initialNotificationContent: 'Initializing',
+      foregroundServiceNotificationId: 888,
+      foregroundServiceTypes: [AndroidForegroundType.location],
+    ),
+    iosConfiguration: IosConfiguration(
+      // auto start service
+      autoStart: true,
+
+      // this will be executed when app is in foreground in separated isolate
+      onForeground: onStart,
+
+      // you have to enable background fetch capability on xcode project
+      onBackground: onIosBackground,
+    ),
+  );
+}
+
+// to ensure this is executed
+// run app from xcode, then from xcode menu, select Simulate Background Fetch
+
+@pragma('vm:entry-point')
+Future<bool> onIosBackground(ServiceInstance service) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
+
+  SharedPreferences preferences = await SharedPreferences.getInstance();
+  await preferences.reload();
+  final log = preferences.getStringList('log') ?? <String>[];
+  log.add(DateTime.now().toIso8601String());
+  await preferences.setStringList('log', log);
+
+  return true;
+}
+
+Future<void> dailyBudgetAlert() async {
+  String body = '';
+
+  CategoriesModel ctM = CategoriesModel();
+  List<Category> categories = await ctM.getCategories();
+  for (final cat in categories) {
+    if (body.isEmpty) {
+      body = '${cat.categoryName} ${(cat.spent / cat.budget * 100)}% spent';
+      print('New body:$body');
+    } else {
+      body =
+          '$body, ${cat.categoryName} ${(cat.spent / cat.budget * 100)}% spent';
+
+      print('New body:$body');
+    }
+  }
+  if (body.isNotEmpty) {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int notiId = prefs.getInt('notification_id')!;
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        notificationLayout: NotificationLayout.BigText,
+        autoDismissible: false,
+        id: notiId,
+        channelKey: 'basic_channel',
+        actionType: ActionType.Default,
+        title: 'Daily budget report',
+        body: body,
+      ),
+    );
+
+    prefs.setInt('notification_id', notiId + 1);
+  }
+}
+
+Future<void> monthlyGoalAlerts() async {
+  String body = '';
+
+  GoalModel gM = GoalModel();
+  List<Goal> goals = await gM.getGoals();
+  for (final goal in goals) {
+    if (body.isEmpty) {
+      body =
+          '${goal.name} ${(goal.currentAmount / goal.targetAmount * 100)}% achieved';
+      print('New body:$body');
+    } else {
+      body =
+          '$body, ${goal.name} ${(goal.currentAmount / goal.targetAmount * 100)}% achieved';
+
+      print('New body:$body');
+    }
+  }
+  if (body.isNotEmpty) {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int notiId = prefs.getInt('notification_id')!;
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        notificationLayout: NotificationLayout.BigText,
+        autoDismissible: false,
+        id: notiId,
+        channelKey: 'basic_channel',
+        actionType: ActionType.Default,
+        title: 'Monthly Goal report',
+        body: body,
+      ),
+    );
+
+    prefs.setInt('notification_id', notiId + 1);
+  }
+}
+
+@pragma('vm:entry-point')
+void onStart(ServiceInstance service) async {
+  // Only available for flutter 3.0.0 and later
+  DartPluginRegistrant.ensureInitialized();
+
+  // For flutter prior to version 3.0.0
+  // We have to register the plugin manually
+  final telephony = Telephony.instance;
+  final cron = Cron();
+  cron.schedule(Schedule.parse('0 8 * * *'), dailyBudgetAlert); //every day at 8
+  cron.schedule(
+    Schedule.parse('@monthly'),
+    monthlyGoalAlerts,
+  ); //every 1st of the month
+
+  if (await AuthModel().getRegion() == Country.kenya.name) {
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        autoDismissible: false,
+        id: 888,
+        channelKey: 'basic_channel',
+        actionType: ActionType.SilentBackgroundAction,
+        title: 'Budgetlite tx discovery service',
+        body: 'running',
+        locked: true,
+      ),
+    );
+    final bool? result = await telephony.requestPhoneAndSmsPermissions;
+
+    if (result != null && result) {
+      telephony.listenIncomingSms(
+        onNewMessage: onMessage,
+        onBackgroundMessage: backgroundMessageHandler,
+      );
+    }
+  }
+
+  if (service is AndroidServiceInstance) {
+    service.on('setAsForeground').listen((event) {
+      service.setAsForegroundService();
+    });
+
+    service.on('setAsBackground').listen((event) {
+      service.setAsBackgroundService();
+    });
+  }
+
+  service.on('stopService').listen((event) {
+    service.stopSelf();
+  });
+
+  // bring to foreground
+  Timer.periodic(const Duration(seconds: 1), (timer) async {
+    if (service is AndroidServiceInstance) {
+      if (await service.isForegroundService()) {}
+    }
+
+    /// you can see this log in logcat
+    // log('FLUTTER BACKGROUND SERVICE: ${DateTime.now()}');
+
+    // test using external plugin
+
+    service.invoke('update', {
+      "current_date": DateTime.now().toIso8601String(),
+      "device": Platform.operatingSystem,
+    });
+  });
+}
+
+onMessage(SmsMessage message) async {
+  try {
+    TransactionsModel txM = TransactionsModel();
+    WalletModel wM = WalletModel();
+    AuthModel aM = AuthModel();
+    String? currentRegion = await aM.getRegion();
+    if (currentRegion == Country.kenya.name) {
+      var transaction = parseMpesa(message);
+      log('from:${message.address} message:${message.body}');
+
+      int? accountId = await aM.getAccountId();
+      log('background_transaction:$transaction');
+      if (transaction != null && accountId != null) {
+        if (transaction['type'] == TxType.credit.val) {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+            category: 'credit',
+          );
+          wM.creditDefaultWallet(tx);
+        } else if (transaction['type'] == TxType.fromSaving.val) {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            category: 'credit',
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          wM.removeFromSavings(tx);
+        } else if (transaction['type'] == TxType.toSaving.val) {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            category: 'savings',
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          wM.addToSavings(tx);
+        } else {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          txM.insertTransaction(tx);
+        }
+      }
+    }
+  } catch (e) {
+    log('Error in background message', error: e);
+  }
+}
+
+@pragma('vm:entry-point')
+backgroundMessageHandler(SmsMessage message) async {
+  //Handle background message
+  try {
+    TransactionsModel txM = TransactionsModel();
+    WalletModel wM = WalletModel();
+    AuthModel aM = AuthModel();
+    String? currentRegion = await aM.getRegion();
+    if (currentRegion == Country.kenya.name) {
+      var transaction = parseMpesa(message);
+      log('from:${message.address} message:${message.body}');
+
+      int? accountId = await aM.getAccountId();
+      log('background_transaction:$transaction');
+      if (transaction != null && accountId != null) {
+        if (transaction['type'] == TxType.credit.val) {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+            category: 'credit',
+          );
+          wM.creditDefaultWallet(tx);
+        } else if (transaction['type'] == TxType.fromSaving.val) {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            category: 'credit',
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          wM.removeFromSavings(tx);
+        } else if (transaction['type'] == TxType.toSaving.val) {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            category: 'savings',
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          wM.addToSavings(tx);
+        } else {
+          TransactionObj tx = TransactionObj(
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          txM.insertTransaction(tx);
+        }
+      }
+    }
+  } catch (e) {
+    log('Error in background message', error: e);
+  }
+}

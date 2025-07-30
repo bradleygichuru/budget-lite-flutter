@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
 import 'package:flutter_application_1/screens/wallet_screen.dart';
+import 'package:flutter_application_1/services/main_service.dart';
 import 'package:flutter_application_1/services/notification_controller.dart';
 import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/screens/dashboard_screen.dart';
@@ -141,6 +142,7 @@ Future<void> main() async {
     debug: true,
   );
   setUpNotificationIds();
+  initializeService();
   setup();
   runApp(const MyApp());
 }
@@ -157,8 +159,6 @@ class MyApp extends StatefulWidget with WatchItStatefulWidgetMixin {
 class MyAppState extends State<MyApp> {
   Future<List<TransactionObj>> unCategorizedTxs = Future.value([]);
   int currentPageIndex = 0;
-  final telephony = Telephony.instance;
-  late Timer pollingTx;
   late final AppLifecycleListener _listener;
   bool handleUncategorized = false;
   CategoriesModel ctm = di.get<CategoriesModel>();
@@ -202,7 +202,7 @@ class MyAppState extends State<MyApp> {
       onDismissActionReceivedMethod:
           NotificationController.onDismissActionReceivedMethod,
     );
-    initPlatformState();
+    //  initPlatformState();
     // initComposed = initTX();
     // pollingTx = Timer.periodic(Duration(seconds: 10), (Timer t) {
     //   pollFetchTx();
@@ -212,24 +212,24 @@ class MyAppState extends State<MyApp> {
     super.initState();
   }
 
-  Future<void> initPlatformState() async {
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (await di.get<AuthModel>().getRegion() == Country.kenya.name) {
-      final bool? result = await telephony.requestPhoneAndSmsPermissions;
-
-      if (result != null && result) {
-        telephony.listenIncomingSms(
-          onNewMessage: onMessage,
-          onBackgroundMessage: backgroundMessageHandler,
-        );
-      }
-    }
-
-    if (!mounted) return;
-  }
+  // Future<void> initPlatformState() async {
+  //   // Platform messages may fail, so we use a try/catch PlatformException.
+  //   // If the widget was removed from the tree while the asynchronous platform
+  //   // message was in flight, we want to discard the reply rather than calling
+  //   // setState to update our non-existent appearance.
+  //   if (await di.get<AuthModel>().getRegion() == Country.kenya.name) {
+  //     final bool? result = await telephony.requestPhoneAndSmsPermissions;
+  //
+  //     if (result != null && result) {
+  //       telephony.listenIncomingSms(
+  //         onNewMessage: onMessage,
+  //         onBackgroundMessage: backgroundMessageHandler,
+  //       );
+  //     }
+  //   }
+  //
+  //   if (!mounted) return;
+  // }
 
   void _onStateChanged(AppLifecycleState state) {
     switch (state) {

@@ -122,135 +122,139 @@ class EnvelopeViewState extends State<EnvelopesView> {
                       color: Colors.blue.shade600,
                       onPressed: () => showDialog<String>(
                         context: context,
-                        builder: (context) => AlertDialog(
-                          actions: [
-                            FilledButton(
-                              style: ButtonStyle(
-                                backgroundColor: WidgetStatePropertyAll<Color>(
-                                  Colors.grey.shade600,
+                        builder: (context) => SingleChildScrollView(
+                          child: AlertDialog(
+                            actions: [
+                              FilledButton(
+                                style: ButtonStyle(
+                                  backgroundColor:
+                                      WidgetStatePropertyAll<Color>(
+                                        Colors.grey.shade600,
+                                      ),
                                 ),
-                              ),
-                              onPressed: _isLoading
-                                  ? null
-                                  : () {
-                                      newBudgetAmountController.text = '';
+                                onPressed: _isLoading
+                                    ? null
+                                    : () {
+                                        newBudgetAmountController.text = '';
 
-                                      newCategoryNameController.text = '';
-                                      Navigator.pop(context);
-                                    },
-                              child: Text(
-                                "Cancel",
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                            FilledButton(
-                              style: ButtonStyle(
-                                backgroundColor: WidgetStatePropertyAll<Color>(
-                                  Colors.blue.shade600,
+                                        newCategoryNameController.text = '';
+                                        Navigator.pop(context);
+                                      },
+                                child: Text(
+                                  "Cancel",
+                                  style: TextStyle(color: Colors.white),
                                 ),
                               ),
-                              onPressed: _isLoading
-                                  ? null
-                                  : () {
-                                      if (_formKey.currentState!.validate()) {
-                                        setState(() {
-                                          _isLoading = true;
-                                        });
-                                        ctM
-                                            .handleCategoryAdd(
-                                              Category(
-                                                accountId: null,
-                                                spent: 0,
-                                                categoryName:
-                                                    newCategoryNameController
+                              FilledButton(
+                                style: ButtonStyle(
+                                  backgroundColor:
+                                      WidgetStatePropertyAll<Color>(
+                                        Colors.blue.shade600,
+                                      ),
+                                ),
+                                onPressed: _isLoading
+                                    ? null
+                                    : () {
+                                        if (_formKey.currentState!.validate()) {
+                                          setState(() {
+                                            _isLoading = true;
+                                          });
+                                          ctM
+                                              .handleCategoryAdd(
+                                                Category(
+                                                  accountId: null,
+                                                  spent: 0,
+                                                  categoryName:
+                                                      newCategoryNameController
+                                                          .text,
+                                                  budget: double.parse(
+                                                    newBudgetAmountController
                                                         .text,
-                                                budget: double.parse(
-                                                  newBudgetAmountController
-                                                      .text,
-                                                ),
-                                              ),
-                                            )
-                                            .then((_) {
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: const Text(
-                                                      "Category created",
-                                                    ),
                                                   ),
-                                                );
-                                                setState(() {
-                                                  _isLoading = false;
-                                                });
+                                                ),
+                                              )
+                                              .then((_) {
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: const Text(
+                                                        "Category created",
+                                                      ),
+                                                    ),
+                                                  );
+                                                  setState(() {
+                                                    _isLoading = false;
+                                                  });
 
-                                                Navigator.pop(context);
-                                              }
-                                            });
-                                      }
-                                    },
-                              child: Text(
-                                "Add envelope",
-                                style: TextStyle(color: Colors.white),
+                                                  Navigator.pop(context);
+                                                }
+                                              });
+                                        }
+                                      },
+                                child: Text(
+                                  "Add envelope",
+                                  style: TextStyle(color: Colors.white),
+                                ),
                               ),
+                            ],
+                            title: Text(
+                              "Add New Envelope",
+                              style: TextStyle(fontWeight: FontWeight.bold),
                             ),
-                          ],
-                          title: Text(
-                            "Add New Envelope",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
 
-                          content: Padding(
-                            padding: EdgeInsets.all(0),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 0,
-                                      vertical: 5,
-                                    ),
-                                    child: TextFormField(
-                                      controller: newCategoryNameController,
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'Please enter valid category name';
-                                        }
-                                        return null;
-                                      },
-                                      decoration: const InputDecoration(
-                                        border: OutlineInputBorder(),
-                                        hintText: 'e.g Entertainment',
-                                        labelText: "Category Name",
+                            content: Padding(
+                              padding: EdgeInsets.all(0),
+                              child: Form(
+                                key: _formKey,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 0,
+                                        vertical: 5,
+                                      ),
+                                      child: TextFormField(
+                                        controller: newCategoryNameController,
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Please enter valid category name';
+                                          }
+                                          return null;
+                                        },
+                                        decoration: const InputDecoration(
+                                          border: OutlineInputBorder(),
+                                          hintText: 'e.g Entertainment',
+                                          labelText: "Category Name",
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 0,
-                                      vertical: 5,
-                                    ),
-                                    child: TextFormField(
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'Please enter valid amount';
-                                        }
-                                        return null;
-                                      },
-                                      keyboardType: TextInputType.number,
-                                      controller: newBudgetAmountController,
-                                      obscureText: false,
-                                      decoration: InputDecoration(
-                                        border: OutlineInputBorder(),
-                                        labelText: 'Budget Amount',
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 0,
+                                        vertical: 5,
+                                      ),
+                                      child: TextFormField(
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Please enter valid amount';
+                                          }
+                                          return null;
+                                        },
+                                        keyboardType: TextInputType.number,
+                                        controller: newBudgetAmountController,
+                                        obscureText: false,
+                                        decoration: InputDecoration(
+                                          border: OutlineInputBorder(),
+                                          labelText: 'Budget Amount',
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -315,140 +319,152 @@ class EnvelopeViewState extends State<EnvelopesView> {
                                         onPressed: () {
                                           showDialog<String>(
                                             context: context,
-                                            builder: (context) => AlertDialog(
-                                              title: Text(
-                                                "Edit Envelope",
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
+                                            builder: (context) => SingleChildScrollView(
+                                              child: AlertDialog(
+                                                title: Text(
+                                                  "Edit Envelope",
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
-                                              ),
 
-                                              content: Padding(
-                                                padding: EdgeInsets.all(10),
-                                                child: Form(
-                                                  key: _formKey,
-                                                  child: Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    children: [
-                                                      Padding(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 8,
-                                                              vertical: 16,
+                                                content: Padding(
+                                                  padding: EdgeInsets.all(10),
+                                                  child: Form(
+                                                    key: _formKey,
+                                                    child: Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: [
+                                                        Padding(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 8,
+                                                                vertical: 16,
+                                                              ),
+                                                          child: TextFormField(
+                                                            validator: (value) {
+                                                              if (value ==
+                                                                      null ||
+                                                                  value
+                                                                      .isEmpty) {
+                                                                return 'Please enter valid amount';
+                                                              }
+                                                              return null;
+                                                            },
+                                                            keyboardType:
+                                                                TextInputType
+                                                                    .number,
+                                                            controller:
+                                                                budgetAmountController,
+                                                            obscureText: false,
+                                                            decoration: InputDecoration(
+                                                              border:
+                                                                  OutlineInputBorder(),
+                                                              labelText:
+                                                                  'Budget Amount',
                                                             ),
-                                                        child: TextFormField(
-                                                          validator: (value) {
-                                                            if (value == null ||
-                                                                value.isEmpty) {
-                                                              return 'Please enter valid amount';
-                                                            }
-                                                            return null;
-                                                          },
-                                                          keyboardType:
-                                                              TextInputType
-                                                                  .number,
-                                                          controller:
-                                                              budgetAmountController,
-                                                          obscureText: false,
-                                                          decoration: InputDecoration(
-                                                            border:
-                                                                OutlineInputBorder(),
-                                                            labelText:
-                                                                'Budget Amount',
                                                           ),
                                                         ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                                actions: [
+                                                  FilledButton(
+                                                    style: ButtonStyle(
+                                                      backgroundColor:
+                                                          WidgetStatePropertyAll<
+                                                            Color
+                                                          >(
+                                                            Colors
+                                                                .grey
+                                                                .shade600,
+                                                          ),
+                                                    ),
+                                                    onPressed: _isLoading
+                                                        ? null
+                                                        : () {
+                                                            Navigator.pop(
+                                                              context,
+                                                            );
+                                                          },
+                                                    child: Text(
+                                                      "Cancel",
+                                                      style: TextStyle(
+                                                        color: Colors.white,
                                                       ),
-                                                    ],
+                                                    ),
                                                   ),
-                                                ),
+                                                  FilledButton(
+                                                    style: ButtonStyle(
+                                                      backgroundColor:
+                                                          WidgetStatePropertyAll<
+                                                            Color
+                                                          >(
+                                                            Colors
+                                                                .blue
+                                                                .shade600,
+                                                          ),
+                                                    ),
+                                                    onPressed: _isLoading
+                                                        ? null
+                                                        : () {
+                                                            if (_formKey
+                                                                .currentState!
+                                                                .validate()) {
+                                                              setState(() {
+                                                                _isLoading =
+                                                                    true;
+                                                              });
+                                                              ctM
+                                                                  .editCategoryBudget(
+                                                                    snapshot
+                                                                        .data![index],
+                                                                    double.parse(
+                                                                      budgetAmountController
+                                                                          .text,
+                                                                    ),
+                                                                  )
+                                                                  .then((
+                                                                    updates,
+                                                                  ) {
+                                                                    if (updates ==
+                                                                        1) {
+                                                                      ScaffoldMessenger.of(
+                                                                        context,
+                                                                      ).showSnackBar(
+                                                                        SnackBar(
+                                                                          content: const Text(
+                                                                            "Category edited",
+                                                                          ),
+                                                                        ),
+                                                                      );
+
+                                                                      setState(() {
+                                                                        _isLoading =
+                                                                            false;
+                                                                      });
+
+                                                                      Navigator.pop(
+                                                                        context,
+                                                                      );
+                                                                    }
+                                                                  });
+                                                            }
+                                                          },
+                                                    child: Text(
+                                                      "Edit envelope",
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                              actions: [
-                                                FilledButton(
-                                                  style: ButtonStyle(
-                                                    backgroundColor:
-                                                        WidgetStatePropertyAll<
-                                                          Color
-                                                        >(Colors.grey.shade600),
-                                                  ),
-                                                  onPressed: _isLoading
-                                                      ? null
-                                                      : () {
-                                                          Navigator.pop(
-                                                            context,
-                                                          );
-                                                        },
-                                                  child: Text(
-                                                    "Cancel",
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                                FilledButton(
-                                                  style: ButtonStyle(
-                                                    backgroundColor:
-                                                        WidgetStatePropertyAll<
-                                                          Color
-                                                        >(Colors.blue.shade600),
-                                                  ),
-                                                  onPressed: _isLoading
-                                                      ? null
-                                                      : () {
-                                                          if (_formKey
-                                                              .currentState!
-                                                              .validate()) {
-                                                            setState(() {
-                                                              _isLoading = true;
-                                                            });
-                                                            ctM
-                                                                .editCategoryBudget(
-                                                                  snapshot
-                                                                      .data![index],
-                                                                  double.parse(
-                                                                    budgetAmountController
-                                                                        .text,
-                                                                  ),
-                                                                )
-                                                                .then((
-                                                                  updates,
-                                                                ) {
-                                                                  if (updates ==
-                                                                      1) {
-                                                                    ScaffoldMessenger.of(
-                                                                      context,
-                                                                    ).showSnackBar(
-                                                                      SnackBar(
-                                                                        content:
-                                                                            const Text(
-                                                                              "Category edited",
-                                                                            ),
-                                                                      ),
-                                                                    );
-
-                                                                    setState(() {
-                                                                      _isLoading =
-                                                                          false;
-                                                                    });
-
-                                                                    Navigator.pop(
-                                                                      context,
-                                                                    );
-                                                                  }
-                                                                });
-                                                          }
-                                                        },
-                                                  child: Text(
-                                                    "Edit envelope",
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
                                             ),
                                           );
                                         },

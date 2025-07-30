@@ -1,5 +1,4 @@
 import 'dart:developer';
-
 import 'package:another_telephony/telephony.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
