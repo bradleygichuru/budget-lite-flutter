@@ -49,6 +49,7 @@ dependencies:
   watch_it: ^1.6.5
   flutter_dotenv: ^5.2.1
   cron: ^0.6.2
+  toastification: ^3.0.3
 
 dev_dependencies:
   flutter_test:

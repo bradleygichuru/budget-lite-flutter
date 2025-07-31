@@ -1,8 +1,5 @@
 import 'dart:developer';
 import 'package:another_telephony/telephony.dart';
-import 'package:flutter_application_1/data_models/auth_data_model.dart';
-import 'package:flutter_application_1/db/db.dart';
-import 'package:flutter_application_1/view_models/auth.dart';
 
 const String received = "received";
 const String paid = "paid to";
@@ -122,8 +119,8 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
           .replaceAll(",", "");
 
       transaction["amount"] = double.parse(amount);
-
       transaction['date'] = message.split(" on ")[1].split("at")[0].trim();
+      transaction['desc'] = transferredArray[1].split('on')[0].trim();
 
       return transaction;
     }

@@ -13,7 +13,7 @@ Future<Database> getDb() async {
     },
     onCreate: (db, version) {
       db.execute(
-        "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT,budget_reset_date TEXT,account_tier TEXT,created_at TEXT)",
+        "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT,budget_reset_date TEXT,account_tier TEXT,created_at TEXT,resetPending INTEGER DEFAULT 0)",
       );
 
       db.execute(
@@ -49,7 +49,7 @@ appDbInit() async {
     },
     onCreate: (db, version) {
       db.execute(
-        "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT,budget_reset_date TEXT,account_tier TEXT,created_at TEXT)",
+        "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT,budget_reset_date TEXT,account_tier TEXT,created_at TEXT ,resetPending INTEGER DEFAULT 0)",
       );
 
       db.execute(

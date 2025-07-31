@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'dart:developer';
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
 import 'package:flutter_application_1/data_models/wallet_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:toastification/toastification.dart';
 import 'package:watch_it/watch_it.dart';
 
 class WalletModel extends ChangeNotifier {
@@ -128,6 +131,63 @@ class WalletModel extends ChangeNotifier {
               totalBalance = Future.value(newWalletState.balance);
               savings = Future.value(newWalletState.savings);
               SharedPreferences prefs = await SharedPreferences.getInstance();
+              // toastification.show(
+              //   overlayState: AppGlobal.navigatorKey.currentState?.overlay,
+              //   title: Text('Wallet credited'),
+              //   description: RichText(
+              //     text: TextSpan(text: '${tx.amount} kes credited to wallet'),
+              //   ),
+              //   autoCloseDuration: const Duration(seconds: 5),
+              //   animationDuration: const Duration(milliseconds: 300),
+              //   alignment: Alignment.topRight,
+              //   direction: TextDirection.ltr,
+              //   type: ToastificationType.success,
+              //   style: ToastificationStyle.fillColored,
+              //   icon: const Icon(Icons.check),
+              //   showIcon: true, // show or hide the icon
+              //   primaryColor: Colors.green,
+              //   backgroundColor: Colors.white,
+              //   foregroundColor: Colors.black,
+              //   padding: const EdgeInsets.symmetric(
+              //     horizontal: 12,
+              //     vertical: 16,
+              //   ),
+              //   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              //   borderRadius: BorderRadius.circular(12),
+              //   boxShadow: const [
+              //     BoxShadow(
+              //       color: Color(0x07000000),
+              //       blurRadius: 16,
+              //       offset: Offset(0, 16),
+              //       spreadRadius: 0,
+              //     ),
+              //   ],
+              //   showProgressBar: true,
+              //   closeButton: ToastCloseButton(
+              //     showType: CloseButtonShowType.onHover,
+              //     buttonBuilder: (context, onClose) {
+              //       return OutlinedButton.icon(
+              //         onPressed: onClose,
+              //         icon: const Icon(Icons.close, size: 20),
+              //         label: const Text('Close'),
+              //       );
+              //     },
+              //   ),
+              //   closeOnClick: false,
+              //   pauseOnHover: true,
+              //   dragToClose: true,
+              //   applyBlurEffect: true,
+              //   callbacks: ToastificationCallbacks(
+              //     onTap: (toastItem) => log('Toast ${toastItem.id} tapped'),
+              //     onCloseButtonTap: (toastItem) =>
+              //         log('Toast ${toastItem.id} close button tapped'),
+              //     onAutoCompleteCompleted: (toastItem) =>
+              //         log('Toast ${toastItem.id} auto complete completed'),
+              //     onDismissed: (toastItem) =>
+              //         log('Toast ${toastItem.id} dismissed'),
+              //   ),
+              // );
+
               AwesomeNotifications().createNotification(
                 content: NotificationContent(
                   id: prefs.getInt('notification_id')!,
@@ -205,6 +265,68 @@ class WalletModel extends ChangeNotifier {
             if (count != null) {
               if (count! > 0) {
                 SharedPreferences prefs = await SharedPreferences.getInstance();
+                // toastification.show(
+                //   overlayState: AppGlobal.navigatorKey.currentState?.overlay,
+                //   title: Text('Wallet debited'),
+                //   description: RichText(
+                //     text: TextSpan(
+                //       text: '${tx.amount} kes debited from wallet',
+                //     ),
+                //   ),
+                //   autoCloseDuration: const Duration(seconds: 5),
+                //   animationDuration: const Duration(milliseconds: 300),
+                //   alignment: Alignment.topRight,
+                //   direction: TextDirection.ltr,
+                //   type: ToastificationType.success,
+                //   style: ToastificationStyle.fillColored,
+                //   icon: const Icon(Icons.check),
+                //   showIcon: true, // show or hide the icon
+                //   primaryColor: Colors.green,
+                //   backgroundColor: Colors.white,
+                //   foregroundColor: Colors.black,
+                //   padding: const EdgeInsets.symmetric(
+                //     horizontal: 12,
+                //     vertical: 16,
+                //   ),
+                //   margin: const EdgeInsets.symmetric(
+                //     horizontal: 12,
+                //     vertical: 8,
+                //   ),
+                //   borderRadius: BorderRadius.circular(12),
+                //   boxShadow: const [
+                //     BoxShadow(
+                //       color: Color(0x07000000),
+                //       blurRadius: 16,
+                //       offset: Offset(0, 16),
+                //       spreadRadius: 0,
+                //     ),
+                //   ],
+                //   showProgressBar: true,
+                //   closeButton: ToastCloseButton(
+                //     showType: CloseButtonShowType.onHover,
+                //     buttonBuilder: (context, onClose) {
+                //       return OutlinedButton.icon(
+                //         onPressed: onClose,
+                //         icon: const Icon(Icons.close, size: 20),
+                //         label: const Text('Close'),
+                //       );
+                //     },
+                //   ),
+                //   closeOnClick: false,
+                //   pauseOnHover: true,
+                //   dragToClose: true,
+                //   applyBlurEffect: true,
+                //   callbacks: ToastificationCallbacks(
+                //     onTap: (toastItem) => log('Toast ${toastItem.id} tapped'),
+                //     onCloseButtonTap: (toastItem) =>
+                //         log('Toast ${toastItem.id} close button tapped'),
+                //     onAutoCompleteCompleted: (toastItem) =>
+                //         log('Toast ${toastItem.id} auto complete completed'),
+                //     onDismissed: (toastItem) =>
+                //         log('Toast ${toastItem.id} dismissed'),
+                //   ),
+                // );
+
                 AwesomeNotifications().createNotification(
                   content: NotificationContent(
                     id: prefs.getInt('notification_id')!,
@@ -265,6 +387,67 @@ class WalletModel extends ChangeNotifier {
                 if (count! > 0) {
                   SharedPreferences prefs =
                       await SharedPreferences.getInstance();
+                  // toastification.show(
+                  //   overlayState: AppGlobal.navigatorKey.currentState?.overlay,
+                  //   title: Text('Wallet debited'),
+                  //   description: RichText(
+                  //     text: TextSpan(
+                  //       text: '${tx.amount} kes debited from wallet',
+                  //     ),
+                  //   ),
+                  //   autoCloseDuration: const Duration(seconds: 5),
+                  //   animationDuration: const Duration(milliseconds: 300),
+                  //   alignment: Alignment.topRight,
+                  //   direction: TextDirection.ltr,
+                  //   type: ToastificationType.success,
+                  //   style: ToastificationStyle.fillColored,
+                  //   icon: const Icon(Icons.check),
+                  //   showIcon: true, // show or hide the icon
+                  //   primaryColor: Colors.green,
+                  //   backgroundColor: Colors.white,
+                  //   foregroundColor: Colors.black,
+                  //   padding: const EdgeInsets.symmetric(
+                  //     horizontal: 12,
+                  //     vertical: 16,
+                  //   ),
+                  //   margin: const EdgeInsets.symmetric(
+                  //     horizontal: 12,
+                  //     vertical: 8,
+                  //   ),
+                  //   borderRadius: BorderRadius.circular(12),
+                  //   boxShadow: const [
+                  //     BoxShadow(
+                  //       color: Color(0x07000000),
+                  //       blurRadius: 16,
+                  //       offset: Offset(0, 16),
+                  //       spreadRadius: 0,
+                  //     ),
+                  //   ],
+                  //   showProgressBar: true,
+                  //   closeButton: ToastCloseButton(
+                  //     showType: CloseButtonShowType.onHover,
+                  //     buttonBuilder: (context, onClose) {
+                  //       return OutlinedButton.icon(
+                  //         onPressed: onClose,
+                  //         icon: const Icon(Icons.close, size: 20),
+                  //         label: const Text('Close'),
+                  //       );
+                  //     },
+                  //   ),
+                  //   closeOnClick: false,
+                  //   pauseOnHover: true,
+                  //   dragToClose: true,
+                  //   applyBlurEffect: true,
+                  //   callbacks: ToastificationCallbacks(
+                  //     onTap: (toastItem) => log('Toast ${toastItem.id} tapped'),
+                  //     onCloseButtonTap: (toastItem) =>
+                  //         log('Toast ${toastItem.id} close button tapped'),
+                  //     onAutoCompleteCompleted: (toastItem) =>
+                  //         log('Toast ${toastItem.id} auto complete completed'),
+                  //     onDismissed: (toastItem) =>
+                  //         log('Toast ${toastItem.id} dismissed'),
+                  //   ),
+                  // );
                   AwesomeNotifications().createNotification(
                     content: NotificationContent(
                       id: prefs.getInt('notification_id')!,
@@ -336,6 +519,64 @@ class WalletModel extends ChangeNotifier {
             notifyListeners();
             if (count > 0) {
               SharedPreferences prefs = await SharedPreferences.getInstance();
+              // toastification.show(
+              //   overlayState: AppGlobal.navigatorKey.currentState?.overlay,
+              //   title: Text('Savings'),
+              //   description: RichText(
+              //     text: TextSpan(
+              //       text: '${tx.amount} kes transferred to savings',
+              //     ),
+              //   ),
+              //   autoCloseDuration: const Duration(seconds: 5),
+              //   animationDuration: const Duration(milliseconds: 300),
+              //   alignment: Alignment.topRight,
+              //   direction: TextDirection.ltr,
+              //   type: ToastificationType.success,
+              //   style: ToastificationStyle.fillColored,
+              //   icon: const Icon(Icons.check),
+              //   showIcon: true, // show or hide the icon
+              //   primaryColor: Colors.green,
+              //   backgroundColor: Colors.white,
+              //   foregroundColor: Colors.black,
+              //   padding: const EdgeInsets.symmetric(
+              //     horizontal: 12,
+              //     vertical: 16,
+              //   ),
+              //   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              //   borderRadius: BorderRadius.circular(12),
+              //   boxShadow: const [
+              //     BoxShadow(
+              //       color: Color(0x07000000),
+              //       blurRadius: 16,
+              //       offset: Offset(0, 16),
+              //       spreadRadius: 0,
+              //     ),
+              //   ],
+              //   showProgressBar: true,
+              //   closeButton: ToastCloseButton(
+              //     showType: CloseButtonShowType.onHover,
+              //     buttonBuilder: (context, onClose) {
+              //       return OutlinedButton.icon(
+              //         onPressed: onClose,
+              //         icon: const Icon(Icons.close, size: 20),
+              //         label: const Text('Close'),
+              //       );
+              //     },
+              //   ),
+              //   closeOnClick: false,
+              //   pauseOnHover: true,
+              //   dragToClose: true,
+              //   applyBlurEffect: true,
+              //   callbacks: ToastificationCallbacks(
+              //     onTap: (toastItem) => log('Toast ${toastItem.id} tapped'),
+              //     onCloseButtonTap: (toastItem) =>
+              //         log('Toast ${toastItem.id} close button tapped'),
+              //     onAutoCompleteCompleted: (toastItem) =>
+              //         log('Toast ${toastItem.id} auto complete completed'),
+              //     onDismissed: (toastItem) =>
+              //         log('Toast ${toastItem.id} dismissed'),
+              //   ),
+              // );
               AwesomeNotifications().createNotification(
                 content: NotificationContent(
                   id: prefs.getInt('notification_id')!,
@@ -369,6 +610,64 @@ class WalletModel extends ChangeNotifier {
             notifyListeners();
             if (count > 0) {
               SharedPreferences prefs = await SharedPreferences.getInstance();
+              // toastification.show(
+              //   overlayState: AppGlobal.navigatorKey.currentState?.overlay,
+              //   title: Text('Savings'),
+              //   description: RichText(
+              //     text: TextSpan(
+              //       text: '${tx.amount} kes transferred to savings',
+              //     ),
+              //   ),
+              //   autoCloseDuration: const Duration(seconds: 5),
+              //   animationDuration: const Duration(milliseconds: 300),
+              //   alignment: Alignment.topRight,
+              //   direction: TextDirection.ltr,
+              //   type: ToastificationType.success,
+              //   style: ToastificationStyle.fillColored,
+              //   icon: const Icon(Icons.check),
+              //   showIcon: true, // show or hide the icon
+              //   primaryColor: Colors.green,
+              //   backgroundColor: Colors.white,
+              //   foregroundColor: Colors.black,
+              //   padding: const EdgeInsets.symmetric(
+              //     horizontal: 12,
+              //     vertical: 16,
+              //   ),
+              //   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              //   borderRadius: BorderRadius.circular(12),
+              //   boxShadow: const [
+              //     BoxShadow(
+              //       color: Color(0x07000000),
+              //       blurRadius: 16,
+              //       offset: Offset(0, 16),
+              //       spreadRadius: 0,
+              //     ),
+              //   ],
+              //   showProgressBar: true,
+              //   closeButton: ToastCloseButton(
+              //     showType: CloseButtonShowType.onHover,
+              //     buttonBuilder: (context, onClose) {
+              //       return OutlinedButton.icon(
+              //         onPressed: onClose,
+              //         icon: const Icon(Icons.close, size: 20),
+              //         label: const Text('Close'),
+              //       );
+              //     },
+              //   ),
+              //   closeOnClick: false,
+              //   pauseOnHover: true,
+              //   dragToClose: true,
+              //   applyBlurEffect: true,
+              //   callbacks: ToastificationCallbacks(
+              //     onTap: (toastItem) => log('Toast ${toastItem.id} tapped'),
+              //     onCloseButtonTap: (toastItem) =>
+              //         log('Toast ${toastItem.id} close button tapped'),
+              //     onAutoCompleteCompleted: (toastItem) =>
+              //         log('Toast ${toastItem.id} auto complete completed'),
+              //     onDismissed: (toastItem) =>
+              //         log('Toast ${toastItem.id} dismissed'),
+              //   ),
+              // );
               AwesomeNotifications().createNotification(
                 content: NotificationContent(
                   id: prefs.getInt('notification_id')!,
@@ -430,6 +729,59 @@ class WalletModel extends ChangeNotifier {
           notifyListeners();
           if (count > 0) {
             SharedPreferences prefs = await SharedPreferences.getInstance();
+            // toastification.show(
+            //   overlayState: AppGlobal.navigatorKey.currentState?.overlay,
+            //   title: Text('Savings'),
+            //   description: RichText(
+            //     text: TextSpan(text: '${tx.amount} kes removed from savings'),
+            //   ),
+            //   autoCloseDuration: const Duration(seconds: 5),
+            //   animationDuration: const Duration(milliseconds: 300),
+            //   alignment: Alignment.topRight,
+            //   direction: TextDirection.ltr,
+            //   type: ToastificationType.success,
+            //   style: ToastificationStyle.fillColored,
+            //   icon: const Icon(Icons.check),
+            //   showIcon: true, // show or hide the icon
+            //   primaryColor: Colors.green,
+            //   backgroundColor: Colors.white,
+            //   foregroundColor: Colors.black,
+            //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            //   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            //   borderRadius: BorderRadius.circular(12),
+            //   boxShadow: const [
+            //     BoxShadow(
+            //       color: Color(0x07000000),
+            //       blurRadius: 16,
+            //       offset: Offset(0, 16),
+            //       spreadRadius: 0,
+            //     ),
+            //   ],
+            //   showProgressBar: true,
+            //   closeButton: ToastCloseButton(
+            //     showType: CloseButtonShowType.onHover,
+            //     buttonBuilder: (context, onClose) {
+            //       return OutlinedButton.icon(
+            //         onPressed: onClose,
+            //         icon: const Icon(Icons.close, size: 20),
+            //         label: const Text('Close'),
+            //       );
+            //     },
+            //   ),
+            //   closeOnClick: false,
+            //   pauseOnHover: true,
+            //   dragToClose: true,
+            //   applyBlurEffect: true,
+            //   callbacks: ToastificationCallbacks(
+            //     onTap: (toastItem) => log('Toast ${toastItem.id} tapped'),
+            //     onCloseButtonTap: (toastItem) =>
+            //         log('Toast ${toastItem.id} close button tapped'),
+            //     onAutoCompleteCompleted: (toastItem) =>
+            //         log('Toast ${toastItem.id} auto complete completed'),
+            //     onDismissed: (toastItem) =>
+            //         log('Toast ${toastItem.id} dismissed'),
+            //   ),
+            // );
             AwesomeNotifications().createNotification(
               content: NotificationContent(
                 id: prefs.getInt('notification_id')!,
@@ -457,6 +809,63 @@ class WalletModel extends ChangeNotifier {
             notifyListeners();
             if (count > 0) {
               SharedPreferences prefs = await SharedPreferences.getInstance();
+
+              // toastification.show(
+              //   overlayState: AppGlobal.navigatorKey.currentState?.overlay,
+              //   title: Text('Savings'),
+              //   description: RichText(
+              //     text: TextSpan(text: '${tx.amount} kes removed from savings'),
+              //   ),
+              //   autoCloseDuration: const Duration(seconds: 5),
+              //   animationDuration: const Duration(milliseconds: 300),
+              //   alignment: Alignment.topRight,
+              //   direction: TextDirection.ltr,
+              //   type: ToastificationType.success,
+              //   style: ToastificationStyle.fillColored,
+              //   icon: const Icon(Icons.check),
+              //   showIcon: true, // show or hide the icon
+              //   primaryColor: Colors.green,
+              //   backgroundColor: Colors.white,
+              //   foregroundColor: Colors.black,
+              //   padding: const EdgeInsets.symmetric(
+              //     horizontal: 12,
+              //     vertical: 16,
+              //   ),
+              //   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              //   borderRadius: BorderRadius.circular(12),
+              //   boxShadow: const [
+              //     BoxShadow(
+              //       color: Color(0x07000000),
+              //       blurRadius: 16,
+              //       offset: Offset(0, 16),
+              //       spreadRadius: 0,
+              //     ),
+              //   ],
+              //   showProgressBar: true,
+              //   closeButton: ToastCloseButton(
+              //     showType: CloseButtonShowType.onHover,
+              //     buttonBuilder: (context, onClose) {
+              //       return OutlinedButton.icon(
+              //         onPressed: onClose,
+              //         icon: const Icon(Icons.close, size: 20),
+              //         label: const Text('Close'),
+              //       );
+              //     },
+              //   ),
+              //   closeOnClick: false,
+              //   pauseOnHover: true,
+              //   dragToClose: true,
+              //   applyBlurEffect: true,
+              //   callbacks: ToastificationCallbacks(
+              //     onTap: (toastItem) => log('Toast ${toastItem.id} tapped'),
+              //     onCloseButtonTap: (toastItem) =>
+              //         log('Toast ${toastItem.id} close button tapped'),
+              //     onAutoCompleteCompleted: (toastItem) =>
+              //         log('Toast ${toastItem.id} auto complete completed'),
+              //     onDismissed: (toastItem) =>
+              //         log('Toast ${toastItem.id} dismissed'),
+              //   ),
+              // );
               AwesomeNotifications().createNotification(
                 content: NotificationContent(
                   id: prefs.getInt('notification_id')!,

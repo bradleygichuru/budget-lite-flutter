@@ -1,15 +1,15 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
-import 'dart:ui';
 import 'package:another_telephony/telephony.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:cron/cron.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data_models/categories_data_model.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/goal_data_model.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
+import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/categories.dart';
 import 'package:flutter_application_1/view_models/goals.dart';
@@ -24,6 +24,7 @@ Future<void> initializeService() async {
     androidConfiguration: AndroidConfiguration(
       // this will be executed when app is in foreground or background in separated isolate
       onStart: onStart,
+      autoStartOnBoot: true,
 
       // auto start service
       autoStart: true,
@@ -33,7 +34,7 @@ Future<void> initializeService() async {
       initialNotificationTitle: 'AWESOME SERVICE',
       initialNotificationContent: 'Initializing',
       foregroundServiceNotificationId: 888,
-      foregroundServiceTypes: [AndroidForegroundType.location],
+      foregroundServiceTypes: [AndroidForegroundType.dataSync],
     ),
     iosConfiguration: IosConfiguration(
       // auto start service
@@ -54,7 +55,7 @@ Future<void> initializeService() async {
 @pragma('vm:entry-point')
 Future<bool> onIosBackground(ServiceInstance service) async {
   WidgetsFlutterBinding.ensureInitialized();
-  DartPluginRegistrant.ensureInitialized();
+  //DartPluginRegistrant.ensureInitialized();
 
   SharedPreferences preferences = await SharedPreferences.getInstance();
   await preferences.reload();
@@ -65,112 +66,48 @@ Future<bool> onIosBackground(ServiceInstance service) async {
   return true;
 }
 
-Future<void> dailyBudgetAlert() async {
-  String body = '';
-
-  CategoriesModel ctM = CategoriesModel();
-  List<Category> categories = await ctM.getCategories();
-  for (final cat in categories) {
-    if (body.isEmpty) {
-      body = '${cat.categoryName} ${(cat.spent / cat.budget * 100)}% spent';
-      print('New body:$body');
-    } else {
-      body =
-          '$body, ${cat.categoryName} ${(cat.spent / cat.budget * 100)}% spent';
-
-      print('New body:$body');
-    }
-  }
-  if (body.isNotEmpty) {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int notiId = prefs.getInt('notification_id')!;
-    AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        notificationLayout: NotificationLayout.BigText,
-        autoDismissible: false,
-        id: notiId,
-        channelKey: 'basic_channel',
-        actionType: ActionType.Default,
-        title: 'Daily budget report',
-        body: body,
-      ),
-    );
-
-    prefs.setInt('notification_id', notiId + 1);
-  }
-}
-
-Future<void> monthlyGoalAlerts() async {
-  String body = '';
-
-  GoalModel gM = GoalModel();
-  List<Goal> goals = await gM.getGoals();
-  for (final goal in goals) {
-    if (body.isEmpty) {
-      body =
-          '${goal.name} ${(goal.currentAmount / goal.targetAmount * 100)}% achieved';
-      print('New body:$body');
-    } else {
-      body =
-          '$body, ${goal.name} ${(goal.currentAmount / goal.targetAmount * 100)}% achieved';
-
-      print('New body:$body');
-    }
-  }
-  if (body.isNotEmpty) {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int notiId = prefs.getInt('notification_id')!;
-    AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        notificationLayout: NotificationLayout.BigText,
-        autoDismissible: false,
-        id: notiId,
-        channelKey: 'basic_channel',
-        actionType: ActionType.Default,
-        title: 'Monthly Goal report',
-        body: body,
-      ),
-    );
-
-    prefs.setInt('notification_id', notiId + 1);
-  }
-}
-
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
-  // Only available for flutter 3.0.0 and later
-  DartPluginRegistrant.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
+  // DartPluginRegistrant.ensureInitialized();
 
-  // For flutter prior to version 3.0.0
-  // We have to register the plugin manually
   final telephony = Telephony.instance;
   final cron = Cron();
   cron.schedule(Schedule.parse('0 8 * * *'), dailyBudgetAlert); //every day at 8
   cron.schedule(
-    Schedule.parse('@monthly'),
+    Schedule.parse('0 0 1 * *'),
     monthlyGoalAlerts,
   ); //every 1st of the month
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? resetDate = prefs.getString('budget_reset_date');
 
-  if (await AuthModel().getRegion() == Country.kenya.name) {
-    AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        autoDismissible: false,
-        id: 888,
-        channelKey: 'basic_channel',
-        actionType: ActionType.SilentBackgroundAction,
-        title: 'Budgetlite tx discovery service',
-        body: 'running',
-        locked: true,
-      ),
+  // cron.schedule(Schedule.parse('* * * * *'), queueResetBudget);
+  // if (resetDate != null) {
+  //   cron.schedule(
+  //     Schedule.parse('0 9 ${int.parse(resetDate)} * *'),
+  //     queueResetBudget,
+  //   );
+  // }
+
+  AwesomeNotifications().createNotification(
+    content: NotificationContent(
+      criticalAlert: false,
+      autoDismissible: false,
+      id: 888,
+      channelKey: 'basic_channel',
+      actionType: ActionType.SilentBackgroundAction,
+      title: 'Budgetlite tx discovery service',
+      body: 'running',
+      locked: true,
+    ),
+  );
+  final bool? result = await telephony.requestPhoneAndSmsPermissions;
+
+  if (result != null && result) {
+    telephony.listenIncomingSms(
+      onNewMessage: onMessage,
+      onBackgroundMessage: backgroundMessageHandler,
     );
-    final bool? result = await telephony.requestPhoneAndSmsPermissions;
-
-    if (result != null && result) {
-      telephony.listenIncomingSms(
-        onNewMessage: onMessage,
-        onBackgroundMessage: backgroundMessageHandler,
-      );
-    }
   }
 
   if (service is AndroidServiceInstance) {
@@ -184,6 +121,7 @@ void onStart(ServiceInstance service) async {
   }
 
   service.on('stopService').listen((event) {
+    AwesomeNotifications().dismiss(888);
     service.stopSelf();
   });
 
@@ -324,5 +262,84 @@ backgroundMessageHandler(SmsMessage message) async {
     }
   } catch (e) {
     log('Error in background message', error: e);
+  }
+}
+
+Future<void> dailyBudgetAlert() async {
+  String body = '';
+
+  CategoriesModel ctM = CategoriesModel();
+  List<Category> categories = await ctM.getCategories();
+  for (final cat in categories) {
+    if (body.isEmpty) {
+      body = '${cat.categoryName} ${(cat.spent / cat.budget * 100)}% spent';
+      print('New body:$body');
+    } else {
+      body =
+          '$body, ${cat.categoryName} ${(cat.spent / cat.budget * 100)}% spent';
+
+      print('New body:$body');
+    }
+  }
+  if (body.isNotEmpty) {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int notiId = prefs.getInt('notification_id')!;
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        notificationLayout: NotificationLayout.BigText,
+        autoDismissible: false,
+        id: notiId,
+        channelKey: 'basic_channel',
+        actionType: ActionType.Default,
+        title: 'Daily budget report',
+        body: body,
+      ),
+    );
+
+    prefs.setInt('notification_id', notiId + 1);
+  }
+}
+
+Future<void> queueResetBudget() async {
+  final db = await getDb();
+  print('Queueing reset');
+  await db.rawUpdate('UPDATE accounts SET resetPending = 1 WHERE id = ?', [
+    '${await AuthModel().getAccountId()}',
+  ]);
+}
+
+Future<void> monthlyGoalAlerts() async {
+  String body = '';
+
+  GoalModel gM = GoalModel();
+  List<Goal> goals = await gM.getGoals();
+  for (final goal in goals) {
+    if (body.isEmpty) {
+      body =
+          '${goal.name} ${(goal.currentAmount / goal.targetAmount * 100)}% achieved';
+      print('New body:$body');
+    } else {
+      body =
+          '$body, ${goal.name} ${(goal.currentAmount / goal.targetAmount * 100)}% achieved';
+
+      print('New body:$body');
+    }
+  }
+  if (body.isNotEmpty) {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int notiId = prefs.getInt('notification_id')!;
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        notificationLayout: NotificationLayout.BigText,
+        autoDismissible: false,
+        id: notiId,
+        channelKey: 'basic_channel',
+        actionType: ActionType.Default,
+        title: 'Monthly Goal report',
+        body: body,
+      ),
+    );
+
+    prefs.setInt('notification_id', notiId + 1);
   }
 }

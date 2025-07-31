@@ -29,6 +29,32 @@ class CategoriesModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Result<List<int>>> resetBudgets() async {
+    try {
+      AuthModel aM;
+      List<int> res = [];
+      if (!di.isRegistered<AuthModel>()) {
+        aM = AuthModel();
+      } else {
+        aM = di<AuthModel>();
+      }
+      List<Category> candidateCats = await getCategories();
+      final db = await getDb();
+      db.transaction((txn) async {
+        for (Category cat in candidateCats) {
+          int updated = await txn.rawUpdate(
+            'UPDATE categories SET spent = 0 WHERE category_name = ? AND account_id = ?',
+            [cat.categoryName, await aM.getAccountId()],
+          );
+          res.add(updated);
+        }
+      });
+      return Result.ok(res);
+    } on Exception catch (e) {
+      return Result.error(e);
+    }
+  }
+
   Future<Result<String>> addBudgetResetDate(String date) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();

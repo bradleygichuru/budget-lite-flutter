@@ -2,9 +2,8 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:developer';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'package:another_telephony/telephony.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/data_models/auth_data_model.dart';
+import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
 import 'package:flutter_application_1/screens/wallet_screen.dart';
 import 'package:flutter_application_1/services/main_service.dart';
@@ -24,68 +23,6 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:watch_it/watch_it.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
-@pragma('vm:entry-point')
-backgroundMessageHandler(SmsMessage message) async {
-  //Handle background message
-  try {
-    TransactionsModel txM = TransactionsModel();
-    WalletModel wM = WalletModel();
-    AuthModel aM = AuthModel();
-    String? currentRegion = await aM.getRegion();
-    if (currentRegion == Country.kenya.name) {
-      var transaction = parseMpesa(message);
-      log('from:${message.address} message:${message.body}');
-
-      int? accountId = await aM.getAccountId();
-      log('background_transaction:$transaction');
-      if (transaction != null && accountId != null) {
-        if (transaction['type'] == TxType.credit.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-            category: 'credit',
-          );
-          wM.creditDefaultWallet(tx);
-        } else if (transaction['type'] == TxType.fromSaving.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            category: 'credit',
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          wM.removeFromSavings(tx);
-        } else if (transaction['type'] == TxType.toSaving.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            category: 'savings',
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          wM.addToSavings(tx);
-        } else {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          txM.insertTransaction(tx);
-        }
-      }
-    }
-  } catch (e) {
-    log('Error in background message', error: e);
-  }
-}
 
 void setup() {
   //intialize changenotifier singletons
@@ -111,13 +48,18 @@ Future<void> main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   await dotenv.load(fileName: ".env");
-
+  // final db = await getDb();
+  // await db.execute(
+  //   'ALTER TABLE accounts ADD COLUMN resetPending TEXT default 0',
+  // );
   // await deleteDatabase(
   //   join(await getDatabasesPath(), 'budget_lite_database.db'),
   // );
   await appDbInit();
   // SharedPreferences prefs = await SharedPreferences.getInstance();
   // prefs.remove("budget_lite_current_account_id");
+
+  setUpNotificationIds();
 
   AwesomeNotifications().initialize(
     // set the icon to null if you want to use the default app icon
@@ -127,9 +69,10 @@ Future<void> main() async {
         channelGroupKey: 'basic_channel_group',
         channelKey: 'basic_channel',
         channelName: 'Basic notifications',
-        channelDescription: 'Notification channel for basic tests',
+        channelDescription: 'Default Notification channel',
         defaultColor: Color(0xFF9D50DD),
         ledColor: Colors.white,
+        criticalAlerts: true,
       ),
     ],
     // Channel groups are only visual and are not required
@@ -141,16 +84,13 @@ Future<void> main() async {
     ],
     debug: true,
   );
-  setUpNotificationIds();
-  initializeService();
+  await initializeService();
   setup();
   runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget with WatchItStatefulWidgetMixin {
   const MyApp({super.key});
-  static final GlobalKey<NavigatorState> navigatorKey =
-      GlobalKey<NavigatorState>();
 
   @override
   MyAppState createState() => MyAppState();
@@ -163,8 +103,12 @@ class MyAppState extends State<MyApp> {
   bool handleUncategorized = false;
   CategoriesModel ctm = di.get<CategoriesModel>();
   TransactionsModel txM = di.get<TransactionsModel>();
-
+  bool isResetLoading = false;
   bool categorizing = false;
+  bool shouldReset = false;
+
+  final GlobalKey<ScaffoldMessengerState> mainScaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   @override
   void didChangeDependencies() {
@@ -202,11 +146,6 @@ class MyAppState extends State<MyApp> {
       onDismissActionReceivedMethod:
           NotificationController.onDismissActionReceivedMethod,
     );
-    //  initPlatformState();
-    // initComposed = initTX();
-    // pollingTx = Timer.periodic(Duration(seconds: 10), (Timer t) {
-    //   pollFetchTx();
-    // });
 
     FlutterNativeSplash.remove();
     super.initState();
@@ -266,7 +205,10 @@ class MyAppState extends State<MyApp> {
       di.get<WalletModel>().refresh();
       di.get<CategoriesModel>().refreshCats();
       di.get<GoalModel>().refreshGoals();
-
+      di.get<AuthModel>().refreshAuth();
+      setState(() {
+        shouldReset = di<AuthModel>().pendingBudgetReset;
+      });
       log('Refresh Models');
     }
   }
@@ -277,329 +219,282 @@ class MyAppState extends State<MyApp> {
 
   void _onPaused() => log('paused');
 
-  onMessage(SmsMessage message) async {
-    try {
-      TransactionsModel txM = TransactionsModel();
-      WalletModel wM = WalletModel();
-      AuthModel aM = AuthModel();
-      String? currentRegion = await aM.getRegion();
-      if (currentRegion == Country.kenya.name) {
-        var transaction = parseMpesa(message);
-        log('from:${message.address} message:${message.body}');
-
-        int? accountId = await aM.getAccountId();
-        log('background_transaction:$transaction');
-        if (transaction != null && accountId != null) {
-          if (transaction['type'] == TxType.credit.val) {
-            TransactionObj tx = TransactionObj(
-              desc: transaction['desc'],
-              type: transaction['type'],
-              source: transaction['source'],
-              amount: transaction['amount'],
-              date: transaction['date'],
-              category: 'credit',
-            );
-            wM.creditDefaultWallet(tx);
-          } else if (transaction['type'] == TxType.fromSaving.val) {
-            TransactionObj tx = TransactionObj(
-              desc: transaction['desc'],
-              type: transaction['type'],
-              category: 'credit',
-              source: transaction['source'],
-              amount: transaction['amount'],
-              date: transaction['date'],
-            );
-            wM.removeFromSavings(tx);
-          } else if (transaction['type'] == TxType.toSaving.val) {
-            TransactionObj tx = TransactionObj(
-              desc: transaction['desc'],
-              type: transaction['type'],
-              source: transaction['source'],
-              category: 'savings',
-              amount: transaction['amount'],
-              date: transaction['date'],
-            );
-            wM.addToSavings(tx);
-          } else {
-            TransactionObj tx = TransactionObj(
-              desc: transaction['desc'],
-              type: transaction['type'],
-              source: transaction['source'],
-              amount: transaction['amount'],
-              date: transaction['date'],
-            );
-            txM.insertTransaction(tx);
-          }
-        }
-      }
-    } catch (e) {
-      log('Error in background message', error: e);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    log('Will reset budget ${di<AuthModel>().pendingBudgetReset} ');
     return handleUncategorized
         ? MaterialApp(
+            navigatorKey: AppGlobal.navigatorKey,
             theme: ThemeData(
               colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
             ),
-            home: Scaffold(
-              appBar: AppBar(
-                leading: IconButton(
-                  icon: Icon(Icons.arrow_back),
-                  onPressed: () {
-                    setState(() {
-                      handleUncategorized = false;
-                    });
-                  },
-                ),
-                backgroundColor: Colors.blue.shade700,
-                title: Column(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(7),
-                      child: FutureBuilder<List<TransactionObj>>(
-                        future: unCategorizedTxs,
-                        builder: (context, snapshot) {
-                          Widget x = CircularProgressIndicator();
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return CircularProgressIndicator();
-                          } else if (snapshot.hasError) {
-                            return Text("Error occured fetching transactions");
-                          } else if (snapshot.connectionState ==
-                                  ConnectionState.done &&
-                              snapshot.hasData) {
-                            if (snapshot.data!.length < 0) {
-                              setState(() {
-                                handleUncategorized = false;
-                              });
+            home: ScaffoldMessenger(
+              key: mainScaffoldMessengerKey,
+              child: Scaffold(
+                appBar: AppBar(
+                  leading: IconButton(
+                    icon: Icon(Icons.arrow_back),
+                    onPressed: () {
+                      setState(() {
+                        handleUncategorized = false;
+                      });
+                    },
+                  ),
+                  backgroundColor: Colors.blue.shade700,
+                  title: Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.all(7),
+                        child: FutureBuilder<List<TransactionObj>>(
+                          future: unCategorizedTxs,
+                          builder: (context, snapshot) {
+                            Widget x = CircularProgressIndicator();
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return CircularProgressIndicator();
+                            } else if (snapshot.hasError) {
+                              return Text(
+                                "Error occured fetching transactions",
+                              );
+                            } else if (snapshot.connectionState ==
+                                    ConnectionState.done &&
+                                snapshot.hasData) {
+                              if (snapshot.data!.length < 0) {
+                                setState(() {
+                                  handleUncategorized = false;
+                                });
+                              }
+                              return Text(
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+
+                                  color: Colors.white,
+                                ),
+                                "Pending Category Assignment",
+                              );
                             }
-                            return Text(
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-
-                                color: Colors.white,
-                              ),
-                              "Pending Category Assignment",
-                            );
-                          }
-                          return x;
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              body: FutureBuilder<List<TransactionObj>>(
-                future: unCategorizedTxs,
-                builder: (context, snapshot) {
-                  final List<DropdownMenuEntry<String>> menuEntries =
-                      UnmodifiableListView<DropdownMenuEntry<String>>(
-                        ctm.knownCategoryEntries.map<DropdownMenuEntry<String>>(
-                          (String name) => DropdownMenuEntry<String>(
-                            value: name,
-                            label: name,
-                          ),
+                            return x;
+                          },
                         ),
-                      );
-                  if (snapshot.connectionState == ConnectionState.done &&
-                      snapshot.hasData) {
-                    return SafeArea(
-                      child: CustomScrollView(
-                        slivers: [
-                          SliverList.builder(
-                            itemCount: snapshot.data?.length,
-                            //shrinkWrap: true,
-                            itemBuilder: (context, index) {
-                              String category = '';
+                      ),
+                    ],
+                  ),
+                ),
+                body: FutureBuilder<List<TransactionObj>>(
+                  future: unCategorizedTxs,
+                  builder: (context, snapshot) {
+                    final List<DropdownMenuEntry<String>> menuEntries =
+                        UnmodifiableListView<DropdownMenuEntry<String>>(
+                          ctm.knownCategoryEntries
+                              .map<DropdownMenuEntry<String>>(
+                                (String name) => DropdownMenuEntry<String>(
+                                  value: name,
+                                  label: name,
+                                ),
+                              ),
+                        );
+                    if (snapshot.connectionState == ConnectionState.done &&
+                        snapshot.hasData) {
+                      return SafeArea(
+                        child: CustomScrollView(
+                          slivers: [
+                            SliverList.builder(
+                              itemCount: snapshot.data?.length,
+                              //shrinkWrap: true,
+                              itemBuilder: (context, index) {
+                                String category = '';
 
-                              final String sign =
-                                  snapshot.data?[index].type == TxType.spend.val
-                                  ? '-'
-                                  : '+';
-                              final double amount =
-                                  snapshot.data![index].amount;
-                              Icon iconsToUse =
-                                  snapshot.data![index].type == TxType.spend.val
-                                  ? Icon(
-                                      size: 15,
-                                      Icons.outbound,
-                                      color: Colors.red,
-                                    )
-                                  : Icon(
-                                      size: 15,
-                                      Icons.call_received,
-                                      color: Colors.green,
-                                    );
+                                final String sign =
+                                    snapshot.data?[index].type ==
+                                        TxType.spend.val
+                                    ? '-'
+                                    : '+';
+                                final double amount =
+                                    snapshot.data![index].amount;
+                                Icon iconsToUse =
+                                    snapshot.data![index].type ==
+                                        TxType.spend.val
+                                    ? Icon(
+                                        size: 15,
+                                        Icons.outbound,
+                                        color: Colors.red,
+                                      )
+                                    : Icon(
+                                        size: 15,
+                                        Icons.call_received,
+                                        color: Colors.green,
+                                      );
 
-                              return Card(
-                                color: Colors.white,
-                                child: Column(
-                                  children: [
-                                    SizedBox(
-                                      child: Card.filled(
-                                        color: Colors.white,
+                                return Card(
+                                  color: Colors.white,
+                                  child: Column(
+                                    children: [
+                                      SizedBox(
+                                        child: Card.filled(
+                                          color: Colors.white,
 
+                                          child: Column(
+                                            children: [
+                                              ListTile(
+                                                leading: iconsToUse,
+                                                title: Text(
+                                                  snapshot
+                                                          .data![index]
+                                                          .category ??
+                                                      'Pending Category',
+                                                ),
+                                                subtitle: Text(
+                                                  '$sign KSh $amount',
+                                                  style: TextStyle(
+                                                    color:
+                                                        snapshot
+                                                                .data![index]
+                                                                .type ==
+                                                            TxType.spend.val
+                                                        ? Colors.red
+                                                        : Colors.green,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: EdgeInsets.all(10),
                                         child: Column(
                                           children: [
-                                            ListTile(
-                                              leading: iconsToUse,
-                                              title: Text(
-                                                snapshot
-                                                        .data![index]
-                                                        .category ??
-                                                    'Pending Category',
-                                              ),
-                                              subtitle: Text(
-                                                '$sign KSh $amount',
-                                                style: TextStyle(
-                                                  color:
-                                                      snapshot
-                                                              .data![index]
-                                                              .type ==
-                                                          TxType.spend.val
-                                                      ? Colors.red
-                                                      : Colors.green,
+                                            Padding(
+                                              padding: EdgeInsets.all(8),
+                                              child: Align(
+                                                alignment: Alignment.centerLeft,
+                                                child: Text(
+                                                  "Select Category",
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
                                                 ),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: EdgeInsets.all(8),
+                                              child: DropdownMenu<String>(
+                                                width: double.infinity,
+                                                hintText: "select category",
+                                                onSelected: (value) {
+                                                  if (value != null) {
+                                                    category = value;
+                                                  }
+                                                  // This is called when the user selects an item.
+
+                                                  log(
+                                                    "selected_category:$category",
+                                                  );
+                                                },
+                                                dropdownMenuEntries:
+                                                    menuEntries,
+                                              ),
+                                            ),
+                                            FilledButton(
+                                              style: ButtonStyle(
+                                                backgroundColor:
+                                                    WidgetStatePropertyAll<
+                                                      Color
+                                                    >(Colors.black),
+                                              ),
+                                              onPressed: categorizing
+                                                  ? null
+                                                  : () {
+                                                      if (category.isNotEmpty &&
+                                                          snapshot
+                                                                  .data![index]
+                                                                  .id !=
+                                                              null) {
+                                                        setState(() {
+                                                          categorizing = true;
+                                                        });
+                                                        txM
+                                                            .setTxCategory(
+                                                              category,
+                                                              snapshot
+                                                                  .data![index]
+                                                                  .id!,
+                                                            )
+                                                            .then((
+                                                              count,
+                                                            ) async {
+                                                              if (count > 0) {
+                                                                Result
+                                                                res = await ctm
+                                                                    .handleCatBalanceCompute(
+                                                                      category,
+                                                                      snapshot
+                                                                          .data![index],
+                                                                    );
+                                                                switch (res) {
+                                                                  case Ok():
+                                                                    {
+                                                                      unCategorizedTxs =
+                                                                          txM.getUncategorizedTx();
+                                                                      txM.refreshTx();
+                                                                      setState(() {
+                                                                        categorizing =
+                                                                            false;
+                                                                      });
+
+                                                                      break;
+                                                                    }
+
+                                                                  default:
+                                                                    {
+                                                                      ScaffoldMessenger.of(
+                                                                        context,
+                                                                      ).showSnackBar(
+                                                                        SnackBar(
+                                                                          content: Text(
+                                                                            'error occured',
+                                                                            style: TextStyle(
+                                                                              color: Colors.red,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      );
+                                                                      setState(() {
+                                                                        categorizing =
+                                                                            false;
+                                                                      });
+                                                                    }
+                                                                }
+                                                              }
+                                                            });
+                                                      }
+                                                    },
+                                              child: Text(
+                                                "Categorize Transaction",
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.all(10),
-                                      child: Column(
-                                        children: [
-                                          Padding(
-                                            padding: EdgeInsets.all(8),
-                                            child: Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: Text(
-                                                "Select Category",
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding: EdgeInsets.all(8),
-                                            child: DropdownMenu<String>(
-                                              width: double.infinity,
-                                              hintText: "select category",
-                                              onSelected: (value) {
-                                                if (value != null) {
-                                                  category = value;
-                                                }
-                                                // This is called when the user selects an item.
-
-                                                log(
-                                                  "selected_category:$category",
-                                                );
-                                              },
-                                              dropdownMenuEntries: menuEntries,
-                                            ),
-                                          ),
-                                          FilledButton(
-                                            style: ButtonStyle(
-                                              backgroundColor:
-                                                  WidgetStatePropertyAll<Color>(
-                                                    Colors.black,
-                                                  ),
-                                            ),
-                                            onPressed: categorizing
-                                                ? null
-                                                : () {
-                                                    if (category.isNotEmpty &&
-                                                        snapshot
-                                                                .data![index]
-                                                                .id !=
-                                                            null) {
-                                                      setState(() {
-                                                        categorizing = true;
-                                                      });
-                                                      txM
-                                                          .setTxCategory(
-                                                            category,
-                                                            snapshot
-                                                                .data![index]
-                                                                .id!,
-                                                          )
-                                                          .then((count) async {
-                                                            if (count > 0) {
-                                                              Result
-                                                              res = await ctm
-                                                                  .handleCatBalanceCompute(
-                                                                    category,
-                                                                    snapshot
-                                                                        .data![index],
-                                                                  );
-                                                              switch (res) {
-                                                                case Ok():
-                                                                  {
-                                                                    unCategorizedTxs =
-                                                                        txM.getUncategorizedTx();
-                                                                    txM.refreshTx();
-                                                                    setState(() {
-                                                                      categorizing =
-                                                                          false;
-                                                                    });
-
-                                                                    break;
-                                                                  }
-
-                                                                default:
-                                                                  {
-                                                                    ScaffoldMessenger.of(
-                                                                      context,
-                                                                    ).showSnackBar(
-                                                                      SnackBar(
-                                                                        content: Text(
-                                                                          'error occured',
-                                                                          style: TextStyle(
-                                                                            color:
-                                                                                Colors.red,
-                                                                          ),
-                                                                        ),
-                                                                      ),
-                                                                    );
-                                                                    setState(() {
-                                                                      categorizing =
-                                                                          false;
-                                                                    });
-                                                                  }
-                                                              }
-                                                            }
-                                                          });
-                                                    }
-                                                  },
-                                            child: Text(
-                                              "Categorize Transaction",
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  return Center(child: CircularProgressIndicator());
-                },
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return Center(child: CircularProgressIndicator());
+                  },
+                ),
               ),
             ),
           )
         : MaterialApp(
+            navigatorKey: AppGlobal.navigatorKey,
             theme: ThemeData(
               colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
             ),

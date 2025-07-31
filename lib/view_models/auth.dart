@@ -25,6 +25,7 @@ class AuthModel extends ChangeNotifier {
   late bool isNewUser;
   late String? authToken;
   late String tier;
+  bool pendingBudgetReset = false;
   String region = 'not set';
 
   Widget authWidget = SafeArea(
@@ -40,11 +41,29 @@ class AuthModel extends ChangeNotifier {
       date = DateTime.parse(accounts[0]['created_at'] as String);
       email = accounts[0]['email'] as String;
       tier = accounts[0]['account_tier'] as String;
+      pendingBudgetReset = accounts[0]['resetPending'] as int == 0
+          ? false
+          : true;
       notifyListeners();
     } catch (e) {
       log('Error Setting account profile', error: e);
     } finally {
       // db.close();
+    }
+  }
+
+  Future<Result<int>> removePendingBudgetReset() async {
+    try {
+      final db = await getDb();
+      int updated = await db.rawUpdate(
+        'UPDATE accounts SET resetPending = 0 WHERE id = ?',
+        ['${await getAccountId()}'],
+      );
+
+      return Result.ok(updated);
+    } on Exception catch (e) {
+      log('Error removing pending reset', error: e);
+      return Result.error(e);
     }
   }
 

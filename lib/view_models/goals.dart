@@ -47,10 +47,17 @@ class GoalModel extends ChangeNotifier {
   Future<Result<int>> addCurrentAmount(String goalName, double credit) async {
     try {
       AuthModel aM;
+      WalletModel wM;
       if (!di.isRegistered<AuthModel>()) {
         aM = AuthModel();
       } else {
         aM = di<AuthModel>();
+      }
+
+      if (!di.isRegistered<WalletModel>()) {
+        wM = WalletModel();
+      } else {
+        wM = di<WalletModel>();
       }
       int? count;
       final db = await getDb();
@@ -60,9 +67,7 @@ class GoalModel extends ChangeNotifier {
         totalAllocatedToGoals = totalAllocatedToGoals + goal.currentAmount;
       }
 
-      Wallet? currentWallet = await GetIt.I
-          .get<WalletModel>()
-          .getAccountWallet();
+      Wallet? currentWallet = await wM.getAccountWallet();
       if (currentWallet != null) {
         if (currentWallet.savings > 0) {
           if (credit > (currentWallet.savings - totalAllocatedToGoals)) {

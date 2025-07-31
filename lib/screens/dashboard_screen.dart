@@ -40,8 +40,15 @@ Map<String, Color> getEnvelopecolor(Category cat) {
   // return y;
 }
 
-class Dashboard extends StatelessWidget with WatchItMixin {
+class Dashboard extends StatefulWidget with WatchItStatefulWidgetMixin {
   const Dashboard({super.key});
+  @override
+  DashboardState createState() => DashboardState();
+}
+
+class DashboardState extends State<Dashboard> {
+  int page = 1;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -105,23 +112,6 @@ class Dashboard extends StatelessWidget with WatchItMixin {
                               }
                               return Text("Error");
                             },
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.all(10),
-                        child: Card(
-                          //color: Colors.white,
-                          elevation: 0,
-
-                          child: Column(
-                            children: [
-                              ListTile(
-                                //leading: Icon(Icons.album),
-                                title: Text('Ready to Assign'),
-                                subtitle: Text('KSh 0'),
-                              ),
-                            ],
                           ),
                         ),
                       ),
@@ -277,85 +267,116 @@ class Dashboard extends StatelessWidget with WatchItMixin {
               ),
             ),
           ),
-          FutureBuilder<List<TransactionObj>>(
-            future: watchPropertyValue((TransactionsModel m) => m.transactions),
-            builder:
-                (
-                  BuildContext context,
-                  AsyncSnapshot<List<TransactionObj>> snapshot,
-                ) {
-                  Widget cont = SliverToBoxAdapter(child: Text(""));
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    cont = SliverToBoxAdapter(
-                      child: CircularProgressIndicator(),
-                    );
-                  } else {
-                    if (snapshot.hasError) {
-                      cont = SliverToBoxAdapter(
-                        child: Center(
-                          child: Text('Error Occured fetching Transactions'),
-                        ),
-                      );
-                    } else {
-                      if (snapshot.hasData) {
-                        if ((snapshot.data ?? []).isNotEmpty) {
-                          cont = SliverList.builder(
-                            itemCount: snapshot.data!.length,
-                            //shrinkWrap: true,
-                            itemBuilder: (context, index) {
-                              final String sign =
-                                  snapshot.data![index].type == TxType.spend.val
-                                  ? '-'
-                                  : '+';
-                              final double amount =
-                                  snapshot.data![index].amount;
-                              Icon iconsToUse =
-                                  snapshot.data![index].type == TxType.spend.val
-                                  ? Icon(
-                                      size: 15,
-                                      Icons.outbound,
-                                      color: Colors.red,
-                                    )
-                                  : Icon(
-                                      size: 15,
-                                      Icons.call_received,
-                                      color: Colors.green,
-                                    );
-                              return SizedBox(
-                                child: Card.outlined(
-                                  color: Colors.white,
 
-                                  child: Column(
-                                    children: [
-                                      ListTile(
-                                        leading: iconsToUse,
-                                        title: Text(
-                                          snapshot.data![index].category ??
-                                              "Pending category",
-                                        ),
-                                        subtitle: Text(
-                                          '$sign KSh $amount',
-                                          style: TextStyle(
-                                            color:
-                                                snapshot.data![index].type ==
-                                                    "spend"
-                                                ? Colors.red
-                                                : Colors.green,
-                                          ),
-                                        ),
+          FutureBuilder<List<TransactionObj>>(
+            future: di<TransactionsModel>().getTxPages(5, page),
+            builder: (context, snapshot) {
+              Widget cont = SliverToBoxAdapter(child: Text("Error Occured"));
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return SliverToBoxAdapter(child: CircularProgressIndicator());
+              } else {
+                if (snapshot.hasError) {
+                  log('error recent transactions:', error: snapshot.error);
+                  return SliverToBoxAdapter(
+                    child: Center(
+                      child: Text('Error Occured fetching Transactions'),
+                    ),
+                  );
+                } else {
+                  if (snapshot.hasData) {
+                    if ((snapshot.data ?? []).isNotEmpty) {
+                      return SliverList.builder(
+                        itemCount: snapshot.data!.length,
+                        //shrinkWrap: true,
+                        itemBuilder: (context, index) {
+                          final String sign =
+                              snapshot.data![index].type == TxType.spend.val
+                              ? '-'
+                              : '+';
+                          final double amount = snapshot.data![index].amount;
+                          Icon iconsToUse =
+                              snapshot.data![index].type == TxType.spend.val
+                              ? Icon(
+                                  size: 15,
+                                  Icons.outbound,
+                                  color: Colors.red,
+                                )
+                              : Icon(
+                                  size: 15,
+                                  Icons.call_received,
+                                  color: Colors.green,
+                                );
+                          return SizedBox(
+                            child: Card.outlined(
+                              color: Colors.white,
+
+                              child: Column(
+                                children: [
+                                  ListTile(
+                                    leading: iconsToUse,
+                                    title: Text(
+                                      snapshot.data![index].desc.isNotEmpty
+                                          ? snapshot.data![index].desc
+                                          : snapshot.data![index].category ??
+                                                "Pending category",
+                                    ),
+                                    subtitle: Text(
+                                      '$sign KSh $amount',
+                                      style: TextStyle(
+                                        color:
+                                            snapshot.data![index].type ==
+                                                "spend"
+                                            ? Colors.red
+                                            : Colors.green,
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
+                                ],
+                              ),
+                            ),
                           );
-                        }
-                      }
+                        },
+                      );
                     }
                   }
-                  return cont;
-                },
+                }
+              }
+              return cont;
+            },
+          ),
+          SliverPadding(
+            padding: EdgeInsets.all(10),
+            sliver: SliverToBoxAdapter(
+              child: Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        if (page > 1) {
+                          setState(() {
+                            page = page - 1;
+                          });
+                        }
+                      },
+                      icon: Icon(Icons.arrow_left),
+                    ),
+                    Text('$page'),
+
+                    IconButton(
+                      onPressed: () {
+                        if (page < di<TransactionsModel>().pages) {
+                          setState(() {
+                            page = page + 1;
+                          });
+                        }
+                      },
+                      icon: Icon(Icons.arrow_right),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),

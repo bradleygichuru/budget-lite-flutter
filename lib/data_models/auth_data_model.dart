@@ -14,10 +14,12 @@ class Account {
 
   final String createdAt;
   final String tier;
+  final int? resetPending;
   Account({
     required this.email,
     required this.createdAt,
     this.id,
+    this.resetPending,
     this.country,
     this.budgetResetDate,
     required this.tier,
@@ -30,12 +32,13 @@ class Account {
       'budget_reset_date': ?budgetResetDate,
       'account_tier': tier,
       'created_at': createdAt,
+      'resetPending': ?resetPending,
     };
   }
 
   @override
   String toString() {
-    return 'Account{id:$id,email:$email,country:$country,budget_reset_date:$budgetResetDate,createdAt:$createdAt,tier:$tier}';
+    return 'Account{id:$id,email:$email,country:$country,budget_reset_date:$budgetResetDate,createdAt:$createdAt,tier:$tier,resetPending:$resetPending}';
   }
 }
 
