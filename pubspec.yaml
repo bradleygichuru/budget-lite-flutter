@@ -51,6 +51,8 @@ dependencies:
   cron: ^0.6.2
   toastification: ^3.0.3
   upgrader: ^11.4.0
+  flutter_expandable_fab: ^2.5.2
+  sentry_flutter: ^9.5.0
 
 dev_dependencies:
   flutter_test:

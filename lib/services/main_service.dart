@@ -231,13 +231,13 @@ backgroundMessageHandler(SmsMessage message) async {
     AuthModel aM = AuthModel();
     String? currentRegion = await aM.getRegion();
 
+    int? accountId = await aM.getAccountId();
     log('from:${message.address} message:${message.body}');
     if (currentRegion == Country.kenya.name) {
       if (message.address == 'MPESA') {
         var transaction = parseMpesa(message);
         log('from:${message.address} message:${message.body}');
 
-        int? accountId = await aM.getAccountId();
         log('background_transaction:$transaction');
         if (transaction != null && accountId != null) {
           if (transaction['type'] == TxType.credit.val) {
@@ -282,11 +282,56 @@ backgroundMessageHandler(SmsMessage message) async {
           }
         }
       }
+      if (message.address == 'NCBA_BANK') {
+        var transaction = parseNCBA(message);
+        if (transaction != null && accountId != null) {
+          if (transaction['type'] == TxType.credit.val) {
+            TransactionObj tx = TransactionObj(
+              desc: transaction['desc'],
+              type: transaction['type'],
+              source: transaction['source'],
+              amount: transaction['amount'],
+              date: transaction['date'],
+              category: 'credit',
+            );
+            wM.creditDefaultWallet(tx);
+          } else if (transaction['type'] == TxType.fromSaving.val) {
+            TransactionObj tx = TransactionObj(
+              desc: transaction['desc'],
+              type: transaction['type'],
+              category: 'credit',
+              source: transaction['source'],
+              amount: transaction['amount'],
+              date: transaction['date'],
+            );
+            wM.removeFromSavings(tx);
+          } else if (transaction['type'] == TxType.toSaving.val) {
+            TransactionObj tx = TransactionObj(
+              desc: transaction['desc'],
+              type: transaction['type'],
+              source: transaction['source'],
+              category: 'savings',
+              amount: transaction['amount'],
+              date: transaction['date'],
+            );
+            wM.addToSavings(tx);
+          } else if (transaction['type'] == TxType.spend.val) {
+            TransactionObj tx = TransactionObj(
+              desc: transaction['desc'],
+              type: transaction['type'],
+              source: transaction['source'],
+              amount: transaction['amount'],
+              date: transaction['date'],
+            );
+            txM.insertTransaction(tx);
+          }
+        }
+      }
 
       if (message.address == 'Equity Bank') {
         var transaction = parseEquity(message);
         log('from:${message.address} message:${message.body}');
-        if (transaction != null) {
+        if (transaction != null && accountId != null) {
           if (transaction['type'] == TxType.spend.val) {
             TransactionObj tx = TransactionObj(
               desc: transaction['desc'],

@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'dart:collection';
 import 'dart:developer';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/constants/globals.dart';
+import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
+import 'package:flutter_application_1/screens/handle_balance.dart';
+import 'package:flutter_application_1/screens/handle_savings.dart';
 import 'package:flutter_application_1/screens/wallet_screen.dart';
 import 'package:flutter_application_1/services/main_service.dart';
 import 'package:flutter_application_1/services/notification_controller.dart';
@@ -20,6 +24,7 @@ import 'package:flutter_application_1/view_models/categories.dart';
 import 'package:flutter_application_1/view_models/goals.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
+import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:upgrader/upgrader.dart';
@@ -89,7 +94,12 @@ Future<void> main() async {
   // await Upgrader.clearSavedSettings();
   await initializeService();
   setup();
-  runApp(const MyApp());
+  await SentryFlutter.init((options) {
+    options.dsn = dotenv.env['SENTRY_DSN'];
+    // Adds request headers and IP for users,
+    // visit: https://docs.sentry.io/platforms/dart/data-management/data-collected/ for more info
+    options.sendDefaultPii = true;
+  }, appRunner: () => runApp(SentryWidget(child: MyApp())));
 }
 
 class MyApp extends StatefulWidget with WatchItStatefulWidgetMixin {
@@ -527,11 +537,119 @@ class MyAppState extends State<MyApp> {
                     } else {
                       return SafeArea(
                         child: Scaffold(
-                          // floatingActionButton: FloatingActionButton.extended(
-                          //   onPressed: () {},
-                          //   label: const Text('Transact'),
-                          //   icon: const Icon(Icons.add),
-                          // ),
+                          floatingActionButtonLocation: ExpandableFab.location,
+                          floatingActionButton: ExpandableFab(
+                            openButtonBuilder:
+                                RotateFloatingActionButtonBuilder(
+                                  child: const Icon(
+                                    Icons.account_balance_wallet,
+                                  ),
+                                  fabSize: ExpandableFabSize.regular,
+                                  shape: const CircleBorder(),
+                                ),
+                            children: [
+                              FloatingActionButton.extended(
+                                onPressed: () async {
+                                  if (di<AuthModel>().region ==
+                                      Country.kenya.name) {
+                                    return showDialog<void>(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (context) {
+                                        return AlertDialog(
+                                          title: Text('Auto import on'),
+                                          content: Text(
+                                            'Transaction auto import is automatically enabled in your region.Be careful of transaction duplication on auto imported transactions',
+                                          ),
+                                          actions: [
+                                            FilledButton(
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                              },
+                                              child: Text('Cancel'),
+                                            ),
+                                            FilledButton(
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        const HandleBalance(),
+                                                  ),
+                                                );
+                                              },
+                                              child: Text('Continue'),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  } else {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const HandleBalance(),
+                                      ),
+                                    );
+                                  }
+                                },
+                                label: Text('Transact'),
+                                icon: Icon(Icons.add),
+                              ),
+                              FloatingActionButton.extended(
+                                onPressed: () async {
+                                  if (di<AuthModel>().region ==
+                                      Country.kenya.name) {
+                                    return showDialog<void>(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (context) {
+                                        return AlertDialog(
+                                          title: Text('Auto import on'),
+                                          content: Text(
+                                            'Transaction auto import is automatically enabled in your region.Be careful on transaction duplication on auto iported transactions',
+                                          ),
+                                          actions: [
+                                            FilledButton(
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                              },
+                                              child: Text('Cancel'),
+                                            ),
+                                            FilledButton(
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        const HandleSavings(),
+                                                  ),
+                                                );
+                                              },
+                                              child: Text('Continue'),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  } else {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const HandleSavings(),
+                                      ),
+                                    );
+                                  }
+                                },
+                                label: Text('Savings'),
+                                icon: Icon(Icons.add),
+                              ),
+                            ],
+                          ),
                           appBar: AppBar(
                             title: Image.asset('assets/24x24_logo.png'),
                           ),
@@ -560,16 +678,16 @@ class MyAppState extends State<MyApp> {
                                 icon: Icon(Icons.crisis_alert_outlined),
                                 label: 'Goals',
                               ),
-                              NavigationDestination(
-                                selectedIcon: Icon(
-                                  Icons.account_balance_wallet,
-                                ),
-                                icon: Icon(
-                                  Icons.account_balance_wallet_outlined,
-                                ),
-                                label: 'Wallet',
-                              ),
 
+                              // NavigationDestination(
+                              //   selectedIcon: Icon(
+                              //     Icons.account_balance_wallet,
+                              //   ),
+                              //   icon: Icon(
+                              //     Icons.account_balance_wallet_outlined,
+                              //   ),
+                              //   label: 'Wallet',
+                              // ),
                               NavigationDestination(
                                 icon: Icon(Icons.settings_outlined),
                                 selectedIcon: Icon(Icons.settings),
@@ -610,7 +728,7 @@ class MyAppState extends State<MyApp> {
                               Dashboard(),
                               EnvelopesView(),
                               GoalsPage(),
-                              WalletScreen(),
+                              //WalletScreen(),
                               SettingsPage(),
                             ][currentPageIndex],
                           ),

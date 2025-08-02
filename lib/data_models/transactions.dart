@@ -6,9 +6,9 @@ const String mpesaPaid = "paid to";
 const String mpesaSent = "sent to";
 const String mpesaTransferred = "transferred";
 const String equitySent = 'sent';
-
+const String ncbaCredited = 'credited';
 const String equityPaid = 'Bill payment';
-
+const String ncbaPaid = 'Paybill';
 const String equityCardPayment = 'Auth for card';
 
 enum TxType {
@@ -80,7 +80,7 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
           .split("Ksh")[1]
           .replaceAll(',', '');
 
-      transaction['date'] = message.split(" on ")[1].split("at")[0].trim();
+      transaction['date'] = DateTime.now().toString();
       transaction["amount"] = double.parse(amount);
       transaction["type"] = TxType.credit.val;
       transaction['desc'] = receivedArray[1].split('from')[1].split('at')[0];
@@ -92,7 +92,7 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
 
       String amount = paidArray[0].split("Ksh")[1].trim().replaceAll(",", "");
 
-      transaction["date"] = message.split(" on ")[1].split("at")[0];
+      transaction['date'] = DateTime.now().toString();
       transaction["amount"] = double.parse(amount);
       transaction["type"] = TxType.spend.val;
       transaction['desc'] = paidArray[1].split('on')[0].trim();
@@ -104,7 +104,7 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
       String amount = sentArray[0].split("Ksh")[1].replaceAll(",", "");
 
       transaction["amount"] = double.parse(amount);
-      transaction['date'] = message.split(" on ")[1].split("at")[0].trim();
+      transaction['date'] = DateTime.now().toString();
       transaction["type"] = TxType.spend.val;
       transaction['desc'] = sentArray[1].split('at')[0].trim();
 
@@ -124,9 +124,42 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
           .replaceAll(",", "");
 
       transaction["amount"] = double.parse(amount);
-      transaction['date'] = message.split(" on ")[1].split("at")[0].trim();
+      transaction['date'] = DateTime.now().toString();
       transaction['desc'] = transferredArray[1].split('on')[0].trim();
 
+      return transaction;
+    }
+  }
+  return null;
+}
+
+Map<String, dynamic>? parseNCBA(SmsMessage messageObj) {
+  if (messageObj.body != null) {
+    String? message = messageObj.body;
+    log("message:${messageObj.body}");
+    Map<String, dynamic> transaction = {
+      "type": "",
+      "source": "NCBA_BANK",
+      "amount": 0,
+      'date': "",
+      'desc': '',
+    };
+    if (message!.contains(ncbaPaid)) {
+      List<String> paidArray = message.split(ncbaPaid);
+      String amount = paidArray[1].split('KES')[1].split('to')[0].trim();
+      transaction['amount'] = double.parse(amount);
+      transaction['desc'] = paidArray[1];
+      transaction["type"] = TxType.spend.val;
+      transaction['date'] = DateTime.now().toString();
+      return transaction;
+    }
+    if (message.contains(ncbaCredited)) {
+      List<String> creditArray = message.split(ncbaCredited);
+      String amount = creditArray[1];
+      transaction['amount'] = double.parse(amount);
+      transaction["type"] = TxType.credit.val;
+      transaction['desc'] = message;
+      transaction['date'] = DateTime.now().toString();
       return transaction;
     }
   }
@@ -139,7 +172,7 @@ Map<String, dynamic>? parseEquity(SmsMessage messageObj) {
     log("message:${messageObj.body}");
     Map<String, dynamic> transaction = {
       "type": "",
-      "source": "Equity",
+      "source": "Equity_BANK",
       "amount": 0,
       'date': "",
       'desc': '',
@@ -153,7 +186,7 @@ Map<String, dynamic>? parseEquity(SmsMessage messageObj) {
       transaction['desc'] = message;
       return transaction;
     }
-    if (message!.contains(equityPaid)) {
+    if (message.contains(equityPaid)) {
       List<String> paidArray = message.split(equityPaid);
       String amount = paidArray[1]
           .split('for')[0]
@@ -166,9 +199,11 @@ Map<String, dynamic>? parseEquity(SmsMessage messageObj) {
 
       transaction["type"] = TxType.spend.val;
       transaction['desc'] = paidArray[1];
-      transaction['date'] = message.split('on')[2].split('at')[0].trim();
+      transaction['date'] = DateTime.now().toString();
+
+      return transaction;
     }
-    if (message!.contains(equityCardPayment)) {
+    if (message.contains(equityCardPayment)) {
       List<String> paidArray = message.split(equityCardPayment);
       String amount = paidArray[0]
           .split('KES')[1]
@@ -179,9 +214,13 @@ Map<String, dynamic>? parseEquity(SmsMessage messageObj) {
       transaction['amount'] = double.parse(amount);
       transaction["type"] = TxType.spend.val;
       transaction['desc'] = paidArray[1];
-      transaction['date'] = paidArray[1].split('on')[1].split('Ref')[0].trim();
+      transaction['date'] = DateTime.now().toString();
+
+      return transaction;
     }
   }
+
+  return null;
 }
 
 class TransactionCreationFailed implements Exception {}
