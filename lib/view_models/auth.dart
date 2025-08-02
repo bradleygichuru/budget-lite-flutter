@@ -19,19 +19,19 @@ class AuthModel extends ChangeNotifier {
   }
   String email = '';
   int? accountId;
-  late DateTime date;
+  DateTime date = DateTime.now();
   late Future<bool> handleAuth;
   late bool isLoggedIn;
   late bool isNewUser;
   late String? authToken;
-  late String tier;
+  String tier = '';
   bool pendingBudgetReset = false;
   String region = 'not set';
 
   Widget authWidget = SafeArea(
     child: Center(child: CircularProgressIndicator()),
   );
-  void setAccountProfileInfo() async {
+  Future<void> setAccountProfileInfo() async {
     final db = await getDb();
     try {
       final List<Map<String, Object?>> accounts = await db.rawQuery(
@@ -74,7 +74,7 @@ class AuthModel extends ChangeNotifier {
     if (regiontoset != null) {
       region = regiontoset;
     }
-    setAccountProfileInfo();
+    await setAccountProfileInfo();
     getAuthToken();
     notifyListeners();
   }
@@ -87,7 +87,7 @@ class AuthModel extends ChangeNotifier {
       region = regiontoset;
     }
 
-    setAccountProfileInfo();
+    await setAccountProfileInfo();
 
     notifyListeners();
   }
@@ -157,7 +157,86 @@ class AuthModel extends ChangeNotifier {
             }
           case Error():
             {
-              return Result.error(getacid.error);
+              switch (getacid.error) {
+                case NoAccountFound():
+                  {
+                    Uri getUser = Uri(
+                      scheme: 'http',
+                      host: dotenv.env['BACKEND_ENDPOINT'],
+                      path: 'api/user',
+                      port: 8000,
+                    );
+                    http.Response resp = await http.get(
+                      getUser,
+                      headers: {
+                        'Authorization':
+                            'Bearer ${decodedResponse["response"]["Bearer"]}',
+                      },
+                    );
+                    var decodedResp = jsonDecode(resp.body) as Map;
+
+                    Result accountCreation = await createAccount(
+                      Account(
+                        id: decodedResp['id'],
+                        email: decodedResp['email'],
+                        createdAt: decodedResp['created_at'],
+                        tier: 'Free',
+                      ),
+                    );
+                    switch (accountCreation) {
+                      case Ok():
+                        {
+                          return Result.ok(accountCreation.value);
+                        }
+                      case Error():
+                        {
+                          return Result.error(accountCreation.error);
+                        }
+                    }
+                  }
+                case AccountIdNullException():
+                  {
+                    Uri getUser = Uri(
+                      scheme: 'http',
+                      host: dotenv.env['BACKEND_ENDPOINT'],
+                      path: 'api/user',
+                      port: 8000,
+                    );
+                    http.Response resp = await http.get(
+                      getUser,
+                      headers: {
+                        'Authorization':
+                            'Bearer ${decodedResponse["response"]["Bearer"]}',
+                      },
+                    );
+                    var decodedResp = jsonDecode(resp.body) as Map;
+
+                    Result accountCreation = await createAccount(
+                      Account(
+                        id: decodedResp['id'],
+                        email: decodedResp['email'],
+                        createdAt: decodedResp['created_at'],
+                        tier: 'Free',
+                      ),
+                    );
+                    switch (accountCreation) {
+                      case Ok():
+                        {
+                          return Result.ok(accountCreation.value);
+                        }
+                      case Error():
+                        {
+                          return Result.error(accountCreation.error);
+                        }
+                    }
+                  }
+
+                default:
+                  {
+                    return Result.error(getacid.error);
+                  }
+              }
+              // return Result.error(getacid.error);
             }
         }
       } else {
@@ -197,13 +276,29 @@ class AuthModel extends ChangeNotifier {
       var decodedResponse = jsonDecode(response.body) as Map;
       if (decodedResponse["success"]) {
         log("request successful");
+        Uri getUser = Uri(
+          scheme: 'http',
+          host: dotenv.env['BACKEND_ENDPOINT'],
+          path: 'api/user',
+          port: 8000,
+        );
+        http.Response resp = await http.get(
+          getUser,
+          headers: {
+            'Authorization': 'Bearer ${decodedResponse["response"]["Bearer"]}',
+          },
+        );
+        var decodedResp = jsonDecode(resp.body) as Map;
+
         Result accountCreation = await createAccount(
           Account(
+            id: decodedResp['id'],
+            email: decodedResp['email'],
+            createdAt: decodedResp['created_at'],
             tier: 'Free',
-            createdAt: DateTime.now().toString(),
-            email: email,
           ),
         );
+
         switch (accountCreation) {
           case Ok():
             {

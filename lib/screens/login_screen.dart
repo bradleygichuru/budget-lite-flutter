@@ -43,6 +43,7 @@ class LoginFormState extends State<LoginForm> {
           key: loginScaffoldMessengerKey,
           child: Scaffold(
             body: Container(
+              height: double.infinity,
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -170,7 +171,7 @@ class LoginFormState extends State<LoginForm> {
                                                       ),
                                                     ),
                                                   );
-
+                                              authM.completeOnboarding();
                                               authM.refreshAuth();
 
                                               setState(() {
@@ -234,6 +235,10 @@ class LoginFormState extends State<LoginForm> {
                                               }
                                             }
                                         }
+
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
                                       }
                                     },
                               child: _isLoading

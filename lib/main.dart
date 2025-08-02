@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:developer';
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
@@ -21,6 +22,7 @@ import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:upgrader/upgrader.dart';
 import 'package:watch_it/watch_it.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -84,6 +86,7 @@ Future<void> main() async {
     ],
     debug: true,
   );
+  // await Upgrader.clearSavedSettings();
   await initializeService();
   setup();
   runApp(const MyApp());
@@ -98,6 +101,9 @@ class MyApp extends StatefulWidget with WatchItStatefulWidgetMixin {
 
 class MyAppState extends State<MyApp> {
   Future<List<TransactionObj>> unCategorizedTxs = Future.value([]);
+  String newApkUrl = '';
+  bool isUpdating = false;
+  // OtaEvent? updateEvent;
   int currentPageIndex = 0;
   late final AppLifecycleListener _listener;
   bool handleUncategorized = false;
@@ -106,6 +112,14 @@ class MyAppState extends State<MyApp> {
   bool isResetLoading = false;
   bool categorizing = false;
   bool shouldReset = false;
+  static const appcastURL =
+      'https://raw.githubusercontent.com/bradleygichuru/budgetlite-appcast/refs/heads/main/budgetlite_updates.xml';
+  final upgrader = Upgrader(
+    debugLogging: kDebugMode ? true : false,
+    storeController: UpgraderStoreController(
+      onAndroid: () => UpgraderAppcastStore(appcastURL: appcastURL),
+    ),
+  );
 
   final GlobalKey<ScaffoldMessengerState> mainScaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
@@ -494,7 +508,6 @@ class MyAppState extends State<MyApp> {
             ),
           )
         : MaterialApp(
-            navigatorKey: AppGlobal.navigatorKey,
             theme: ThemeData(
               colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
             ),
@@ -514,6 +527,14 @@ class MyAppState extends State<MyApp> {
                     } else {
                       return SafeArea(
                         child: Scaffold(
+                          // floatingActionButton: FloatingActionButton.extended(
+                          //   onPressed: () {},
+                          //   label: const Text('Transact'),
+                          //   icon: const Icon(Icons.add),
+                          // ),
+                          appBar: AppBar(
+                            title: Image.asset('assets/24x24_logo.png'),
+                          ),
                           bottomNavigationBar: NavigationBar(
                             onDestinationSelected: (int index) {
                               setState(() {
@@ -556,13 +577,43 @@ class MyAppState extends State<MyApp> {
                               ),
                             ],
                           ),
-                          body: <Widget>[
-                            Dashboard(),
-                            EnvelopesView(),
-                            GoalsPage(),
-                            WalletScreen(),
-                            SettingsPage(),
-                          ][currentPageIndex],
+                          body: UpgradeAlert(
+                            // onUpdate: () {
+                            //   try {
+                            //     OtaUpdate().execute(newApkUrl).listen(
+                            //       cancelOnError: true,
+                            //       (OtaEvent event) {
+                            //         setState(() {
+                            //           updateEvent = event;
+                            //         });
+                            //       },
+                            //       onDone: () => setState(() {
+                            //         isUpdating = false;
+                            //       }),
+                            //     );
+                            //   } catch (e) {
+                            //     ScaffoldMessenger.of(context).showSnackBar(
+                            //       SnackBar(
+                            //         content: Text(
+                            //           'Error occured updating app',
+                            //           style: TextStyle(color: Colors.red),
+                            //         ),
+                            //       ),
+                            //     );
+                            //
+                            //     log('OtaUpdate error', error: e);
+                            //   }
+                            //   return true;
+                            // },
+                            upgrader: upgrader,
+                            child: <Widget>[
+                              Dashboard(),
+                              EnvelopesView(),
+                              GoalsPage(),
+                              WalletScreen(),
+                              SettingsPage(),
+                            ][currentPageIndex],
+                          ),
                         ),
                       );
                     }

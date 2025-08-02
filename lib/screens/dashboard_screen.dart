@@ -271,7 +271,9 @@ class DashboardState extends State<Dashboard> {
           FutureBuilder<List<TransactionObj>>(
             future: di<TransactionsModel>().getTxPages(5, page),
             builder: (context, snapshot) {
-              Widget cont = SliverToBoxAdapter(child: Text("Error Occured"));
+              Widget cont = SliverToBoxAdapter(
+                child: Center(child: Text("Error Occured")),
+              );
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return SliverToBoxAdapter(child: CircularProgressIndicator());
               } else {
@@ -282,62 +284,61 @@ class DashboardState extends State<Dashboard> {
                       child: Text('Error Occured fetching Transactions'),
                     ),
                   );
-                } else {
-                  if (snapshot.hasData) {
-                    if ((snapshot.data ?? []).isNotEmpty) {
-                      return SliverList.builder(
-                        itemCount: snapshot.data!.length,
-                        //shrinkWrap: true,
-                        itemBuilder: (context, index) {
-                          final String sign =
-                              snapshot.data![index].type == TxType.spend.val
-                              ? '-'
-                              : '+';
-                          final double amount = snapshot.data![index].amount;
-                          Icon iconsToUse =
-                              snapshot.data![index].type == TxType.spend.val
-                              ? Icon(
-                                  size: 15,
-                                  Icons.outbound,
-                                  color: Colors.red,
-                                )
-                              : Icon(
-                                  size: 15,
-                                  Icons.call_received,
-                                  color: Colors.green,
-                                );
-                          return SizedBox(
-                            child: Card.outlined(
-                              color: Colors.white,
+                }
+                if (snapshot.hasData) {
+                  if ((snapshot.data ?? []).isNotEmpty) {
+                    return SliverList.builder(
+                      itemCount: snapshot.data!.length,
+                      //shrinkWrap: true,
+                      itemBuilder: (context, index) {
+                        final String sign =
+                            snapshot.data![index].type == TxType.spend.val
+                            ? '-'
+                            : '+';
+                        final double amount = snapshot.data![index].amount;
+                        Icon iconsToUse =
+                            snapshot.data![index].type == TxType.spend.val
+                            ? Icon(size: 15, Icons.outbound, color: Colors.red)
+                            : Icon(
+                                size: 15,
+                                Icons.call_received,
+                                color: Colors.green,
+                              );
+                        return SizedBox(
+                          child: Card.outlined(
+                            color: Colors.white,
 
-                              child: Column(
-                                children: [
-                                  ListTile(
-                                    leading: iconsToUse,
-                                    title: Text(
-                                      snapshot.data![index].desc.isNotEmpty
-                                          ? snapshot.data![index].desc
-                                          : snapshot.data![index].category ??
-                                                "Pending category",
-                                    ),
-                                    subtitle: Text(
-                                      '$sign KSh $amount',
-                                      style: TextStyle(
-                                        color:
-                                            snapshot.data![index].type ==
-                                                "spend"
-                                            ? Colors.red
-                                            : Colors.green,
-                                      ),
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  leading: iconsToUse,
+                                  title: Text(
+                                    snapshot.data![index].desc.isNotEmpty
+                                        ? snapshot.data![index].desc
+                                        : snapshot.data![index].category ??
+                                              "Pending category",
+                                  ),
+                                  subtitle: Text(
+                                    '$sign KSh $amount',
+                                    style: TextStyle(
+                                      color:
+                                          snapshot.data![index].type == "spend"
+                                          ? Colors.red
+                                          : Colors.green,
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          );
-                        },
-                      );
-                    }
+                          ),
+                        );
+                      },
+                    );
+                  }
+                  if ((snapshot.data ?? []).isEmpty) {
+                    return SliverToBoxAdapter(
+                      child: Center(child: Text("No transactions found")),
+                    );
                   }
                 }
               }

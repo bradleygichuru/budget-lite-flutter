@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:path/path.dart';
@@ -210,20 +211,26 @@ class SettingsPageState extends State<SettingsPage> {
                 ),
               ),
             ),
-            FilledButton(
-              onPressed: () async {
-                SharedPreferences prefs = await SharedPreferences.getInstance();
-                prefs.setBool("isLoggedIn", false);
-                prefs.remove("budget_lite_current_account_id");
-                prefs.setBool("isNewUser", true);
-                await deleteDatabase(
-                  join(await getDatabasesPath(), 'budget_lite_database.db'),
-                );
-                authM.removeAuthToken();
-                authM.refreshAuth();
-              },
-              child: Text("Dev Reset App"),
-            ),
+            kDebugMode
+                ? FilledButton(
+                    onPressed: () async {
+                      SharedPreferences prefs =
+                          await SharedPreferences.getInstance();
+                      prefs.setBool("isLoggedIn", false);
+                      prefs.remove("budget_lite_current_account_id");
+                      prefs.setBool("isNewUser", true);
+                      await deleteDatabase(
+                        join(
+                          await getDatabasesPath(),
+                          'budget_lite_database.db',
+                        ),
+                      );
+                      authM.removeAuthToken();
+                      authM.refreshAuth();
+                    },
+                    child: Text("Dev Reset App"),
+                  )
+                : Text(''),
           ],
         ),
       ),

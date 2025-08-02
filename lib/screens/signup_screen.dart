@@ -38,6 +38,7 @@ class SignUpFormState extends State<SignupForm> {
           key: signUpScaffoldKey,
           child: Scaffold(
             body: Container(
+              height: double.infinity,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.centerLeft,

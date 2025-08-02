@@ -1,10 +1,15 @@
 import 'dart:developer';
 import 'package:another_telephony/telephony.dart';
 
-const String received = "received";
-const String paid = "paid to";
-const String sent = "sent to";
-const String transferred = "transferred";
+const String mpesaReceived = "received";
+const String mpesaPaid = "paid to";
+const String mpesaSent = "sent to";
+const String mpesaTransferred = "transferred";
+const String equitySent = 'sent';
+
+const String equityPaid = 'Bill payment';
+
+const String equityCardPayment = 'Auth for card';
 
 enum TxType {
   spend('spend'),
@@ -67,8 +72,8 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
       'date': "",
       'desc': '',
     };
-    if (message!.contains(received)) {
-      List<String> receivedArray = message.split(received);
+    if (message!.contains(mpesaReceived)) {
+      List<String> receivedArray = message.split(mpesaReceived);
       String amount = receivedArray[1]
           .split("from")[0]
           .trim()
@@ -82,8 +87,8 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
 
       return transaction;
     }
-    if (message.contains(paid)) {
-      List<String> paidArray = message.split(paid);
+    if (message.contains(mpesaPaid)) {
+      List<String> paidArray = message.split(mpesaPaid);
 
       String amount = paidArray[0].split("Ksh")[1].trim().replaceAll(",", "");
 
@@ -94,8 +99,8 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
 
       return transaction;
     }
-    if (message.contains(sent)) {
-      List<String> sentArray = message.split(sent);
+    if (message.contains(mpesaSent)) {
+      List<String> sentArray = message.split(mpesaSent);
       String amount = sentArray[0].split("Ksh")[1].replaceAll(",", "");
 
       transaction["amount"] = double.parse(amount);
@@ -106,8 +111,8 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
       return transaction;
     }
 
-    if (message.contains(transferred)) {
-      List<String> transferredArray = message.split(transferred);
+    if (message.contains(mpesaTransferred)) {
+      List<String> transferredArray = message.split(mpesaTransferred);
       if (transferredArray[1].trim().split(' ')[0] == 'from') {
         transaction["type"] = TxType.fromSaving.val;
       } else if (transferredArray[1].trim().split(' ')[0] == 'to') {
@@ -126,6 +131,57 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
     }
   }
   return null;
+}
+
+Map<String, dynamic>? parseEquity(SmsMessage messageObj) {
+  if (messageObj.body != null) {
+    String? message = messageObj.body;
+    log("message:${messageObj.body}");
+    Map<String, dynamic> transaction = {
+      "type": "",
+      "source": "Equity",
+      "amount": 0,
+      'date': "",
+      'desc': '',
+    };
+    if (message!.contains(equitySent)) {
+      List<String> sentArray = message.split(equitySent);
+      String amount = sentArray[1].split('to')[0].split('KShs.')[1].trim();
+      transaction['amount'] = double.parse(amount);
+      transaction["type"] = TxType.spend.val;
+      transaction['date'] = DateTime.now().toString();
+      transaction['desc'] = message;
+      return transaction;
+    }
+    if (message!.contains(equityPaid)) {
+      List<String> paidArray = message.split(equityPaid);
+      String amount = paidArray[1]
+          .split('for')[0]
+          .split('of')[1]
+          .trim()
+          .replaceAll('KES.', '')
+          .trim();
+
+      transaction['amount'] = double.parse(amount);
+
+      transaction["type"] = TxType.spend.val;
+      transaction['desc'] = paidArray[1];
+      transaction['date'] = message.split('on')[2].split('at')[0].trim();
+    }
+    if (message!.contains(equityCardPayment)) {
+      List<String> paidArray = message.split(equityCardPayment);
+      String amount = paidArray[0]
+          .split('KES')[1]
+          .replaceAll(',', '')
+          .trim()
+          .replaceAll(' ', '');
+
+      transaction['amount'] = double.parse(amount);
+      transaction["type"] = TxType.spend.val;
+      transaction['desc'] = paidArray[1];
+      transaction['date'] = paidArray[1].split('on')[1].split('Ref')[0].trim();
+    }
+  }
 }
 
 class TransactionCreationFailed implements Exception {}
