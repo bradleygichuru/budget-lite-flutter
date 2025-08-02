@@ -94,12 +94,13 @@ Future<void> main() async {
   // await Upgrader.clearSavedSettings();
   await initializeService();
   setup();
-  await SentryFlutter.init((options) {
-    options.dsn = dotenv.env['SENTRY_DSN'];
-    // Adds request headers and IP for users,
-    // visit: https://docs.sentry.io/platforms/dart/data-management/data-collected/ for more info
-    options.sendDefaultPii = true;
-  }, appRunner: () => runApp(SentryWidget(child: MyApp())));
+  // await SentryFlutter.init((options) {
+  //   options.dsn = dotenv.env['SENTRY_DSN'];
+  //   // Adds request headers and IP for users,
+  //   // visit: https://docs.sentry.io/platforms/dart/data-management/data-collected/ for more info
+  //   options.sendDefaultPii = true;
+  // }, appRunner: () => runApp(SentryWidget(child: MyApp())));
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget with WatchItStatefulWidgetMixin {
@@ -651,7 +652,7 @@ class MyAppState extends State<MyApp> {
                             ],
                           ),
                           appBar: AppBar(
-                            title: Image.asset('assets/24x24_logo.png'),
+                            title: Image.asset('assets/ic_launcher.png'),
                           ),
                           bottomNavigationBar: NavigationBar(
                             onDestinationSelected: (int index) {

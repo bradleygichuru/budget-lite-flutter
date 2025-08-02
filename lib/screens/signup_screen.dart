@@ -298,16 +298,30 @@ class SignUpFormState extends State<SignupForm> {
                                     );
                                   }
                                 },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text('Continue'),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 4),
-                                child: const Icon(Icons.arrow_right_alt),
-                              ),
-                            ],
-                          ),
+                          child: _isLoading
+                              ? Center(
+                                  child: SizedBox(
+                                    width: 24.0,
+                                    height: 24.0,
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text('Continue'),
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      child: const Icon(Icons.arrow_right_alt),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
                     ),
@@ -335,31 +349,17 @@ class SignUpFormState extends State<SignupForm> {
                                   );
                                   // Navigate back to first route when tapped.
                                 },
-                          child: _isLoading
-                              ? Center(
-                                  child: SizedBox(
-                                    width: 24.0,
-                                    height: 24.0,
-                                    child: CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                      ),
-                                      child: const Icon(Icons.person_add),
-                                    ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                child: const Icon(Icons.person_add),
+                              ),
 
-                                    const Text('Sign In'),
-                                  ],
-                                ),
+                              const Text('Sign In'),
+                            ],
+                          ),
                         ),
                       ),
                     ),
