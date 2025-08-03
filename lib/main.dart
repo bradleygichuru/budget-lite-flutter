@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'dart:collection';
 import 'dart:developer';
@@ -92,7 +93,6 @@ Future<void> main() async {
     debug: true,
   );
   // await Upgrader.clearSavedSettings();
-  await initializeService();
   setup();
   // await SentryFlutter.init((options) {
   //   options.dsn = dotenv.env['SENTRY_DSN'];
@@ -100,6 +100,8 @@ Future<void> main() async {
   //   // visit: https://docs.sentry.io/platforms/dart/data-management/data-collected/ for more info
   //   options.sendDefaultPii = true;
   // }, appRunner: () => runApp(SentryWidget(child: MyApp())));
+
+  initializeService();
   runApp(const MyApp());
 }
 
@@ -652,7 +654,13 @@ class MyAppState extends State<MyApp> {
                             ],
                           ),
                           appBar: AppBar(
-                            title: Image.asset('assets/24x24_logo.png'),
+                            title: Text(
+                              'Budgetlite',
+                              style: GoogleFonts.robotoMono(
+                                color: Colors.blue.shade600,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                           bottomNavigationBar: NavigationBar(
                             onDestinationSelected: (int index) {
