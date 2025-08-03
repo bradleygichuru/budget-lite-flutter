@@ -14,6 +14,12 @@ class InitialBalance extends StatefulWidget with WatchItStatefulWidgetMixin {
 
 class InitialBalanceState extends State<InitialBalance> {
   @override
+  void initState() {
+    di<AuthModel>().setLastOnboardingStep('intial_balance');
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     TextEditingController balanceEC = TextEditingController();
 

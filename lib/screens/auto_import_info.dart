@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/sms_perms_request.dart';
+import 'package:flutter_application_1/view_models/auth.dart';
+import 'package:watch_it/watch_it.dart';
 
-class AutoImportInfoScreen extends StatelessWidget {
+class AutoImportInfoScreen extends StatefulWidget {
   const AutoImportInfoScreen({super.key});
+  @override
+  AutoImportInfoScreenState createState() => AutoImportInfoScreenState();
+}
+
+class AutoImportInfoScreenState extends State<AutoImportInfoScreen> {
+  @override
+  void initState() {
+    di<AuthModel>().setLastOnboardingStep('auto_import_info');
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -135,11 +148,11 @@ class AutoImportInfoScreen extends StatelessWidget {
                           ),
                         ),
                         onPressed: () {
-                           Navigator.push(
-                             context,
-                             MaterialPageRoute(
-                               builder: (context) => const SmsPermsRequest(),
-                           ),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SmsPermsRequest(),
+                            ),
                           );
                         },
                         child: Row(

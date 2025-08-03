@@ -80,6 +80,9 @@ flutter:
   assets:
       - .env
       - assets/24x24_logo.png
+      - assets/ic_launcher.png
+
+      - assets/48x48_logo.png
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

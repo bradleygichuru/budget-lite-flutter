@@ -2,13 +2,23 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:flutter_application_1/screens/setup_budget.dart';
+import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:watch_it/watch_it.dart';
 
-class SmsPermsRequest extends StatelessWidget {
+class SmsPermsRequest extends StatefulWidget {
   const SmsPermsRequest({super.key});
+  @override
+  SmsPermsRequestState createState() => SmsPermsRequestState();
+}
+
+class SmsPermsRequestState extends State<SmsPermsRequest> {
+  @override
+  void initState() {
+    di<AuthModel>().setLastOnboardingStep('sms_perms_request');
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {

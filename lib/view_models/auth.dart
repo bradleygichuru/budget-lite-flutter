@@ -6,8 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/wallet_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
+import 'package:flutter_application_1/screens/auto_import_info.dart';
+import 'package:flutter_application_1/screens/initial_balance.dart';
 import 'package:flutter_application_1/screens/landing.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
+import 'package:flutter_application_1/screens/select_region_screen.dart';
+import 'package:flutter_application_1/screens/setup_budget.dart';
+import 'package:flutter_application_1/screens/sms_perms_request.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +22,7 @@ class AuthModel extends ChangeNotifier {
   AuthModel() {
     initAuth();
   }
+
   String email = '';
   int? accountId;
   DateTime date = DateTime.now();
@@ -67,6 +73,18 @@ class AuthModel extends ChangeNotifier {
     }
   }
 
+  Future<void> setLastOnboardingStep(String step) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int? id = prefs.getInt("budget_lite_current_account_id");
+      if (id != null) {
+        prefs.setString('last_onboarding_step', step);
+      }
+    } catch (e) {
+      log('Error occured saving onboarding step', error: e);
+    }
+  }
+
   void refreshAuth() async {
     handleAuth = isSetLoggedIn();
 
@@ -95,6 +113,8 @@ class AuthModel extends ChangeNotifier {
   void completeOnboarding() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setBool("isNewUser", false);
+    prefs.remove('last_onboarding_step');
+
     refreshAuth();
     notifyListeners();
   }
@@ -327,7 +347,42 @@ class AuthModel extends ChangeNotifier {
 
     log("isNewUser:$isNewUser,isLoggedIn:$isLoggedIn");
     if (isNewUser) {
-      authWidget = Landing();
+      String? lastStep = prefs.getString('last_onboarding_step');
+      if (lastStep != null && lastStep.isNotEmpty) {
+        switch (lastStep) {
+          case 'select_region':
+            {
+              authWidget = SelectRegion();
+              break;
+            }
+          case 'auto_import_info':
+            {
+              authWidget = AutoImportInfoScreen();
+            }
+          case 'sms_perms_request':
+            {
+              authWidget = SmsPermsRequest();
+              break;
+            }
+          case 'setup_budget':
+            {
+              authWidget = SetupBudget();
+              break;
+            }
+          case 'intial_balance':
+            {
+              authWidget = InitialBalance();
+              break;
+            }
+          default:
+            {
+              authWidget = Landing();
+              break;
+            }
+        }
+      } else {
+        authWidget = Landing();
+      }
 
       log("onboarding");
       return true;

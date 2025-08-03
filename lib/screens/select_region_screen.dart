@@ -12,6 +12,12 @@ class SelectRegion extends StatefulWidget {
 }
 
 class SelectRegionState extends State<SelectRegion> {
+  @override
+  void initState() {
+    di<AuthModel>().setLastOnboardingStep('select_region');
+    super.initState();
+  }
+
   AuthModel aM = di.get<AuthModel>();
   @override
   Widget build(BuildContext context) {

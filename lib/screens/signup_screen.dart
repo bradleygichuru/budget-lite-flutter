@@ -5,6 +5,7 @@ import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:flutter_application_1/screens/select_region_screen.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:watch_it/watch_it.dart';
 
 class SignupForm extends StatefulWidget {
@@ -228,6 +229,9 @@ class SignUpFormState extends State<SignupForm> {
                                       switch (userRegRes) {
                                         case Ok():
                                           {
+                                            SharedPreferences prefs =
+                                                await SharedPreferences.getInstance();
+                                            prefs.setBool("isNewUser", true);
                                             if (context.mounted) {
                                               signUpScaffoldKey.currentState!
                                                   .showSnackBar(
@@ -298,16 +302,30 @@ class SignUpFormState extends State<SignupForm> {
                                     );
                                   }
                                 },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text('Continue'),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 4),
-                                child: const Icon(Icons.arrow_right_alt),
-                              ),
-                            ],
-                          ),
+                          child: _isLoading
+                              ? Center(
+                                  child: SizedBox(
+                                    width: 24.0,
+                                    height: 24.0,
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text('Continue'),
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      child: const Icon(Icons.arrow_right_alt),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
                     ),
@@ -335,31 +353,17 @@ class SignUpFormState extends State<SignupForm> {
                                   );
                                   // Navigate back to first route when tapped.
                                 },
-                          child: _isLoading
-                              ? Center(
-                                  child: SizedBox(
-                                    width: 24.0,
-                                    height: 24.0,
-                                    child: CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                      ),
-                                      child: const Icon(Icons.person_add),
-                                    ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                child: const Icon(Icons.person_add),
+                              ),
 
-                                    const Text('Sign In'),
-                                  ],
-                                ),
+                              const Text('Sign In'),
+                            ],
+                          ),
                         ),
                       ),
                     ),

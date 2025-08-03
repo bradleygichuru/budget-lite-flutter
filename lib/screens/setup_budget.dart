@@ -185,6 +185,7 @@ class SetupBudgetState extends State<SetupBudget> {
     setAccountId();
     categories = genInitCat(currAccountId);
     commonCategories = getWithClickstate(currAccountId);
+    di<AuthModel>().setLastOnboardingStep('setup_budget');
     super.initState();
   }
 
