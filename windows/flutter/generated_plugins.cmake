@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   awesome_notifications
+  firebase_core
   permission_handler_windows
   sentry_flutter
   url_launcher_windows

@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/wallet_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
@@ -114,6 +116,7 @@ class AuthModel extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setBool("isNewUser", false);
     prefs.remove('last_onboarding_step');
+    AppGlobal.analytics.logEvent(name: 'onboarding-complete');
 
     refreshAuth();
     notifyListeners();
@@ -169,6 +172,9 @@ class AuthModel extends ChangeNotifier {
         switch (getacid) {
           case Ok():
             {
+              AppGlobal.analytics.logLogin(
+                loginMethod: 'password-authentication',
+              );
               log('Login: setAccount id:${getacid.value}');
               SharedPreferences prefs = await SharedPreferences.getInstance();
               prefs.setBool('isLoggedIn', true);
@@ -206,6 +212,9 @@ class AuthModel extends ChangeNotifier {
                     switch (accountCreation) {
                       case Ok():
                         {
+                          AppGlobal.analytics.logSignUp(
+                            signUpMethod: "password-authenctication",
+                          );
                           return Result.ok(accountCreation.value);
                         }
                       case Error():

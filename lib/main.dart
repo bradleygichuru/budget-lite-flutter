@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:ota_update/ota_update.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'dart:collection';
@@ -31,6 +34,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:watch_it/watch_it.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_application_1/firebase_options.dart';
 
 void setup() {
   //intialize changenotifier singletons
@@ -100,7 +104,20 @@ Future<void> main() async {
   //   // visit: https://docs.sentry.io/platforms/dart/data-management/data-collected/ for more info
   //   options.sendDefaultPii = true;
   // }, appRunner: () => runApp(SentryWidget(child: MyApp())));
-
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  bool weWantFatalErrorRecording = true;
+  FlutterError.onError = (errorDetails) {
+    if (weWantFatalErrorRecording) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    } else {
+      FirebaseCrashlytics.instance.recordFlutterError(errorDetails);
+    }
+  };
+  // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
   initializeService();
   runApp(const MyApp());
 }
@@ -116,7 +133,7 @@ class MyAppState extends State<MyApp> {
   Future<List<TransactionObj>> unCategorizedTxs = Future.value([]);
   String newApkUrl = '';
   bool isUpdating = false;
-  // OtaEvent? updateEvent;
+  OtaEvent? updateEvent;
   int currentPageIndex = 0;
   late final AppLifecycleListener _listener;
   bool handleUncategorized = false;
@@ -125,9 +142,13 @@ class MyAppState extends State<MyApp> {
   bool isResetLoading = false;
   bool categorizing = false;
   bool shouldReset = false;
+  AppcastItem? bestItem;
   static const appcastURL =
       'https://raw.githubusercontent.com/bradleygichuru/budgetlite-appcast/refs/heads/main/budgetlite_updates.xml';
+  final appCast = Appcast();
+
   final upgrader = Upgrader(
+    durationUntilAlertAgain: Duration(minutes: 1),
     debugLogging: kDebugMode ? true : false,
     storeController: UpgraderStoreController(
       onAndroid: () => UpgraderAppcastStore(appcastURL: appcastURL),
@@ -174,6 +195,9 @@ class MyAppState extends State<MyApp> {
           NotificationController.onDismissActionReceivedMethod,
     );
 
+    setState(() {
+      bestItem = appCast.bestItem();
+    });
     FlutterNativeSplash.remove();
     super.initState();
   }
@@ -245,11 +269,73 @@ class MyAppState extends State<MyApp> {
   void _onHidden() => log('hidden');
 
   void _onPaused() => log('paused');
+  isUpdatingDialog() {
+    String title = '';
+    bool showProgress = false;
+    if (updateEvent != null) {
+      switch (updateEvent!.status) {
+        case OtaStatus.DOWNLOADING:
+          {
+            title = 'Donwloading Apk';
+            showProgress = true;
+            break;
+          }
+        case OtaStatus.INSTALLING:
+          {
+            title = 'Installing apk';
+
+            showProgress = true;
+            break;
+          }
+        case OtaStatus.DOWNLOAD_ERROR:
+          {
+            title = 'Error downloading update';
+
+            showProgress = false;
+            break;
+          }
+        case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
+          {
+            title = 'Required permissons not granted';
+
+            showProgress = false;
+            break;
+          }
+        case OtaStatus.INTERNAL_ERROR:
+          {
+            title = 'An internal error occured downloading update';
+
+            showProgress = false;
+            break;
+          }
+        case OtaStatus.CANCELED:
+          {
+            title = 'Update was cancelled';
+
+            showProgress = false;
+          }
+        default:
+          {}
+      }
+    }
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: showProgress
+              ? Center(child: CircularProgressIndicator())
+              : null,
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    log('Will reset budget ${di<AuthModel>().pendingBudgetReset} ');
-    return handleUncategorized
+    return isUpdating
+        ? isUpdatingDialog()
+        : handleUncategorized
         ? MaterialApp(
             navigatorKey: AppGlobal.navigatorKey,
             theme: ThemeData(
@@ -705,33 +791,58 @@ class MyAppState extends State<MyApp> {
                             ],
                           ),
                           body: UpgradeAlert(
-                            // onUpdate: () {
-                            //   try {
-                            //     OtaUpdate().execute(newApkUrl).listen(
-                            //       cancelOnError: true,
-                            //       (OtaEvent event) {
-                            //         setState(() {
-                            //           updateEvent = event;
-                            //         });
-                            //       },
-                            //       onDone: () => setState(() {
-                            //         isUpdating = false;
-                            //       }),
-                            //     );
-                            //   } catch (e) {
-                            //     ScaffoldMessenger.of(context).showSnackBar(
-                            //       SnackBar(
-                            //         content: Text(
-                            //           'Error occured updating app',
-                            //           style: TextStyle(color: Colors.red),
-                            //         ),
-                            //       ),
-                            //     );
-                            //
-                            //     log('OtaUpdate error', error: e);
-                            //   }
-                            //   return true;
-                            // },
+                            showIgnore: false,
+                            onUpdate: bestItem != null
+                                ? () {
+                                    try {
+                                      if (bestItem!.fileURL != null) {
+                                        setState(() {
+                                          isUpdating = true;
+                                        });
+                                        OtaUpdate()
+                                            .execute(bestItem!.fileURL!)
+                                            .listen(
+                                              cancelOnError: true,
+                                              (OtaEvent event) {
+                                                setState(() {
+                                                  updateEvent = event;
+                                                });
+                                              },
+                                              onDone: () => setState(() {
+                                                isUpdating = false;
+                                              }),
+                                            );
+                                      } else {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Error obtaining apk url',
+                                              style: TextStyle(
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Error occured updating app',
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ),
+                                      );
+
+                                      log('OtaUpdate error', error: e);
+                                    }
+                                    return true;
+                                  }
+                                : null,
                             upgrader: upgrader,
                             child: <Widget>[
                               Dashboard(),

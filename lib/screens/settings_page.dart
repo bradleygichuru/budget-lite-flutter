@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
@@ -29,6 +30,23 @@ class SettingsPage extends StatefulWidget with WatchItStatefulWidgetMixin {
 
 class SettingsPageState extends State<SettingsPage> {
   AuthModel authM = di.get<AuthModel>();
+  String version = '';
+  String buildNumber = '';
+  @override
+  void initState() {
+    setVersionInfo();
+    super.initState();
+  }
+
+  void setVersionInfo() {
+    PackageInfo.fromPlatform().then((PackageInfo packageInfo) {
+      setState(() {
+        version = packageInfo.version;
+        buildNumber = packageInfo.buildNumber;
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -204,6 +222,52 @@ class SettingsPageState extends State<SettingsPage> {
                               ],
                             ),
                           ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            Padding(
+              padding: EdgeInsets.all(7),
+              child: SizedBox(
+                width: double.infinity,
+                child: Card.outlined(
+                  color: Colors.white,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ListTile(
+                        title: Text(
+                          'App Information',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        subtitle: Text('Version and build details'),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.all(5),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: ListTile(
+                                title: Text('Version'),
+                                subtitle: Text(version ?? 'version'),
+                              ),
+                            ),
+                            Expanded(
+                              child: ListTile(
+                                title: Text('Build'),
+                                subtitle: Text(buildNumber ?? 'build'),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
