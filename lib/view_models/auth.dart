@@ -32,6 +32,8 @@ class AuthModel extends ChangeNotifier {
   late bool isLoggedIn;
   late bool isNewUser;
   late String? authToken;
+  late String? curCookie;
+  late String? sessionToken;
   String tier = '';
   bool pendingBudgetReset = false;
   String region = 'not set';
@@ -96,12 +98,17 @@ class AuthModel extends ChangeNotifier {
     }
     await setAccountProfileInfo();
     getAuthToken();
+    getSessionToken();
+
+    getCookie();
     notifyListeners();
   }
 
   void initAuth() async {
     handleAuth = isSetLoggedIn();
     getAuthToken();
+    getCookie();
+    getSessionToken();
     String? regiontoset = await getRegion();
     if (regiontoset != null) {
       region = regiontoset;
@@ -116,7 +123,7 @@ class AuthModel extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setBool("isNewUser", false);
     prefs.remove('last_onboarding_step');
-    AppGlobal.analytics.logEvent(name: 'onboarding-complete');
+    AppGlobal.analytics.logEvent(name: 'onboarding_complete');
 
     refreshAuth();
     notifyListeners();
@@ -158,10 +165,10 @@ class AuthModel extends ChangeNotifier {
         final payload = <String, dynamic>{};
         payload["email"] = email;
         payload["password"] = password;
+        // payload['rememberMe'] = 'true';
         // payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
         http.Response response = await http.post(url, body: payload);
         log("resp:${response.body}");
-
         final Map<String, dynamic> decodedResponse =
             jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -171,9 +178,19 @@ class AuthModel extends ChangeNotifier {
           return Result.error(InvalidEmailOrPassword());
         }
         if (token != null) {
+          String? rawCookie = response.headers['set-cookie'];
+          if (rawCookie != null) {
+            int index = rawCookie.indexOf(';');
+            String cookieToSet = (index == -1)
+                ? rawCookie
+                : rawCookie.substring(0, index);
+            log('cookie:$cookieToSet');
+            setCookie(cookieToSet);
+          }
           log("request successful");
 
-          setAuthToken(decodedResponse["token"]);
+          setAuthToken(response.headers['set-auth-token'] as String);
+          setSessionToken(token);
 
           log("setting auth token");
 
@@ -590,6 +607,32 @@ class AuthModel extends ChangeNotifier {
     }
   }
 
+  void setCookie(String cookie) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString("budgetlite_cookie", cookie);
+    curCookie = cookie;
+    notifyListeners();
+  }
+
+  void getCookie() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    curCookie = prefs.getString("budgetlite_cookie");
+    notifyListeners();
+  }
+
+  void setSessionToken(String token) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString("budgetlite_session_token", token);
+    sessionToken = token;
+    notifyListeners();
+  }
+
+  void getSessionToken() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    sessionToken = prefs.getString("budgetlite_session_token");
+    notifyListeners();
+  }
+
   void setAuthToken(String token) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString("auth_token", token);
@@ -648,17 +691,20 @@ class AuthModel extends ChangeNotifier {
     );
 
     final payload = <String, dynamic>{};
-    payload["token"] = authToken;
+    payload["token"] = sessionToken;
     // payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
-    await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $authToken',
-        'Content-Type': 'application/json',
-        'set-cookie': 'better-auth.session_token=${authToken}',
-      },
-      body: jsonEncode(payload),
-    );
+
+    Map<String, String> headers = curCookie != null && authToken != null
+        ? {
+            'Authorization': 'Bearer $authToken',
+            // 'set-auth-token': authToken!,
+            'set-cookie': curCookie!,
+          }
+        : {
+            // 'Authorization': 'Bearer $authToken',
+          };
+    log('logut:$headers');
+    await http.post(url, headers: headers, body: payload);
 
     prefs.setBool("isLoggedIn", false);
 

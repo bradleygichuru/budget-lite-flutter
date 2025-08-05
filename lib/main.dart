@@ -157,8 +157,8 @@ class MyAppState extends State<MyApp> {
   final appCast = Appcast();
 
   final upgrader = Upgrader(
-    durationUntilAlertAgain: Duration(minutes: 1),
-    debugLogging: kDebugMode ? true : false,
+    // durationUntilAlertAgain: Duration(minutes: 1),
+    // debugLogging: kDebugMode ? true : false,
     storeController: UpgraderStoreController(
       onAndroid: () => UpgraderAppcastStore(appcastURL: appcastURL),
     ),
