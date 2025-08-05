@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:flutter_application_1/screens/select_region_screen.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
@@ -257,19 +258,46 @@ class SignUpFormState extends State<SignupForm> {
                                           }
                                         case Error():
                                           {
-                                            setState(() {
-                                              _isLoading = false;
-                                            });
-                                            signUpScaffoldKey.currentState!
-                                                .showSnackBar(
-                                                  SnackBar(
-                                                    behavior: SnackBarBehavior
-                                                        .floating,
-                                                    content: const Text(
-                                                      "Error Signing Up",
-                                                    ),
-                                                  ),
-                                                );
+                                            switch (userRegRes.error) {
+                                              case AccountAlreadyExists():
+                                                {
+                                                  setState(() {
+                                                    _isLoading = false;
+                                                  });
+                                                  signUpScaffoldKey
+                                                      .currentState!
+                                                      .showSnackBar(
+                                                        SnackBar(
+                                                          behavior:
+                                                              SnackBarBehavior
+                                                                  .floating,
+                                                          content: const Text(
+                                                            "User already exists",
+                                                          ),
+                                                        ),
+                                                      );
+
+                                                  break;
+                                                }
+                                              case ErrorRegistering():
+                                                {
+                                                  setState(() {
+                                                    _isLoading = false;
+                                                  });
+                                                  signUpScaffoldKey
+                                                      .currentState!
+                                                      .showSnackBar(
+                                                        SnackBar(
+                                                          behavior:
+                                                              SnackBarBehavior
+                                                                  .floating,
+                                                          content: const Text(
+                                                            "Error Signing Up",
+                                                          ),
+                                                        ),
+                                                      );
+                                                }
+                                            }
                                           }
                                       }
                                     } catch (e) {

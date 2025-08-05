@@ -13,7 +13,7 @@ Future<Database> getDb() async {
     },
     onCreate: (db, version) {
       db.execute(
-        "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT,budget_reset_date TEXT,account_tier TEXT,created_at TEXT,resetPending INTEGER DEFAULT 0)",
+        "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT,budget_reset_date TEXT,account_tier TEXT,created_at TEXT,resetPending INTEGER DEFAULT 0,auth_id TEXT)",
       );
 
       db.execute(
@@ -45,11 +45,11 @@ appDbInit() async {
   await openDatabase(
     join(await getDatabasesPath(), 'budget_lite_database.db'),
     onConfigure: (db) {
-      onConfigure(db); // db.execute('PRAGMA foreign_keys = ON');
+      onConfigure(db);
     },
     onCreate: (db, version) {
       db.execute(
-        "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT,budget_reset_date TEXT,account_tier TEXT,created_at TEXT ,resetPending INTEGER DEFAULT 0)",
+        "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT,budget_reset_date TEXT,account_tier TEXT,created_at TEXT,resetPending INTEGER DEFAULT 0,auth_id TEXT)",
       );
 
       db.execute(

@@ -191,7 +191,7 @@ class WalletModel extends ChangeNotifier {
               AwesomeNotifications().createNotification(
                 content: NotificationContent(
                   id: prefs.getInt('notification_id')!,
-                  channelKey: 'basic_channel',
+                  channelKey: 'budgetlite_silent',
                   actionType: ActionType.Default,
                   title: 'Wallet credited',
                   body: '${tx.amount} kes credited to wallet',
@@ -330,7 +330,7 @@ class WalletModel extends ChangeNotifier {
                 AwesomeNotifications().createNotification(
                   content: NotificationContent(
                     id: prefs.getInt('notification_id')!,
-                    channelKey: 'basic_channel',
+                    channelKey: 'budgetlite_silent',
                     actionType: ActionType.Default,
                     title: 'Wallet debited',
                     body: '${tx.amount} kes debited from wallet',
@@ -451,7 +451,7 @@ class WalletModel extends ChangeNotifier {
                   AwesomeNotifications().createNotification(
                     content: NotificationContent(
                       id: prefs.getInt('notification_id')!,
-                      channelKey: 'basic_channel',
+                      channelKey: 'budgetlite_silent',
                       actionType: ActionType.Default,
                       title: 'Wallet debited',
                       body: '${tx.amount} kes debited from wallet',
@@ -580,7 +580,7 @@ class WalletModel extends ChangeNotifier {
               AwesomeNotifications().createNotification(
                 content: NotificationContent(
                   id: prefs.getInt('notification_id')!,
-                  channelKey: 'basic_channel',
+                  channelKey: 'budgetlite_silent',
                   actionType: ActionType.Default,
                   title: 'Savings',
                   body: '${tx.amount} kes transferred to savings',
@@ -671,7 +671,7 @@ class WalletModel extends ChangeNotifier {
               AwesomeNotifications().createNotification(
                 content: NotificationContent(
                   id: prefs.getInt('notification_id')!,
-                  channelKey: 'basic_channel',
+                  channelKey: 'budgetlite_silent',
                   actionType: ActionType.Default,
                   title: 'Savings',
                   body: '${tx.amount} kes transferred to savings',
@@ -785,7 +785,7 @@ class WalletModel extends ChangeNotifier {
             AwesomeNotifications().createNotification(
               content: NotificationContent(
                 id: prefs.getInt('notification_id')!,
-                channelKey: 'basic_channel',
+                channelKey: 'budgetlite_silent',
                 actionType: ActionType.Default,
                 title: 'Savings',
                 body: '${tx.amount} kes removed from savings',
@@ -869,7 +869,7 @@ class WalletModel extends ChangeNotifier {
               AwesomeNotifications().createNotification(
                 content: NotificationContent(
                   id: prefs.getInt('notification_id')!,
-                  channelKey: 'basic_channel',
+                  channelKey: 'budgetlite_silent',
                   actionType: ActionType.Default,
                   title: 'Savings',
                   body: '${tx.amount} kes removed from savings',

@@ -125,16 +125,20 @@ class AuthModel extends ChangeNotifier {
   Future<String?> getRegion() async {
     final db = await getDb();
     try {
-      final List<Map<String, Object?>> accounts = await db.rawQuery(
-        'SELECT * FROM accounts WHERE id = ?',
-        ['${await getAccountId()}'],
-      );
+      if (await getAccountId() != null) {
+        final List<Map<String, Object?>> accounts = await db.rawQuery(
+          'SELECT * FROM accounts WHERE id = ?',
+          ['${await getAccountId()}'],
+        );
 
-      log('Region :${accounts.first['country']}');
-      for (final ac in accounts) {
-        log("Account:${jsonEncode(ac)}");
+        log('Region :${accounts.first['country']}');
+        // for (final ac in accounts) {
+        //   log("Account:${jsonEncode(ac)}");
+        // }
+        if (accounts.isNotEmpty) {
+          return accounts.first['country'] as String;
+        }
       }
-      return accounts.first['country'] as String;
     } catch (e) {
       log('Error getting region:$e');
       rethrow;
@@ -145,132 +149,242 @@ class AuthModel extends ChangeNotifier {
 
   Future<Result<int>> loginUser(String email, String password) async {
     try {
-      Uri url = Uri(
-        scheme: "http",
-        host: dotenv.env['BACKEND_ENDPOINT'],
-        path: "api/v1/login",
-        port: 8000,
-      );
+      bool better_auth = true;
+      if (better_auth) {
+        Uri url = Uri.parse(
+          '${dotenv.env['BACKEND_ENDPOINT']}/api/auth/sign-in/email',
+        );
 
-      final payload = <String, dynamic>{};
-      payload["email"] = email;
-      payload["password"] = password;
-      payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
-      http.Response response = await http.post(url, body: payload);
-      log("resp:${response.body}");
+        final payload = <String, dynamic>{};
+        payload["email"] = email;
+        payload["password"] = password;
+        // payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
+        http.Response response = await http.post(url, body: payload);
+        log("resp:${response.body}");
 
-      var decodedResponse = jsonDecode(response.body) as Map;
+        final Map<String, dynamic> decodedResponse =
+            jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (decodedResponse["success"]) {
-        log("request successful");
+        String? code = decodedResponse['code'];
+        String? token = decodedResponse['token'];
+        if (code == 'INVALID_EMAIL_OR_PASSWORD') {
+          return Result.error(InvalidEmailOrPassword());
+        }
+        if (token != null) {
+          log("request successful");
 
-        setAuthToken(decodedResponse["response"]["Bearer"]);
+          setAuthToken(decodedResponse["token"]);
 
-        log("setting auth token");
+          log("setting auth token");
 
-        Result getacid = await setAccountId(email.trim());
-        switch (getacid) {
-          case Ok():
-            {
-              AppGlobal.analytics.logLogin(
-                loginMethod: 'password-authentication',
-              );
-              log('Login: setAccount id:${getacid.value}');
-              SharedPreferences prefs = await SharedPreferences.getInstance();
-              prefs.setBool('isLoggedIn', true);
-              log(decodedResponse["response"]["Bearer"]);
-              return Result.ok(getacid.value);
-            }
-          case Error():
-            {
-              switch (getacid.error) {
-                case NoAccountFound():
-                  {
-                    Uri getUser = Uri(
-                      scheme: 'http',
-                      host: dotenv.env['BACKEND_ENDPOINT'],
-                      path: 'api/user',
-                      port: 8000,
-                    );
-                    http.Response resp = await http.get(
-                      getUser,
-                      headers: {
-                        'Authorization':
-                            'Bearer ${decodedResponse["response"]["Bearer"]}',
-                      },
-                    );
-                    var decodedResp = jsonDecode(resp.body) as Map;
-
-                    Result accountCreation = await createAccount(
-                      Account(
-                        id: decodedResp['id'],
-                        email: decodedResp['email'],
-                        createdAt: decodedResp['created_at'],
-                        tier: 'Free',
-                      ),
-                    );
-                    switch (accountCreation) {
-                      case Ok():
-                        {
-                          AppGlobal.analytics.logSignUp(
-                            signUpMethod: "password-authenctication",
-                          );
-                          return Result.ok(accountCreation.value);
-                        }
-                      case Error():
-                        {
-                          return Result.error(accountCreation.error);
-                        }
-                    }
-                  }
-                case AccountIdNullException():
-                  {
-                    Uri getUser = Uri(
-                      scheme: 'http',
-                      host: dotenv.env['BACKEND_ENDPOINT'],
-                      path: 'api/user',
-                      port: 8000,
-                    );
-                    http.Response resp = await http.get(
-                      getUser,
-                      headers: {
-                        'Authorization':
-                            'Bearer ${decodedResponse["response"]["Bearer"]}',
-                      },
-                    );
-                    var decodedResp = jsonDecode(resp.body) as Map;
-
-                    Result accountCreation = await createAccount(
-                      Account(
-                        id: decodedResp['id'],
-                        email: decodedResp['email'],
-                        createdAt: decodedResp['created_at'],
-                        tier: 'Free',
-                      ),
-                    );
-                    switch (accountCreation) {
-                      case Ok():
-                        {
-                          return Result.ok(accountCreation.value);
-                        }
-                      case Error():
-                        {
-                          return Result.error(accountCreation.error);
-                        }
-                    }
-                  }
-
-                default:
-                  {
-                    return Result.error(getacid.error);
-                  }
+          Result getacid = await setAccountId(email.trim());
+          switch (getacid) {
+            case Ok():
+              {
+                AppGlobal.analytics.logLogin(
+                  loginMethod: 'password-authentication',
+                );
+                log('Login: setAccount id:${getacid.value}');
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                prefs.setBool('isLoggedIn', true);
+                log(decodedResponse["token"]);
+                return Result.ok(getacid.value);
               }
-              // return Result.error(getacid.error);
-            }
+            case Error():
+              {
+                switch (getacid.error) {
+                  case NoAccountFound():
+                    {
+                      Result accountCreation = await createAccount(
+                        Account(
+                          // id: decodedResponse['user']['id'],
+                          authId: decodedResponse['user']['id'] as String,
+                          email: decodedResponse['user']['email'] as String,
+                          createdAt:
+                              decodedResponse['user']['createdAt'] as String,
+                          tier: 'Free',
+                        ),
+                      );
+                      switch (accountCreation) {
+                        case Ok():
+                          {
+                            AppGlobal.analytics.logSignUp(
+                              signUpMethod: "password-authenctication",
+                            );
+                            return Result.ok(accountCreation.value);
+                          }
+                        case Error():
+                          {
+                            return Result.error(accountCreation.error);
+                          }
+                      }
+                    }
+                  case AccountIdNullException():
+                    {
+                      Result accountCreation = await createAccount(
+                        Account(
+                          // id: decodedResponse['user']['id'],
+                          authId: decodedResponse['user']['id'] as String,
+                          email: decodedResponse['user']['email'],
+                          createdAt: decodedResponse['user']['createdAt'],
+                          tier: 'Free',
+                        ),
+                      );
+                      switch (accountCreation) {
+                        case Ok():
+                          {
+                            AppGlobal.analytics.logSignUp(
+                              signUpMethod: "password-authenctication",
+                            );
+                            return Result.ok(accountCreation.value);
+                          }
+                        case Error():
+                          {
+                            return Result.error(accountCreation.error);
+                          }
+                      }
+                    }
+
+                  default:
+                    {
+                      return Result.error(getacid.error);
+                    }
+                }
+                // return Result.error(getacid.error);
+              }
+          }
+        } else {
+          log("request failed");
+          return Result.error(ErrorLogginIn());
         }
       } else {
-        log("request failed");
-        return Result.error(ErrorLogginIn());
+        Uri url = Uri(
+          scheme: "http",
+          host: dotenv.env['BACKEND_ENDPOINT'],
+          path: "api/v1/login",
+          port: 8000,
+        );
+
+        final payload = <String, dynamic>{};
+        payload["email"] = email;
+        payload["password"] = password;
+        payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
+        http.Response response = await http.post(url, body: payload);
+        log("resp:${response.body}");
+
+        var decodedResponse = jsonDecode(response.body) as Map;
+
+        if (decodedResponse["success"]) {
+          log("request successful");
+
+          setAuthToken(decodedResponse["response"]["Bearer"]);
+
+          log("setting auth token");
+
+          Result getacid = await setAccountId(email.trim());
+          switch (getacid) {
+            case Ok():
+              {
+                AppGlobal.analytics.logLogin(
+                  loginMethod: 'password-authentication',
+                );
+                log('Login: setAccount id:${getacid.value}');
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                prefs.setBool('isLoggedIn', true);
+                log(decodedResponse["response"]["Bearer"]);
+                return Result.ok(getacid.value);
+              }
+            case Error():
+              {
+                switch (getacid.error) {
+                  case NoAccountFound():
+                    {
+                      Uri getUser = Uri(
+                        scheme: 'http',
+                        host: dotenv.env['BACKEND_ENDPOINT'],
+                        path: 'api/user',
+                        port: 8000,
+                      );
+                      http.Response resp = await http.get(
+                        getUser,
+                        headers: {
+                          'Authorization':
+                              'Bearer ${decodedResponse["response"]["Bearer"]}',
+                        },
+                      );
+                      var decodedResp = jsonDecode(resp.body) as Map;
+
+                      Result accountCreation = await createAccount(
+                        Account(
+                          id: decodedResp['id'],
+                          email: decodedResp['email'],
+                          createdAt: decodedResp['created_at'],
+                          tier: 'Free',
+                        ),
+                      );
+                      switch (accountCreation) {
+                        case Ok():
+                          {
+                            AppGlobal.analytics.logSignUp(
+                              signUpMethod: "password-authenctication",
+                            );
+                            return Result.ok(accountCreation.value);
+                          }
+                        case Error():
+                          {
+                            return Result.error(accountCreation.error);
+                          }
+                      }
+                    }
+                  case AccountIdNullException():
+                    {
+                      Uri getUser = Uri(
+                        scheme: 'http',
+                        host: dotenv.env['BACKEND_ENDPOINT'],
+                        path: 'api/user',
+                        port: 8000,
+                      );
+                      http.Response resp = await http.get(
+                        getUser,
+                        headers: {
+                          'Authorization':
+                              'Bearer ${decodedResponse["response"]["Bearer"]}',
+                        },
+                      );
+                      var decodedResp = jsonDecode(resp.body) as Map;
+
+                      Result accountCreation = await createAccount(
+                        Account(
+                          id: decodedResp['id'],
+                          email: decodedResp['email'],
+                          createdAt: decodedResp['created_at'],
+                          tier: 'Free',
+                        ),
+                      );
+                      switch (accountCreation) {
+                        case Ok():
+                          {
+                            return Result.ok(accountCreation.value);
+                          }
+                        case Error():
+                          {
+                            return Result.error(accountCreation.error);
+                          }
+                      }
+                    }
+
+                  default:
+                    {
+                      return Result.error(getacid.error);
+                    }
+                }
+                // return Result.error(getacid.error);
+              }
+          }
+        } else {
+          log("request failed");
+          return Result.error(ErrorLogginIn());
+        }
       }
     } on Exception catch (e) {
       log('Login Error:$e');
@@ -286,61 +400,130 @@ class AuthModel extends ChangeNotifier {
     String passwordConfirmation,
   ) async {
     try {
-      Uri url = Uri(
-        scheme: "http",
-        host: dotenv.env['BACKEND_ENDPOINT'],
-        path: "api/v1/register",
-        port: 8000,
-      );
-      final payload = <String, dynamic>{};
-      payload["name"] = name;
-      payload["email"] = email;
-      payload["password"] = password;
-      payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
-      payload["phone"] = phone;
-      payload["password_confirmation"] = passwordConfirmation;
-
-      http.Response response = await http.post(url, body: payload);
-      log("resp:${response.body}");
-      var decodedResponse = jsonDecode(response.body) as Map;
-      if (decodedResponse["success"]) {
-        log("request successful");
-        Uri getUser = Uri(
-          scheme: 'http',
-          host: dotenv.env['BACKEND_ENDPOINT'],
-          path: 'api/user',
-          port: 8000,
+      bool better_auth = true;
+      if (better_auth) {
+        Uri url = Uri.parse(
+          '${dotenv.env['BACKEND_ENDPOINT']}/api/auth/sign-up/email',
         );
-        http.Response resp = await http.get(
-          getUser,
-          headers: {
-            'Authorization': 'Bearer ${decodedResponse["response"]["Bearer"]}',
-          },
-        );
-        var decodedResp = jsonDecode(resp.body) as Map;
+        final payload = <String, dynamic>{};
+        payload["name"] = name;
+        payload["email"] = email;
+        payload["password"] = password;
+        // payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
+        // payload["phone"] = phone;
+        // payload["password_confirmation"] = passwordConfirmation;
 
-        Result accountCreation = await createAccount(
-          Account(
-            id: decodedResp['id'],
-            email: decodedResp['email'],
-            createdAt: decodedResp['created_at'],
-            tier: 'Free',
-          ),
-        );
+        http.Response response = await http.post(url, body: payload);
+        final decodedResponse =
+            jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+        // log('body:${response.body}');
+        log("resp:$decodedResponse");
 
-        switch (accountCreation) {
-          case Ok():
-            {
-              return Result.ok(accountCreation.value);
-            }
-          case Error():
-            {
-              return Result.error(accountCreation.error);
-            }
+        log("token:${decodedResponse['token']}");
+        // log('code:${decodedResponse['code']}');
+        String? code = decodedResponse['code'];
+        String? token = decodedResponse['token'];
+        String userAlreadyExists = 'USER_ALREADY_EXISTS';
+        if (code == userAlreadyExists) {
+          return Result.error(AccountAlreadyExists());
+        }
+        if (token != null) {
+          log("request successful");
+          // Uri getUser = Uri(
+          //   scheme: 'http',
+          //   host: dotenv.env['BACKEND_ENDPOINT'],
+          //   path: 'api/user',
+          //   port: 8000,
+          // );
+          // http.Response resp = await http.get(
+          //   getUser,
+          //   headers: {
+          //     'Authorization': 'Bearer ${decodedResponse["response"]["Bearer"]}',
+          //   },
+          // );
+
+          Result accountCreation = await createAccount(
+            Account(
+              // id: decodedResponse['user']['id'] as String,
+              email: decodedResponse['user']['email'] as String,
+              authId: decodedResponse['user']['id'] as String,
+              createdAt: decodedResponse['user']['createdAt'] as String,
+              tier: 'Free',
+            ),
+          );
+
+          switch (accountCreation) {
+            case Ok():
+              {
+                return Result.ok(accountCreation.value);
+              }
+            case Error():
+              {
+                return Result.error(accountCreation.error);
+              }
+          }
+        } else {
+          log("request failed");
+          return Result.error(ErrorRegistering());
         }
       } else {
-        log("request failed");
-        return Result.error(ErrorRegistering());
+        Uri url = Uri(
+          scheme: "http",
+          host: dotenv.env['BACKEND_ENDPOINT'],
+          path: "api/v1/register",
+          port: 8000,
+        );
+        final payload = <String, dynamic>{};
+        payload["name"] = name;
+        payload["email"] = email;
+        payload["password"] = password;
+        payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
+        payload["phone"] = phone;
+        payload["password_confirmation"] = passwordConfirmation;
+
+        http.Response response = await http.post(url, body: payload);
+        log("resp:${response.body}");
+        var decodedResponse = jsonDecode(response.body) as Map;
+        if (decodedResponse["success"]) {
+          log("request successful");
+          Uri getUser = Uri(
+            scheme: 'http',
+            host: dotenv.env['BACKEND_ENDPOINT'],
+            path: 'api/user',
+            port: 8000,
+          );
+          http.Response resp = await http.get(
+            getUser,
+            headers: {
+              'Authorization':
+                  'Bearer ${decodedResponse["response"]["Bearer"]}',
+            },
+          );
+          var decodedResp = jsonDecode(resp.body) as Map;
+
+          Result accountCreation = await createAccount(
+            Account(
+              id: decodedResp['id'],
+              email: decodedResp['email'],
+              createdAt: decodedResp['created_at'],
+              tier: 'Free',
+            ),
+          );
+
+          switch (accountCreation) {
+            case Ok():
+              {
+                return Result.ok(accountCreation.value);
+              }
+            case Error():
+              {
+                return Result.error(accountCreation.error);
+              }
+          }
+        } else {
+          log("request failed");
+          return Result.error(ErrorRegistering());
+        }
       }
     } on Exception catch (e) {
       log('Signup Error :$e');
@@ -460,6 +643,22 @@ class AuthModel extends ChangeNotifier {
 
   void logout() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+    Uri url = Uri.parse(
+      '${dotenv.env['BACKEND_ENDPOINT']}/api/auth/revoke-session',
+    );
+
+    final payload = <String, dynamic>{};
+    payload["token"] = authToken;
+    // payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
+    await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $authToken',
+        'Content-Type': 'application/json',
+        'set-cookie': 'better-auth.session_token=${authToken}',
+      },
+      body: jsonEncode(payload),
+    );
 
     prefs.setBool("isLoggedIn", false);
 

@@ -96,6 +96,7 @@ class LoginFormState extends State<LoginForm> {
                         ),
                         child: TextFormField(
                           controller: emailController,
+                          keyboardType: TextInputType.emailAddress,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter valid Email';
@@ -207,6 +208,25 @@ class LoginFormState extends State<LoginForm> {
                                                             ),
                                                           ),
                                                         );
+                                                  }
+                                                case InvalidEmailOrPassword():
+                                                  {
+                                                    setState(() {
+                                                      _isLoading = false;
+                                                    });
+                                                    loginScaffoldMessengerKey
+                                                        .currentState!
+                                                        .showSnackBar(
+                                                          SnackBar(
+                                                            behavior:
+                                                                SnackBarBehavior
+                                                                    .floating,
+                                                            content: const Text(
+                                                              "Invalid email or password",
+                                                            ),
+                                                          ),
+                                                        );
+                                                    break;
                                                   }
 
                                                   break;

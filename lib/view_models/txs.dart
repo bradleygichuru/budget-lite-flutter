@@ -391,7 +391,7 @@ class TransactionsModel extends ChangeNotifier {
               content: NotificationContent(
                 id: notiId,
                 displayOnForeground: true,
-                channelKey: 'basic_channel',
+                channelKey: 'budgetlite_silent',
                 actionType: ActionType.Default,
                 title: 'New transaction',
                 body: 'Credited from ${transaction.source}',
@@ -458,7 +458,7 @@ class TransactionsModel extends ChangeNotifier {
             AwesomeNotifications().createNotification(
               content: NotificationContent(
                 id: notiId,
-                channelKey: 'basic_channel',
+                channelKey: 'budgetlite_silent',
                 actionType: ActionType.Default,
                 title: 'New transaction',
                 body: 'transfered from Savings',
@@ -526,7 +526,7 @@ class TransactionsModel extends ChangeNotifier {
             AwesomeNotifications().createNotification(
               content: NotificationContent(
                 id: notiId,
-                channelKey: 'basic_channel',
+                channelKey: 'budgetlite_silent',
                 actionType: ActionType.Default,
                 title: 'New transaction',
                 body: 'transfered to savings',
@@ -593,7 +593,7 @@ class TransactionsModel extends ChangeNotifier {
             AwesomeNotifications().createNotification(
               content: NotificationContent(
                 id: notiId,
-                channelKey: 'basic_channel',
+                channelKey: 'budgetlite_silent',
                 actionType: ActionType.Default,
                 title: 'New transaction',
                 body: 'Click to set budget category',

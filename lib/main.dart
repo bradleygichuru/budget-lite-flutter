@@ -78,6 +78,15 @@ Future<void> main() async {
     null,
     [
       NotificationChannel(
+        channelGroupKey: 'budgetlite_silent_group',
+        channelKey: 'budgetlite_silent',
+        channelName: 'Budgetlite silent notifications',
+        channelDescription: 'Budgetlite silent notifications channel',
+        defaultColor: Color(0xFF9D50DD),
+        ledColor: Colors.white,
+        playSound: false,
+      ),
+      NotificationChannel(
         channelGroupKey: 'basic_channel_group',
         channelKey: 'basic_channel',
         channelName: 'Basic notifications',

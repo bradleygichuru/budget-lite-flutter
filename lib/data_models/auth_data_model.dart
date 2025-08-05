@@ -11,13 +11,14 @@ class Account {
   final String email;
   final String? country;
   final String? budgetResetDate;
-
+  final String? authId;
   final String createdAt;
   final String tier;
   final int? resetPending;
   Account({
     required this.email,
     required this.createdAt,
+    this.authId,
     this.id,
     this.resetPending,
     this.country,
@@ -26,6 +27,7 @@ class Account {
   });
   Map<String, Object> toMap() {
     return {
+      'auth_id': ?authId,
       'id': ?id,
       'email': email,
       'country': ?country,
@@ -38,7 +40,7 @@ class Account {
 
   @override
   String toString() {
-    return 'Account{id:$id,email:$email,country:$country,budget_reset_date:$budgetResetDate,createdAt:$createdAt,tier:$tier,resetPending:$resetPending}';
+    return 'Account{id:$id,email:$email,auth_id:$authId,country:$country,budget_reset_date:$budgetResetDate,createdAt:$createdAt,tier:$tier,resetPending:$resetPending}';
   }
 }
 
@@ -57,7 +59,17 @@ class ErrorLogginIn implements Exception {
   String toString() => "Login error";
 }
 
+class InvalidEmailOrPassword implements Exception {
+  @override
+  String toString() => 'INVALID_EMAIL_OR_PASSWORD';
+}
+
 class ErrorRegistering implements Exception {
   @override
   String toString() => "Registering error";
+}
+
+class AccountAlreadyExists implements Exception {
+  @override
+  String toString() => "Account Already exists";
 }
