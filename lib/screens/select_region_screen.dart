@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
+import 'package:flutter_application_1/screens/auto_import_availability.dart';
 import 'package:flutter_application_1/screens/auto_import_info.dart';
 import 'package:flutter_application_1/screens/setup_budget.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
@@ -90,7 +91,7 @@ class SelectRegionState extends State<SelectRegion> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          AutoImportInfoScreen(),
+                                          AutoImportAvailabilityScreen(),
                                     ),
                                   );
                                 }
@@ -130,7 +131,8 @@ class SelectRegionState extends State<SelectRegion> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => SetupBudget(),
+                                      builder: (context) =>
+                                          AutoImportAvailabilityScreen(),
                                     ),
                                   );
                                 }

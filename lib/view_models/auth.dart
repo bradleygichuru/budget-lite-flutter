@@ -686,9 +686,7 @@ class AuthModel extends ChangeNotifier {
 
   void logout() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    Uri url = Uri.parse(
-      '${dotenv.env['BACKEND_ENDPOINT']}/api/auth/revoke-session',
-    );
+    Uri url = Uri.parse('${dotenv.env['BACKEND_ENDPOINT']}/api/auth/sign-out');
 
     final payload = <String, dynamic>{};
     payload["token"] = sessionToken;
@@ -704,7 +702,7 @@ class AuthModel extends ChangeNotifier {
             // 'Authorization': 'Bearer $authToken',
           };
     log('logut:$headers');
-    await http.post(url, headers: headers, body: payload);
+    await http.post(url, headers: headers);
 
     prefs.setBool("isLoggedIn", false);
 

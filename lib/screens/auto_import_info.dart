@@ -37,6 +37,7 @@ class AutoImportInfoScreenState extends State<AutoImportInfoScreen> {
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
@@ -57,89 +58,171 @@ class AutoImportInfoScreenState extends State<AutoImportInfoScreen> {
                       ),
                     ),
                   ),
-
                   Center(
-                    child: const Text(
-                      "BudgetLite automatically imports your transactions from SMS notifications",
+                    child: Padding(
+                      padding: EdgeInsets.all(8),
+                      child: const Text(
+                        "BudgetLite automatically imports your transactions from SMS notifications",
+                      ),
                     ),
                   ),
 
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 16,
-                    ),
-                    child: Center(
-                      child: Card(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            const ListTile(
-                              leading: Icon(
-                                Icons.bolt,
-                                size: 30,
-                                color: Color(0xFFA3E635),
-                              ),
-                              title: Text('Zero Manual Entry'),
-                              subtitle: Text(
-                                'Automatically capture M-Pesa and bank transaction SMS messages',
-                              ),
-                            ),
-                          ],
+                    padding: const EdgeInsets.all(8),
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.bolt,
+                        size: 30,
+                        color: Color(0xFFA3E635),
+                      ),
+                      title: Text(
+                        'Zero Manual Entry',
+                        style: TextStyle(
+                          color: Colors.grey.shade900,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Automatically capture M-Pesa and bank transaction SMS messages',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
                         ),
                       ),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 16,
-                    ),
+                    padding: EdgeInsets.all(8),
                     child: Center(
-                      child: Card(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            const ListTile(
-                              leading: Icon(
-                                Icons.shield,
-                                color: Color(0xFF1E88E5),
-                                size: 30,
-                              ),
-                              title: Text('Secure & Private'),
-                              subtitle: Text(
-                                'SMS data is processed locally on your device and encrypted',
-                              ),
-                            ),
-                          ],
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.shield,
+                          color: Color(0xFF1E88E5),
+                          size: 30,
+                        ),
+                        title: Text(
+                          'Secure & Private',
+                          style: TextStyle(
+                            color: Colors.grey.shade900,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'SMS data is processed locally on your device and encrypted',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                       ),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 16,
-                    ),
+                    padding: EdgeInsets.all(8),
                     child: Center(
-                      child: Card(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            const ListTile(
-                              leading: Icon(Icons.bolt, size: 30),
-                              title: Text('Smart Categorization'),
-                              subtitle: Text(
-                                'Automatically categorize transactions',
-                              ),
-                            ),
-                          ],
+                      child: ListTile(
+                        leading: Icon(Icons.bolt, size: 30),
+                        title: Text(
+                          'Smart Categorization',
+                          style: TextStyle(
+                            color: Colors.grey.shade900,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Automatically categorize transactions',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                       ),
                     ),
                   ),
+
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                    padding: EdgeInsets.all(8),
+                    child: Card(
+                      child: Column(
+                        children: [
+                          ListTile(title: Text('How it works:')),
+                          ListTile(
+                            leading: Text(
+                              '1.',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            title: Text(
+                              'Grant SMS reading permission',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          ListTile(
+                            leading: Text(
+                              '2.',
+
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            title: Text(
+                              'BudgetLite scans for bank/M-Pesa messages',
+
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          ListTile(
+                            leading: Text(
+                              '3.',
+
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            title: Text(
+                              'Transactions are automatically imported',
+
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          ListTile(
+                            leading: Text(
+                              '4.',
+
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
+                            ),
+
+                            title: Text(
+                              'Smart categorization keeps your budget updated',
+
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(8),
                     child: Center(
                       child: FilledButton(
                         style: ButtonStyle(
