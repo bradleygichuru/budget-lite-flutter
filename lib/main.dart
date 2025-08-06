@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:loading_overlay/loading_overlay.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -72,11 +73,21 @@ Future<void> main() async {
   // prefs.remove("budget_lite_current_account_id");
 
   setUpNotificationIds();
-
   AwesomeNotifications().initialize(
     // set the icon to null if you want to use the default app icon
     null,
     [
+      NotificationChannel(
+        importance: NotificationImportance.High,
+        channelGroupKey: 'service_channel_group',
+        channelKey: 'service_channel',
+        channelName: 'Budgetlite Service silent notifications',
+        channelDescription: 'Budgetlite Service silent notifications channel',
+        defaultColor: Color(0xFF9D50DD),
+        ledColor: Colors.white,
+        playSound: false,
+      ),
+
       NotificationChannel(
         channelGroupKey: 'budgetlite_silent_group',
         channelKey: 'budgetlite_silent',
@@ -327,16 +338,19 @@ class MyAppState extends State<MyApp> {
           {}
       }
     }
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(title),
-          content: showProgress
-              ? Center(child: CircularProgressIndicator())
-              : null,
-        );
-      },
+    return MaterialApp(
+      home: Scaffold(
+        body: Dialog(
+          child: Column(
+            children: [
+              Text(title),
+              showProgress
+                  ? Center(child: CircularProgressIndicator())
+                  : Text(''),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -624,9 +638,16 @@ class MyAppState extends State<MyApp> {
               builder: (context, snapshot) {
                 Widget cont = Text("");
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return SafeArea(
-                    child: Center(child: CircularProgressIndicator()),
+                  return Scaffold(
+                    body: LoadingOverlay(
+                      isLoading:
+                          snapshot.connectionState == ConnectionState.waiting
+                          ? true
+                          : false,
+                      child: Text('loading'),
+                    ),
                   );
+                  // SafeArea(child: Center(child: CircularProgressIndicator()));
                 }
                 if (snapshot.connectionState == ConnectionState.done) {
                   if (snapshot.hasData) {
@@ -808,6 +829,7 @@ class MyAppState extends State<MyApp> {
                                         setState(() {
                                           isUpdating = true;
                                         });
+                                        log('isUpdating:$isUpdating');
                                         OtaUpdate()
                                             .execute(bestItem!.fileURL!)
                                             .listen(

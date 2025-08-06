@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
@@ -334,59 +335,6 @@ class TransactionsModel extends ChangeNotifier {
       switch (transaction.type) {
         case 'credit':
           {
-            // toastification.show(
-            //   overlayState: AppGlobal.navigatorKey.currentState?.overlay,
-            //   title: Text('New transaction'),
-            //   description: RichText(
-            //     text: TextSpan(text: 'Credited from ${transaction.source}'),
-            //   ),
-            //   autoCloseDuration: const Duration(seconds: 5),
-            //   animationDuration: const Duration(milliseconds: 300),
-            //   alignment: Alignment.topRight,
-            //   direction: TextDirection.ltr,
-            //   type: ToastificationType.success,
-            //   style: ToastificationStyle.fillColored,
-            //   icon: const Icon(Icons.check),
-            //   showIcon: true, // show or hide the icon
-            //   primaryColor: Colors.green,
-            //   backgroundColor: Colors.white,
-            //   foregroundColor: Colors.black,
-            //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            //   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            //   borderRadius: BorderRadius.circular(12),
-            //   boxShadow: const [
-            //     BoxShadow(
-            //       color: Color(0x07000000),
-            //       blurRadius: 16,
-            //       offset: Offset(0, 16),
-            //       spreadRadius: 0,
-            //     ),
-            //   ],
-            //   showProgressBar: true,
-            //   closeButton: ToastCloseButton(
-            //     showType: CloseButtonShowType.onHover,
-            //     buttonBuilder: (context, onClose) {
-            //       return OutlinedButton.icon(
-            //         onPressed: onClose,
-            //         icon: const Icon(Icons.close, size: 20),
-            //         label: const Text('Close'),
-            //       );
-            //     },
-            //   ),
-            //   closeOnClick: false,
-            //   pauseOnHover: true,
-            //   dragToClose: true,
-            //   applyBlurEffect: true,
-            //   callbacks: ToastificationCallbacks(
-            //     onTap: (toastItem) => log('Toast ${toastItem.id} tapped'),
-            //     onCloseButtonTap: (toastItem) =>
-            //         log('Toast ${toastItem.id} close button tapped'),
-            //     onAutoCompleteCompleted: (toastItem) =>
-            //         log('Toast ${toastItem.id} auto complete completed'),
-            //     onDismissed: (toastItem) =>
-            //         log('Toast ${toastItem.id} dismissed'),
-            //   ),
-            // );
             AwesomeNotifications().createNotification(
               content: NotificationContent(
                 id: notiId,
@@ -401,60 +349,6 @@ class TransactionsModel extends ChangeNotifier {
           }
         case 'from saving':
           {
-            // toastification.show(
-            //   overlayState: AppGlobal.navigatorKey.currentState?.overlay,
-            //   title: Text('New transaction'),
-            //   description: RichText(
-            //     text: TextSpan(text: 'transfered from savings'),
-            //   ),
-            //   autoCloseDuration: const Duration(seconds: 5),
-            //   animationDuration: const Duration(milliseconds: 300),
-            //   alignment: Alignment.topRight,
-            //   direction: TextDirection.ltr,
-            //   type: ToastificationType.success,
-            //   style: ToastificationStyle.fillColored,
-            //   icon: const Icon(Icons.check),
-            //   showIcon: true, // show or hide the icon
-            //   primaryColor: Colors.green,
-            //   backgroundColor: Colors.white,
-            //   foregroundColor: Colors.black,
-            //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            //   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            //   borderRadius: BorderRadius.circular(12),
-            //   boxShadow: const [
-            //     BoxShadow(
-            //       color: Color(0x07000000),
-            //       blurRadius: 16,
-            //       offset: Offset(0, 16),
-            //       spreadRadius: 0,
-            //     ),
-            //   ],
-            //   showProgressBar: true,
-            //   closeButton: ToastCloseButton(
-            //     showType: CloseButtonShowType.onHover,
-            //     buttonBuilder: (context, onClose) {
-            //       return OutlinedButton.icon(
-            //         onPressed: onClose,
-            //         icon: const Icon(Icons.close, size: 20),
-            //         label: const Text('Close'),
-            //       );
-            //     },
-            //   ),
-            //   closeOnClick: false,
-            //   pauseOnHover: true,
-            //   dragToClose: true,
-            //   applyBlurEffect: true,
-            //   callbacks: ToastificationCallbacks(
-            //     onTap: (toastItem) => log('Toast ${toastItem.id} tapped'),
-            //     onCloseButtonTap: (toastItem) =>
-            //         log('Toast ${toastItem.id} close button tapped'),
-            //     onAutoCompleteCompleted: (toastItem) =>
-            //         log('Toast ${toastItem.id} auto complete completed'),
-            //     onDismissed: (toastItem) =>
-            //         log('Toast ${toastItem.id} dismissed'),
-            //   ),
-            // );
-
             AwesomeNotifications().createNotification(
               content: NotificationContent(
                 id: notiId,
@@ -469,60 +363,6 @@ class TransactionsModel extends ChangeNotifier {
           }
         case 'to saving':
           {
-            // toastification.show(
-            //   overlayState: AppGlobal.navigatorKey.currentState?.overlay,
-            //   title: Text('New transaction'),
-            //   description: RichText(
-            //     text: TextSpan(text: 'transfered to savings'),
-            //   ),
-            //   autoCloseDuration: const Duration(seconds: 5),
-            //   animationDuration: const Duration(milliseconds: 300),
-            //   alignment: Alignment.topRight,
-            //   direction: TextDirection.ltr,
-            //   type: ToastificationType.success,
-            //   style: ToastificationStyle.fillColored,
-            //   icon: const Icon(Icons.check),
-            //   showIcon: true, // show or hide the icon
-            //   primaryColor: Colors.green,
-            //   backgroundColor: Colors.white,
-            //   foregroundColor: Colors.black,
-            //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            //   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            //   borderRadius: BorderRadius.circular(12),
-            //   boxShadow: const [
-            //     BoxShadow(
-            //       color: Color(0x07000000),
-            //       blurRadius: 16,
-            //       offset: Offset(0, 16),
-            //       spreadRadius: 0,
-            //     ),
-            //   ],
-            //   showProgressBar: true,
-            //   closeButton: ToastCloseButton(
-            //     showType: CloseButtonShowType.onHover,
-            //     buttonBuilder: (context, onClose) {
-            //       return OutlinedButton.icon(
-            //         onPressed: onClose,
-            //         icon: const Icon(Icons.close, size: 20),
-            //         label: const Text('Close'),
-            //       );
-            //     },
-            //   ),
-            //   closeOnClick: false,
-            //   pauseOnHover: true,
-            //   dragToClose: true,
-            //   applyBlurEffect: true,
-            //   callbacks: ToastificationCallbacks(
-            //     onTap: (toastItem) => log('Toast ${toastItem.id} tapped'),
-            //     onCloseButtonTap: (toastItem) =>
-            //         log('Toast ${toastItem.id} close button tapped'),
-            //     onAutoCompleteCompleted: (toastItem) =>
-            //         log('Toast ${toastItem.id} auto complete completed'),
-            //     onDismissed: (toastItem) =>
-            //         log('Toast ${toastItem.id} dismissed'),
-            //   ),
-            // );
-
             AwesomeNotifications().createNotification(
               content: NotificationContent(
                 id: notiId,
@@ -537,59 +377,6 @@ class TransactionsModel extends ChangeNotifier {
           }
         case 'spend':
           {
-            // toastification.show(
-            //   overlayState: AppGlobal.navigatorKey.currentState?.overlay,
-            //   title: Text('New transaction'),
-            //   description: RichText(
-            //     text: TextSpan(text: 'Click to set budget category'),
-            //   ),
-            //   autoCloseDuration: const Duration(seconds: 5),
-            //   animationDuration: const Duration(milliseconds: 300),
-            //   alignment: Alignment.topRight,
-            //   direction: TextDirection.ltr,
-            //   type: ToastificationType.success,
-            //   style: ToastificationStyle.fillColored,
-            //   icon: const Icon(Icons.check),
-            //   showIcon: true, // show or hide the icon
-            //   primaryColor: Colors.green,
-            //   backgroundColor: Colors.white,
-            //   foregroundColor: Colors.black,
-            //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            //   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            //   borderRadius: BorderRadius.circular(12),
-            //   boxShadow: const [
-            //     BoxShadow(
-            //       color: Color(0x07000000),
-            //       blurRadius: 16,
-            //       offset: Offset(0, 16),
-            //       spreadRadius: 0,
-            //     ),
-            //   ],
-            //   showProgressBar: true,
-            //   closeButton: ToastCloseButton(
-            //     showType: CloseButtonShowType.onHover,
-            //     buttonBuilder: (context, onClose) {
-            //       return OutlinedButton.icon(
-            //         onPressed: onClose,
-            //         icon: const Icon(Icons.close, size: 20),
-            //         label: const Text('Close'),
-            //       );
-            //     },
-            //   ),
-            //   closeOnClick: false,
-            //   pauseOnHover: true,
-            //   dragToClose: true,
-            //   applyBlurEffect: true,
-            //   callbacks: ToastificationCallbacks(
-            //     onTap: (toastItem) => log('Toast ${toastItem.id} tapped'),
-            //     onCloseButtonTap: (toastItem) =>
-            //         log('Toast ${toastItem.id} close button tapped'),
-            //     onAutoCompleteCompleted: (toastItem) =>
-            //         log('Toast ${toastItem.id} auto complete completed'),
-            //     onDismissed: (toastItem) =>
-            //         log('Toast ${toastItem.id} dismissed'),
-            //   ),
-            // );
             AwesomeNotifications().createNotification(
               content: NotificationContent(
                 id: notiId,

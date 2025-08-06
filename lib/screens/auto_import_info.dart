@@ -60,9 +60,10 @@ class AutoImportInfoScreenState extends State<AutoImportInfoScreen> {
                   ),
                   Center(
                     child: Padding(
-                      padding: EdgeInsets.all(8),
-                      child: const Text(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
                         "BudgetLite automatically imports your transactions from SMS notifications",
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
@@ -143,6 +144,7 @@ class AutoImportInfoScreenState extends State<AutoImportInfoScreen> {
                   Padding(
                     padding: EdgeInsets.all(8),
                     child: Card(
+                      color: Colors.white,
                       child: Column(
                         children: [
                           ListTile(title: Text('How it works:')),

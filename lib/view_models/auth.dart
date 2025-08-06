@@ -2,12 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
-import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/wallet_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
+import 'package:flutter_application_1/screens/auto_import_availability.dart';
 import 'package:flutter_application_1/screens/auto_import_info.dart';
 import 'package:flutter_application_1/screens/initial_balance.dart';
 import 'package:flutter_application_1/screens/landing.dart';
@@ -36,17 +37,17 @@ class AuthModel extends ChangeNotifier {
   late String? sessionToken;
   String tier = '';
   bool pendingBudgetReset = false;
-  String region = 'not set';
+  String? region;
 
   Widget authWidget = SafeArea(
     child: Center(child: CircularProgressIndicator()),
   );
-  Future<void> setAccountProfileInfo() async {
+  Future<void> setAccountProfileInfo(int acId) async {
     final db = await getDb();
     try {
       final List<Map<String, Object?>> accounts = await db.rawQuery(
         'SELECT * FROM accounts WHERE id = ?',
-        ['${await getAccountId()}'],
+        ['$acId'],
       );
       date = DateTime.parse(accounts[0]['created_at'] as String);
       email = accounts[0]['email'] as String;
@@ -89,14 +90,17 @@ class AuthModel extends ChangeNotifier {
     }
   }
 
-  void refreshAuth() async {
+  Future<void> refreshAuth() async {
     handleAuth = isSetLoggedIn();
 
     String? regiontoset = await getRegion();
     if (regiontoset != null) {
       region = regiontoset;
     }
-    await setAccountProfileInfo();
+    int? acid = await getAccountId();
+    if (acid != null) {
+      await setAccountProfileInfo(acid);
+    }
     getAuthToken();
     getSessionToken();
 
@@ -104,7 +108,7 @@ class AuthModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void initAuth() async {
+  Future<void> initAuth() async {
     handleAuth = isSetLoggedIn();
     getAuthToken();
     getCookie();
@@ -114,7 +118,10 @@ class AuthModel extends ChangeNotifier {
       region = regiontoset;
     }
 
-    await setAccountProfileInfo();
+    int? acid = await getAccountId();
+    if (acid != null) {
+      await setAccountProfileInfo(acid);
+    }
 
     notifyListeners();
   }
@@ -195,6 +202,8 @@ class AuthModel extends ChangeNotifier {
           log("setting auth token");
 
           Result getacid = await setAccountId(email.trim());
+
+          // Result getacid = await compute(setAccountId, email.trim());
           switch (getacid) {
             case Ok():
               {
@@ -212,6 +221,17 @@ class AuthModel extends ChangeNotifier {
                 switch (getacid.error) {
                   case NoAccountFound():
                     {
+                      // Result accountCreation = await compute(
+                      //   createAccount,
+                      //   Account(
+                      //     // id: decodedResponse['user']['id'],
+                      //     authId: decodedResponse['user']['id'] as String,
+                      //     email: decodedResponse['user']['email'] as String,
+                      //     createdAt:
+                      //         decodedResponse['user']['createdAt'] as String,
+                      //     tier: 'Free',
+                      //   ),
+                      // );
                       Result accountCreation = await createAccount(
                         Account(
                           // id: decodedResponse['user']['id'],
@@ -238,6 +258,17 @@ class AuthModel extends ChangeNotifier {
                     }
                   case AccountIdNullException():
                     {
+                      // Result accountCreation = await compute(
+                      //   createAccount,
+                      //   Account(
+                      //     // id: decodedResponse['user']['id'],
+                      //     authId: decodedResponse['user']['id'] as String,
+                      //     email: decodedResponse['user']['email'] as String,
+                      //     createdAt:
+                      //         decodedResponse['user']['createdAt'] as String,
+                      //     tier: 'Free',
+                      //   ),
+                      // );
                       Result accountCreation = await createAccount(
                         Account(
                           // id: decodedResponse['user']['id'],
@@ -299,6 +330,7 @@ class AuthModel extends ChangeNotifier {
           log("setting auth token");
 
           Result getacid = await setAccountId(email.trim());
+          // Result getacid = await compute(setAccountId, email.trim());
           switch (getacid) {
             case Ok():
               {
@@ -330,7 +362,15 @@ class AuthModel extends ChangeNotifier {
                         },
                       );
                       var decodedResp = jsonDecode(resp.body) as Map;
-
+                      // Result accountCreation = await compute(
+                      //   createAccount,
+                      //   Account(
+                      //     id: decodedResp['id'],
+                      //     email: decodedResp['email'],
+                      //     createdAt: decodedResp['created_at'],
+                      //     tier: 'Free',
+                      //   ),
+                      // );
                       Result accountCreation = await createAccount(
                         Account(
                           id: decodedResp['id'],
@@ -369,6 +409,16 @@ class AuthModel extends ChangeNotifier {
                         },
                       );
                       var decodedResp = jsonDecode(resp.body) as Map;
+
+                      // Result accountCreation = await compute(
+                      //   createAccount,
+                      //   Account(
+                      //     id: decodedResp['id'],
+                      //     email: decodedResp['email'],
+                      //     createdAt: decodedResp['created_at'],
+                      //     tier: 'Free',
+                      //   ),
+                      // );
 
                       Result accountCreation = await createAccount(
                         Account(
@@ -458,7 +508,16 @@ class AuthModel extends ChangeNotifier {
           //     'Authorization': 'Bearer ${decodedResponse["response"]["Bearer"]}',
           //   },
           // );
-
+          // Result accountCreation = await compute(
+          //   createAccount,
+          //   Account(
+          //     // id: decodedResponse['user']['id'] as String,
+          //     email: decodedResponse['user']['email'] as String,
+          //     authId: decodedResponse['user']['id'] as String,
+          //     createdAt: decodedResponse['user']['createdAt'] as String,
+          //     tier: 'Free',
+          //   ),
+          // );
           Result accountCreation = await createAccount(
             Account(
               // id: decodedResponse['user']['id'] as String,
@@ -526,6 +585,15 @@ class AuthModel extends ChangeNotifier {
               tier: 'Free',
             ),
           );
+          // Result accountCreation = await compute(
+          //   createAccount,
+          //   Account(
+          //     id: decodedResp['id'],
+          //     email: decodedResp['email'],
+          //     createdAt: decodedResp['created_at'],
+          //     tier: 'Free',
+          //   ),
+          // );
 
           switch (accountCreation) {
             case Ok():
@@ -581,6 +649,11 @@ class AuthModel extends ChangeNotifier {
           case 'intial_balance':
             {
               authWidget = InitialBalance();
+              break;
+            }
+          case 'auto_import_availability':
+            {
+              authWidget = AutoImportAvailabilityScreen();
               break;
             }
           default:

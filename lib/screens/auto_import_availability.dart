@@ -49,13 +49,18 @@ class AutoImportAvailabilityState extends State<AutoImportAvailabilityScreen> {
                 ),
 
                 Center(
-                  child: const Text(
+                  child: Text(
                     "Transaction Auto-Import",
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
                   ),
                 ),
 
-                Center(child: const Text("Availability in your region")),
+                Center(
+                  child: Text(
+                    "Availability in your region",
+                    textAlign: TextAlign.center,
+                  ),
+                ),
                 Padding(
                   padding: EdgeInsets.all(8),
                   child: Card(
@@ -74,10 +79,13 @@ class AutoImportAvailabilityState extends State<AutoImportAvailabilityScreen> {
                         ),
                         ListTile(
                           title: Text(
-                            'Available in ${di<AuthModel>().region}',
+                            'Available in ${di<AuthModel>().region} region',
                             style: TextStyle(
                               fontWeight: FontWeight.w500,
-                              color: Colors.green.shade500,
+                              color:
+                                  di<AuthModel>().region == Country.kenya.name
+                                  ? Colors.green.shade500
+                                  : Colors.red.shade500,
                             ),
                           ),
                         ),
@@ -107,42 +115,44 @@ class AutoImportAvailabilityState extends State<AutoImportAvailabilityScreen> {
                   ),
                 ),
 
-                Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Card(
-                    color: Colors.white,
-                    child: Column(
-                      children: [
-                        ListTile(
-                          title: Text(
-                            'Supported banks',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Currently supported financial institutions',
-                          ),
-                        ),
-                        ListTile(
-                          leading: Icon(Icons.account_balance_sharp),
-                          title: Text('Equity Bank'),
-                        ),
+                di<AuthModel>().region == Country.kenya.name
+                    ? Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Card(
+                          color: Colors.white,
+                          child: Column(
+                            children: [
+                              ListTile(
+                                title: Text(
+                                  'Supported banks',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Currently supported financial institutions',
+                                ),
+                              ),
+                              ListTile(
+                                leading: Icon(Icons.account_balance_sharp),
+                                title: Text('Equity Bank'),
+                              ),
 
-                        ListTile(
-                          leading: Icon(Icons.account_balance_sharp),
-                          title: Text('Equity Bank'),
-                        ),
+                              ListTile(
+                                leading: Icon(Icons.account_balance_sharp),
+                                title: Text('Equity Bank'),
+                              ),
 
-                        ListTile(
-                          leading: Icon(Icons.account_balance_sharp),
-                          title: Text('M-Pesa'),
+                              ListTile(
+                                leading: Icon(Icons.account_balance_sharp),
+                                title: Text('M-Pesa'),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
+                      )
+                    : Text(''),
 
                 Padding(
                   padding: EdgeInsets.all(8),

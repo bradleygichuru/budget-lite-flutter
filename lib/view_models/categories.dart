@@ -71,7 +71,7 @@ class CategoriesModel extends ChangeNotifier {
     }
   }
 
-  void refreshCats() async {
+  Future<void> refreshCats() async {
     final categoriesRet = await getCategories();
 
     if (categoriesRet.isNotEmpty) {

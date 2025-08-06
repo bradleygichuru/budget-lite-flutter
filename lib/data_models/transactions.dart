@@ -2,6 +2,8 @@ import 'dart:developer';
 import 'package:another_telephony/telephony.dart';
 
 const String mpesaReceived = "received";
+
+const String mpesaBought = "bought";
 const String mpesaPaid = "paid to";
 const String mpesaSent = "sent to";
 const String mpesaTransferred = "transferred";
@@ -72,6 +74,19 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
       'date': "",
       'desc': '',
     };
+    if (message!.contains(mpesaBought)) {
+      List<String> boughtArray = message.split(mpesaBought);
+      String amount = boughtArray[1]
+          .split('of')[0]
+          .replaceAll(',', '')
+          .split('Ksh')[1]
+          .trim();
+
+      transaction["type"] = TxType.spend.val;
+      transaction['date'] = DateTime.now().toString();
+      transaction["amount"] = double.parse(amount);
+      transaction['desc'] = boughtArray[1].split('on')[0].trim();
+    }
     if (message!.contains(mpesaReceived)) {
       List<String> receivedArray = message.split(mpesaReceived);
       String amount = receivedArray[1]

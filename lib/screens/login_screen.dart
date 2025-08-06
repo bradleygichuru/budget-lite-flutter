@@ -59,7 +59,7 @@ class LoginFormState extends State<LoginForm> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: <Widget>[
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: 8,
                           vertical: 16,
@@ -74,18 +74,22 @@ class LoginFormState extends State<LoginForm> {
                       ),
 
                       Center(
-                        child: const Text(
+                        child: Text(
                           "Welcome Back",
                           style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade900,
+                            fontSize: 24,
                           ),
                         ),
                       ),
 
-                      Center(
-                        child: const Text(
+                      Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
                           "Sign in to continue your budgeting journey",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey.shade600),
                         ),
                       ),
 

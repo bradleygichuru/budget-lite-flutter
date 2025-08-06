@@ -83,18 +83,22 @@ class SmsPermsRequestState extends State<SmsPermsRequest> {
                     ),
                   ),
                   Center(
-                    child: const Text(
+                    child: Text(
                       "SMS Permission Required",
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 20,
+                        color: Colors.grey.shade900,
                       ),
                     ),
                   ),
 
-                  Center(
-                    child: const Text(
+                  Padding(
+                    padding: EdgeInsets.all(5),
+                    child: Text(
                       "BudgetLite needs permission to read SMS messages to automatically import your transactions",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey.shade600),
                     ),
                   ),
 
@@ -105,20 +109,31 @@ class SmsPermsRequestState extends State<SmsPermsRequest> {
                     ),
                     child: Center(
                       child: Card(
+                        color: Colors.white,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
                             ListTile(
                               leading: const Icon(
-                                Icons.ad_units,
+                                Icons.ad_units_outlined,
                                 size: 30,
-                                color: Color(0xFFA3E635),
+                                color: Colors.black,
                               ),
                               title: Text(
                                 '${Platform.isAndroid ? "Android" : 'IOS'} device',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade600,
+                                ),
                               ),
-                              subtitle: const Text(
+                            ),
+                            ListTile(
+                              title: Text(
                                 'Device will ask for permission to access messages. This helps automatically import your financial transactions.',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                           ],
@@ -133,31 +148,74 @@ class SmsPermsRequestState extends State<SmsPermsRequest> {
                     ),
                     child: Center(
                       child: Card.outlined(
-                        color: Color(0xFFF0FDF4),
+                        color: Colors.green.shade50,
 
                         child: Column(
                           children: [
                             ListTile(
-                              leading: Icon(Icons.shield),
-                              title: Text("Your Privacy is Protected"),
-                            ),
-                            ListTile(
-                              dense: true,
-                              leading: Text("•"),
+                              leading: Icon(
+                                Icons.shield_outlined,
+                                color: Colors.green.shade600,
+                              ),
                               title: Text(
-                                "Only financial SMS messages are processed",
+                                "Your Privacy is Protected",
+                                style: TextStyle(
+                                  color: Colors.green.shade800,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                             ListTile(
                               dense: true,
-                              leading: Text("•"),
-                              title: Text("Personal messages are ignored"),
+                              leading: Text(
+                                "•",
+
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              title: Text(
+                                "Only financial SMS messages are processed",
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontSize: 14,
+                                ),
+                              ),
                             ),
                             ListTile(
                               dense: true,
-                              leading: Text("•"),
+                              leading: Text(
+                                "•",
+
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              title: Text(
+                                "Personal messages are ignored",
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            ListTile(
+                              dense: true,
+                              leading: Text(
+                                "•",
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontSize: 14,
+                                ),
+                              ),
                               title: Text(
                                 "Only financial SMS messages are processed",
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                           ],

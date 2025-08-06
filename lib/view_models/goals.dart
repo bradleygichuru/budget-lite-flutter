@@ -17,7 +17,7 @@ class GoalModel extends ChangeNotifier {
   }
   Future<List<Goal>> goals = Future.value([]);
   List<String> knownGoalNames = [];
-  void initGoals() async {
+  Future<void> initGoals() async {
     final goals = await getGoals();
     if (goals.isNotEmpty) {
       List<String> x = [];
@@ -30,7 +30,7 @@ class GoalModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void refreshGoals() async {
+  Future<void> refreshGoals() async {
     final goals = await getGoals();
     if (goals.isNotEmpty) {
       List<String> x = [];
@@ -67,8 +67,13 @@ class GoalModel extends ChangeNotifier {
         totalAllocatedToGoals = totalAllocatedToGoals + goal.currentAmount;
       }
 
-      Wallet? currentWallet = await wM.getAccountWallet();
-      if (currentWallet != null) {
+      int? acid = await aM.getAccountId();
+      Wallet? currentWallet;
+      if (acid != null) {
+        currentWallet = await wM.getAccountWallet(acid);
+      }
+
+      if (currentWallet != null && acid != null) {
         if (currentWallet.savings > 0) {
           if (credit > (currentWallet.savings - totalAllocatedToGoals)) {
             return Result.error(ExceedsUnallocated());
@@ -78,10 +83,10 @@ class GoalModel extends ChangeNotifier {
             double update = candidate.currentAmount + credit;
             count = await db.rawUpdate(
               'UPDATE goals SET current_amount = ? WHERE id = ? AND account_id = ?',
-              ['$update', '${candidate.id}', '${await aM.getAccountId()}'],
+              ['$update', '${candidate.id}', '$acid'],
             );
             goals = getGoals();
-            refreshGoals();
+            await refreshGoals();
             notifyListeners();
             return Result.ok(count);
           }

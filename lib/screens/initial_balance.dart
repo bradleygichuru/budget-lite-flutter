@@ -194,7 +194,7 @@ class InitialBalanceState extends State<InitialBalance> {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 10),
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.all(Radius.circular(4)),
@@ -255,49 +255,52 @@ class InitialBalanceState extends State<InitialBalance> {
                     ),
                   ),
                 ),
-                ButtonTheme(
-                  height: 30,
-                  child: OutlinedButton(
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStatePropertyAll(Colors.white),
-                    ),
-                    onPressed: () async {
-                      try {
-                        di.get<AuthModel>().completeOnboarding();
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginForm(),
-                          ),
-                        );
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                "Error intializing wallet values",
-                              ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                  child: ButtonTheme(
+                    height: 30,
+                    child: OutlinedButton(
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStatePropertyAll(Colors.white),
+                      ),
+                      onPressed: () async {
+                        try {
+                          di.get<AuthModel>().completeOnboarding();
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginForm(),
                             ),
                           );
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  "Error intializing wallet values",
+                                ),
+                              ),
+                            );
 
-                          Navigator.pop(context);
+                            Navigator.pop(context);
+                          }
+                          log('Error occured intializing wallet figures:$e');
                         }
-                        log('Error occured intializing wallet figures:$e');
-                      }
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 4),
-                          child: Icon(Icons.skip_next, color: Colors.black),
-                        ),
-                        Text(
-                          'Skip & Start Empty',
-                          style: TextStyle(color: Colors.black),
-                        ),
-                      ],
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(Icons.skip_next, color: Colors.black),
+                          ),
+                          Text(
+                            'Skip & Start Empty',
+                            style: TextStyle(color: Colors.black),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

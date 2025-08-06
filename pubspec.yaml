@@ -58,6 +58,8 @@ dependencies:
   ota_update: ^7.0.2
   firebase_crashlytics: ^5.0.0
   package_info_plus: ^8.3.0
+  loading_overlay: ^0.4.3
+  flutter_local_notifications: ^19.4.0
 
 dev_dependencies:
   flutter_test:
