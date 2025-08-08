@@ -2,6 +2,8 @@ import 'dart:collection';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
+import 'package:flutter_application_1/data_models/wallet_data_model.dart';
+import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/categories.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
@@ -140,7 +142,7 @@ class HandleBalanceState extends State<HandleBalance> {
                           ],
                         ),
                         SizedBox(
-                          height: 400,
+                          height: 600,
                           child: TabBarView(
                             children: [
                               Padding(
@@ -265,125 +267,181 @@ class HandleBalanceState extends State<HandleBalance> {
                                               ),
                                             ),
                                           ),
-                                          Padding(
-                                            padding: const EdgeInsets.all(5),
-                                            child: ElevatedButton(
-                                              style: ButtonStyle(
-                                                fixedSize:
-                                                    WidgetStatePropertyAll(
-                                                      Size.fromWidth(
-                                                        double.infinity,
-                                                      ),
-                                                    ),
-                                                backgroundColor:
-                                                    WidgetStatePropertyAll(
-                                                      Colors.black,
-                                                    ),
-                                              ),
-                                              onPressed: () {
-                                                if (_debitfFormKey.currentState!
-                                                        .validate() &&
-                                                    category.isNotEmpty) {
-                                                  TransactionObj tx =
-                                                      TransactionObj(
-                                                        type: TxType.spend.val,
-                                                        desc: descController
-                                                            .value
-                                                            .text,
-                                                        category: category,
-                                                        source: sourceController
-                                                            .value
-                                                            .text,
-                                                        amount: double.parse(
-                                                          amountController
-                                                              .value
-                                                              .text,
+                                          SafeArea(
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(7),
+                                              child: ElevatedButton(
+                                                style: ButtonStyle(
+                                                  fixedSize:
+                                                      WidgetStatePropertyAll(
+                                                        Size.fromWidth(
+                                                          double.infinity,
                                                         ),
-                                                        date: DateTime.now()
-                                                            .toString(),
-                                                      );
-                                                  try {
-                                                    di.get<WalletModel>().debitDefaultWallet(tx).then((
-                                                      updateCols,
-                                                    ) {
-                                                      log(
-                                                        'On page Wallet cols updated:$updateCols',
-                                                      );
-                                                      if (updateCols == 1) {
-                                                        // Category candidate = cats.firstWhere((cat)=> cat.categoryName == category);
+                                                      ),
+                                                  backgroundColor:
+                                                      WidgetStatePropertyAll(
+                                                        Colors.black,
+                                                      ),
+                                                ),
+                                                onPressed: () async {
+                                                  if (_debitfFormKey
+                                                          .currentState!
+                                                          .validate() &&
+                                                      category.isNotEmpty) {
+                                                    TransactionObj
+                                                    tx = TransactionObj(
+                                                      type: TxType.spend.val,
+                                                      desc: descController
+                                                          .value
+                                                          .text,
+                                                      category: category,
+                                                      source: sourceController
+                                                          .value
+                                                          .text,
+                                                      amount: double.parse(
                                                         amountController
-                                                            .clear();
-                                                        descController.clear();
-
-                                                        di
-                                                            .get<WalletModel>()
-                                                            .refresh();
-                                                        di
-                                                            .get<
-                                                              TransactionsModel
-                                                            >()
-                                                            .refreshTx();
-
-                                                        if (context.mounted) {
-                                                          handleBlScaffoldMessengerKey
-                                                              .currentState!
-                                                              .showSnackBar(
-                                                                SnackBar(
-                                                                  content:
-                                                                      const Text(
-                                                                        "Wallet updated",
-                                                                      ),
-                                                                ),
-                                                              );
-                                                        }
-                                                      } else {
-                                                        if (context.mounted) {
-                                                          handleBlScaffoldMessengerKey
-                                                              .currentState!
-                                                              .showSnackBar(
-                                                                SnackBar(
-                                                                  content:
-                                                                      const Text(
-                                                                        "Failed updating wallet",
-                                                                      ),
-                                                                ),
-                                                              );
-                                                        }
-                                                      }
-                                                    });
-                                                  } catch (e) {
-                                                    log(
-                                                      'Error ${e.toString()}',
+                                                            .value
+                                                            .text,
+                                                      ),
+                                                      date: DateTime.now()
+                                                          .toString(),
                                                     );
+                                                    try {
+                                                      Result e = await di
+                                                          .get<WalletModel>()
+                                                          .debitDefaultWallet(
+                                                            tx,
+                                                          );
+                                                      switch (e) {
+                                                        case Ok():
+                                                          {
+                                                            if (e.value > 0) {
+                                                              // Category candidate = cats.firstWhere((cat)=> cat.categoryName == category);
+                                                              amountController
+                                                                  .clear();
+                                                              descController
+                                                                  .clear();
 
-                                                    handleBlScaffoldMessengerKey
-                                                        .currentState!
-                                                        .showSnackBar(
-                                                          SnackBar(
-                                                            content: const Text(
-                                                              "Error Occured",
+                                                              di
+                                                                  .get<
+                                                                    WalletModel
+                                                                  >()
+                                                                  .refresh();
+                                                              di
+                                                                  .get<
+                                                                    TransactionsModel
+                                                                  >()
+                                                                  .refreshTx();
+
+                                                              if (context
+                                                                  .mounted) {
+                                                                handleBlScaffoldMessengerKey
+                                                                    .currentState!
+                                                                    .showSnackBar(
+                                                                      SnackBar(
+                                                                        content:
+                                                                            const Text(
+                                                                              "Wallet updated",
+                                                                            ),
+                                                                      ),
+                                                                    );
+                                                              }
+                                                            }
+
+                                                            break;
+                                                          }
+                                                        case Error():
+                                                          {
+                                                            switch (e.error) {
+                                                              case AccountWalletNotFoundException():
+                                                                {
+                                                                  if (context
+                                                                      .mounted) {
+                                                                    handleBlScaffoldMessengerKey
+                                                                        .currentState!
+                                                                        .showSnackBar(
+                                                                          SnackBar(
+                                                                            content: const Text(
+                                                                              "Error accessing account wallet",
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                  }
+
+                                                                  break;
+                                                                }
+                                                              default:
+                                                                {
+                                                                  if (context
+                                                                      .mounted) {
+                                                                    handleBlScaffoldMessengerKey
+                                                                        .currentState!
+                                                                        .showSnackBar(
+                                                                          SnackBar(
+                                                                            content: const Text(
+                                                                              "Failed updating wallet",
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                  }
+
+                                                                  break;
+                                                                }
+                                                            }
+                                                          }
+
+                                                        default:
+                                                          {
+                                                            if (context
+                                                                .mounted) {
+                                                              handleBlScaffoldMessengerKey
+                                                                  .currentState!
+                                                                  .showSnackBar(
+                                                                    SnackBar(
+                                                                      content:
+                                                                          const Text(
+                                                                            "Failed updating wallet",
+                                                                          ),
+                                                                    ),
+                                                                  );
+                                                            }
+                                                            break;
+                                                          }
+                                                      }
+                                                    } catch (e) {
+                                                      log(
+                                                        'Error ${e.toString()}',
+                                                      );
+
+                                                      handleBlScaffoldMessengerKey
+                                                          .currentState!
+                                                          .showSnackBar(
+                                                            SnackBar(
+                                                              content: const Text(
+                                                                "Error Occured",
+                                                              ),
                                                             ),
-                                                          ),
-                                                        );
-                                                  }
-                                                } else {
-                                                  if (mounted) {
-                                                    handleBlScaffoldMessengerKey
-                                                        .currentState!
-                                                        .showSnackBar(
-                                                          SnackBar(
-                                                            content: const Text(
-                                                              "Confirm form values",
+                                                          );
+                                                    }
+                                                  } else {
+                                                    if (mounted) {
+                                                      handleBlScaffoldMessengerKey
+                                                          .currentState!
+                                                          .showSnackBar(
+                                                            SnackBar(
+                                                              content: const Text(
+                                                                "Confirm form values",
+                                                              ),
                                                             ),
-                                                          ),
-                                                        );
+                                                          );
+                                                    }
                                                   }
-                                                }
-                                              },
-                                              child: Text(
-                                                "Add Expense",
-                                                style: TextStyle(
-                                                  color: Colors.white,
+                                                },
+                                                child: Text(
+                                                  "Add Expense",
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -494,12 +552,12 @@ class HandleBalanceState extends State<HandleBalance> {
                                                       Colors.black,
                                                     ),
                                               ),
-                                              onPressed: () {
+                                              onPressed: () async {
                                                 if (_creditfFormKey
                                                     .currentState!
                                                     .validate()) {
                                                   try {
-                                                    di
+                                                    Result y = await di
                                                         .get<WalletModel>()
                                                         .creditDefaultWallet(
                                                           TransactionObj(
@@ -522,10 +580,11 @@ class HandleBalanceState extends State<HandleBalance> {
                                                             date: DateTime.now()
                                                                 .toString(),
                                                           ),
-                                                        )
-                                                        .then((updateCols) {
-                                                          if (updateCols !=
-                                                              null) {
+                                                        );
+                                                    switch (y) {
+                                                      case Ok():
+                                                        {
+                                                          if (y.value != null) {
                                                             amountController
                                                                 .clear();
                                                             descController
@@ -555,7 +614,63 @@ class HandleBalanceState extends State<HandleBalance> {
                                                                   );
                                                             }
                                                           }
-                                                        });
+
+                                                          break;
+                                                        }
+                                                      case Error():
+                                                        {
+                                                          switch (y.error) {
+                                                            case AccountWalletNotFoundException():
+                                                              {
+                                                                if (context
+                                                                    .mounted) {
+                                                                  handleBlScaffoldMessengerKey
+                                                                      .currentState!
+                                                                      .showSnackBar(
+                                                                        SnackBar(
+                                                                          content: const Text(
+                                                                            "Account Wallet not found",
+                                                                          ),
+                                                                        ),
+                                                                      );
+                                                                }
+                                                              }
+
+                                                            case TransactionExists():
+                                                              {
+                                                                handleBlScaffoldMessengerKey
+                                                                    .currentState!
+                                                                    .showSnackBar(
+                                                                      SnackBar(
+                                                                        content:
+                                                                            const Text(
+                                                                              "Transaction Exists",
+                                                                            ),
+                                                                      ),
+                                                                    );
+                                                                break;
+                                                              }
+                                                            default:
+                                                              {
+                                                                log(
+                                                                  'Error occured}',
+                                                                );
+
+                                                                handleBlScaffoldMessengerKey
+                                                                    .currentState!
+                                                                    .showSnackBar(
+                                                                      SnackBar(
+                                                                        content:
+                                                                            Text(
+                                                                              "Error Occured",
+                                                                            ),
+                                                                      ),
+                                                                    );
+                                                                break;
+                                                              }
+                                                          }
+                                                        }
+                                                    }
                                                   } catch (e) {
                                                     log(
                                                       'Error ${e.toString()}',

@@ -139,10 +139,11 @@ class SetupBudgetState extends State<SetupBudget> {
                 color: (cat.clicked ? Colors.green.shade50 : Colors.white),
                 child: Padding(
                   padding: EdgeInsetsDirectional.symmetric(
-                    horizontal: 8,
-                    vertical: 10,
+                    vertical: 3,
+                    horizontal: 7,
                   ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SafeArea(
@@ -155,15 +156,16 @@ class SetupBudgetState extends State<SetupBudget> {
                         ),
                       ),
 
-                      SafeArea(
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            "ksh ${cat.budget}",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
-                            ),
+                      Padding(
+                        padding: EdgeInsetsGeometry.symmetric(
+                          vertical: 6,
+                          horizontal: 3,
+                        ),
+                        child: Text(
+                          "ksh ${cat.budget}",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade500,
                           ),
                         ),
                       ),
@@ -505,125 +507,125 @@ class SetupBudgetState extends State<SetupBudget> {
                     ),
                   ),
                 ),
-                SliverPadding(
-                  padding: EdgeInsets.all(10),
-                  sliver: SliverToBoxAdapter(
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: Text(
-                        "Budget Settings",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
 
-                SliverPadding(
-                  padding: EdgeInsets.all(10),
-                  sliver: SliverToBoxAdapter(
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: Card(
-                        color: Colors.grey.shade50,
-                        child: Column(
-                          children: [
-                            ListTile(
-                              title: Text(
-                                'Automatically reset all budgets on specific date',
-                              ),
-                              leading: Radio<bool>(
-                                value: ResetAutomatic.auto.value,
-                                onChanged: (bool? value) async {
-                                  setState(() {
-                                    _resetAutomatic = value;
-                                  });
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) {
-                                      TextEditingController txC =
-                                          TextEditingController();
-                                      return AlertDialog(
-                                        title: Text('Set Reset Date'),
-                                        content: TextField(
-                                          controller: txC,
-                                          keyboardType: TextInputType.number,
-                                          decoration: InputDecoration(
-                                            border: OutlineInputBorder(),
-                                            labelText: 'Reset Date',
-                                          ),
-                                        ),
-                                        actions: [
-                                          FilledButton(
-                                            onPressed: () async {
-                                              Result x = await di
-                                                  .get<CategoriesModel>()
-                                                  .addBudgetResetDate(
-                                                    txC.value.text,
-                                                  );
-                                              switch (x) {
-                                                case Ok():
-                                                  {
-                                                    spScaffoldMessengerKey
-                                                        .currentState!
-                                                        .showSnackBar(
-                                                          SnackBar(
-                                                            content: const Text(
-                                                              "Reset Date Set",
-                                                            ),
-                                                          ),
-                                                        );
-                                                    Navigator.pop(context);
-                                                    break;
-                                                  }
-                                                default:
-                                                  {
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      SnackBar(
-                                                        content: const Text(
-                                                          "Error setting date",
-                                                        ),
-                                                      ),
-                                                    );
-                                                  }
-                                              }
-                                            },
-                                            child: Text('Set Date'),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  );
-                                },
-                                groupValue: _resetAutomatic,
-                              ),
-                            ),
-
-                            ListTile(
-                              title: Text(
-                                'Keep current spending amounts and reset budget manually whenever you want',
-                              ),
-                              leading: Radio<bool>(
-                                value: ResetAutomatic.manual.value,
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    _resetAutomatic = value;
-                                  });
-                                },
-                                groupValue: _resetAutomatic,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
+                // SliverPadding(
+                //   padding: EdgeInsets.all(10),
+                //   sliver: SliverToBoxAdapter(
+                //     child: Align(
+                //       alignment: Alignment.topLeft,
+                //       child: Text(
+                //         "Budget Settings",
+                //         style: TextStyle(
+                //           fontWeight: FontWeight.w500,
+                //           fontSize: 18,
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                // ),
+                //
+                // SliverPadding(
+                //   padding: EdgeInsets.all(10),
+                //   sliver: SliverToBoxAdapter(
+                //     child: Align(
+                //       alignment: Alignment.topLeft,
+                //       child: Card(
+                //         color: Colors.grey.shade50,
+                //         child: Column(
+                //           children: [
+                //             ListTile(
+                //               title: Text(
+                //                 'Automatically reset all budgets on specific date',
+                //               ),
+                //               leading: Radio<bool>(
+                //                 value: ResetAutomatic.auto.value,
+                //                 onChanged: (bool? value) async {
+                //                   setState(() {
+                //                     _resetAutomatic = value;
+                //                   });
+                //                   showDialog(
+                //                     context: context,
+                //                     builder: (context) {
+                //                       TextEditingController txC =
+                //                           TextEditingController();
+                //                       return AlertDialog(
+                //                         title: Text('Set Reset Date'),
+                //                         content: TextField(
+                //                           controller: txC,
+                //                           keyboardType: TextInputType.number,
+                //                           decoration: InputDecoration(
+                //                             border: OutlineInputBorder(),
+                //                             labelText: 'Reset Date',
+                //                           ),
+                //                         ),
+                //                         actions: [
+                //                           FilledButton(
+                //                             onPressed: () async {
+                //                               Result x = await di
+                //                                   .get<CategoriesModel>()
+                //                                   .addBudgetResetDate(
+                //                                     txC.value.text,
+                //                                   );
+                //                               switch (x) {
+                //                                 case Ok():
+                //                                   {
+                //                                     spScaffoldMessengerKey
+                //                                         .currentState!
+                //                                         .showSnackBar(
+                //                                           SnackBar(
+                //                                             content: const Text(
+                //                                               "Reset Date Set",
+                //                                             ),
+                //                                           ),
+                //                                         );
+                //                                     Navigator.pop(context);
+                //                                     break;
+                //                                   }
+                //                                 default:
+                //                                   {
+                //                                     ScaffoldMessenger.of(
+                //                                       context,
+                //                                     ).showSnackBar(
+                //                                       SnackBar(
+                //                                         content: const Text(
+                //                                           "Error setting date",
+                //                                         ),
+                //                                       ),
+                //                                     );
+                //                                   }
+                //                               }
+                //                             },
+                //                             child: Text('Set Date'),
+                //                           ),
+                //                         ],
+                //                       );
+                //                     },
+                //                   );
+                //                 },
+                //                 groupValue: _resetAutomatic,
+                //               ),
+                //             ),
+                //
+                //             ListTile(
+                //               title: Text(
+                //                 'Keep current spending amounts and reset budget manually whenever you want',
+                //               ),
+                //               leading: Radio<bool>(
+                //                 value: ResetAutomatic.manual.value,
+                //                 onChanged: (bool? value) {
+                //                   setState(() {
+                //                     _resetAutomatic = value;
+                //                   });
+                //                 },
+                //                 groupValue: _resetAutomatic,
+                //               ),
+                //             ),
+                //           ],
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                // ),
                 SliverPadding(
                   padding: EdgeInsets.all(10),
                   sliver: SliverToBoxAdapter(

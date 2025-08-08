@@ -149,7 +149,7 @@ class AuthModel extends ChangeNotifier {
         // for (final ac in accounts) {
         //   log("Account:${jsonEncode(ac)}");
         // }
-        if (accounts.isNotEmpty) {
+        if (accounts.isNotEmpty && accounts.first['country'] != null) {
           return accounts.first['country'] as String;
         }
       }
@@ -758,31 +758,38 @@ class AuthModel extends ChangeNotifier {
   }
 
   void logout() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    Uri url = Uri.parse('${dotenv.env['BACKEND_ENDPOINT']}/api/auth/sign-out');
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      Uri url = Uri.parse(
+        '${dotenv.env['BACKEND_ENDPOINT']}/api/auth/sign-out',
+      );
 
-    final payload = <String, dynamic>{};
-    payload["token"] = sessionToken;
-    // payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
+      final payload = <String, dynamic>{};
+      payload["token"] = sessionToken;
+      // payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
 
-    Map<String, String> headers = curCookie != null && authToken != null
-        ? {
-            'Authorization': 'Bearer $authToken',
-            // 'set-auth-token': authToken!,
-            'set-cookie': curCookie!,
-          }
-        : {
-            // 'Authorization': 'Bearer $authToken',
-          };
-    log('logut:$headers');
-    await http.post(url, headers: headers);
+      Map<String, String> headers = curCookie != null && authToken != null
+          ? {
+              'Authorization': 'Bearer $authToken',
+              // 'set-auth-token': authToken!,
+              'set-cookie': curCookie!,
+            }
+          : {
+              // 'Authorization': 'Bearer $authToken',
+            };
+      log('logut:$headers');
+      await http.post(url, headers: headers);
 
-    prefs.setBool("isLoggedIn", false);
+      prefs.setBool("isLoggedIn", false);
 
-    removeAuthToken();
-    handleAuth = isSetLoggedIn();
+      prefs.remove("budget_lite_current_account_id");
+      removeAuthToken();
+      handleAuth = isSetLoggedIn();
 
-    notifyListeners();
+      notifyListeners();
+    } catch (e) {
+      log("error loging out:", error: e);
+    }
   }
 
   Future<int> setRegion(String r) async {

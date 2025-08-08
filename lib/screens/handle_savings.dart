@@ -83,22 +83,23 @@ class HandleBalanceState extends State<HandleSavings>
                 child: Text('Cancel'),
               ),
               FilledButton(
-                onPressed: () {
+                onPressed: () async {
                   if (addSC.value.text != null && addSC.value.text.isNotEmpty) {
                     try {
-                      wM
-                          .addToSavings(
-                            TransactionObj(
-                              desc: "Add to savings",
-                              type: TxType.toSaving.val,
-                              source: '',
-                              category: 'savings',
-                              amount: double.parse(addSC.value.text),
-                              date: DateTime.now().toString(),
-                            ),
-                          )
-                          .then((updatedCols) {
-                            if (updatedCols != 0) {
+                      Result addTs = await wM.addToSavings(
+                        TransactionObj(
+                          desc: "Add to savings",
+                          type: TxType.toSaving.val,
+                          source: '',
+                          category: 'savings',
+                          amount: double.parse(addSC.value.text),
+                          date: DateTime.now().toString(),
+                        ),
+                      );
+                      switch (addTs) {
+                        case Ok():
+                          {
+                            if (addTs.value != 0) {
                               if (context.mounted) {
                                 handleSScaffoldMessengerKey.currentState!
                                     .showSnackBar(
@@ -122,15 +123,54 @@ class HandleBalanceState extends State<HandleSavings>
                                 Navigator.pop(context);
                               }
                             }
-                          });
-                    } on NotEnoughException {
-                      handleSScaffoldMessengerKey.currentState!.showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            "Not enough Balance in wallet to move to savings ",
-                          ),
-                        ),
-                      );
+
+                            break;
+                          }
+                        case Error():
+                          {
+                            switch (addTs.error) {
+                              case TransactionExists():
+                                {
+                                  handleSScaffoldMessengerKey.currentState!
+                                      .showSnackBar(
+                                        SnackBar(
+                                          content: const Text(
+                                            "Transaction Exists",
+                                          ),
+                                        ),
+                                      );
+                                  break;
+                                }
+                              case NotEnoughException():
+                                {
+                                  handleSScaffoldMessengerKey.currentState!
+                                      .showSnackBar(
+                                        SnackBar(
+                                          content: const Text(
+                                            "Not enough Balance in wallet to move to savings ",
+                                          ),
+                                        ),
+                                      );
+                                  break;
+                                }
+
+                              default:
+                                {
+                                  log('Error Adding savings');
+
+                                  handleSScaffoldMessengerKey.currentState!
+                                      .showSnackBar(
+                                        SnackBar(
+                                          content: const Text(
+                                            "Error Adding savings",
+                                          ),
+                                        ),
+                                      );
+                                  break;
+                                }
+                            }
+                          }
+                      }
                     } catch (e) {
                       log('Error Adding savings:$e');
 
@@ -187,23 +227,24 @@ class HandleBalanceState extends State<HandleSavings>
                 child: Text('Cancel'),
               ),
               FilledButton(
-                onPressed: () {
+                onPressed: () async {
                   if (moveSC.value.text != null &&
                       moveSC.value.text.isNotEmpty) {
                     try {
-                      wM
-                          .removeFromSavings(
-                            TransactionObj(
-                              desc: "Add to savings",
-                              type: TxType.toSaving.val,
-                              source: '',
-                              category: 'savings',
-                              amount: double.parse(moveSC.value.text),
-                              date: DateTime.now().toString(),
-                            ),
-                          )
-                          .then((updatedCols) {
-                            if (updatedCols != 0) {
+                      Result removefs = await wM.removeFromSavings(
+                        TransactionObj(
+                          desc: "Add to savings",
+                          type: TxType.toSaving.val,
+                          source: '',
+                          category: 'savings',
+                          amount: double.parse(moveSC.value.text),
+                          date: DateTime.now().toString(),
+                        ),
+                      );
+                      switch (removefs) {
+                        case Ok():
+                          {
+                            if (removefs.value != 0) {
                               if (context.mounted) {
                                 handleSScaffoldMessengerKey.currentState!
                                     .showSnackBar(
@@ -222,23 +263,60 @@ class HandleBalanceState extends State<HandleSavings>
                                     .showSnackBar(
                                       SnackBar(
                                         content: const Text(
-                                          "Error transferring from savings",
+                                          "Savings not updated",
                                         ),
                                       ),
                                     );
                                 Navigator.pop(context);
                               }
                             }
-                          });
-                    } on NotEnoughSavingsException {
-                      log('Not enough savings');
-                      handleSScaffoldMessengerKey.currentState!.showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            "Not enough Savings in wallet to move to cash balance ",
-                          ),
-                        ),
-                      );
+
+                            break;
+                          }
+                        case Error():
+                          {
+                            switch (removefs.error) {
+                              case TransactionExists():
+                                {
+                                  handleSScaffoldMessengerKey.currentState!
+                                      .showSnackBar(
+                                        SnackBar(
+                                          content: const Text(
+                                            "Transaction Exists",
+                                          ),
+                                        ),
+                                      );
+                                  break;
+                                }
+                              case AccountWalletNotFoundException():
+                                {
+                                  log('Account wallet not found');
+                                  handleSScaffoldMessengerKey.currentState!
+                                      .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            "Account wallet not found",
+                                          ),
+                                        ),
+                                      );
+                                  break;
+                                }
+                              case NotEnoughSavingsException():
+                                {
+                                  log('Not enough savings');
+                                  handleSScaffoldMessengerKey.currentState!
+                                      .showSnackBar(
+                                        SnackBar(
+                                          content: const Text(
+                                            "Not enough Savings in wallet to move to cash balance ",
+                                          ),
+                                        ),
+                                      );
+                                  break;
+                                }
+                            }
+                          }
+                      }
                     } catch (e) {
                       log('Error Adding savings:$e');
 

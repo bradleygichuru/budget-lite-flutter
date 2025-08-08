@@ -6,8 +6,10 @@ import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/transactions.dart';
 import 'package:flutter_application_1/db/db.dart';
+import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/utils/utils.dart';
 import 'package:toastification/toastification.dart';
 import 'package:watch_it/watch_it.dart';
 
@@ -67,6 +69,8 @@ class TransactionsModel extends ChangeNotifier {
           category: tx["category"] as String?,
           accountId: tx["account_id"] as int,
           desc: tx['desc'] as String,
+
+          messageHashCode: tx['message_hash_code'] as String?,
         ).toString(),
       );
     });
@@ -80,6 +84,8 @@ class TransactionsModel extends ChangeNotifier {
             'category': category as String?,
             'account_id': accountId as int,
             'desc': desc as String,
+
+            'message_hash_code': messageHashCode as String?,
           }
           in transactionMaps) {
         x.add(
@@ -92,6 +98,8 @@ class TransactionsModel extends ChangeNotifier {
             category: category,
             accountId: accountId,
             desc: desc,
+
+            messageHashCode: messageHashCode,
           ),
         );
       }
@@ -99,96 +107,100 @@ class TransactionsModel extends ChangeNotifier {
     return x;
   }
 
-  Future<int> setTxCategory(String category, int id) async {
+  Future<Result<int>> setTxCategory(String category, int id) async {
     AuthModel aM;
-    if (!di.isRegistered<AuthModel>()) {
-      aM = AuthModel();
-    } else {
-      aM = di<AuthModel>();
+    try {
+      if (!di.isRegistered<AuthModel>()) {
+        aM = AuthModel();
+      } else {
+        aM = di<AuthModel>();
+      }
+      final db = await getDb();
+      log("categorizing tx of id:$id");
+      int count = await db.rawUpdate(
+        'UPDATE transactions SET category = ? WHERE id = ? AND account_id = ?',
+        [category, '$id', '${await aM.getAccountId()}'],
+      );
+      notifyListeners();
+      return Result.ok(count);
+    } on Exception catch (e) {
+      return Result.error(e);
     }
-    final db = await getDb();
-    log("categorizing tx of id:$id");
-    int count = await db.rawUpdate(
-      'UPDATE transactions SET category = ? WHERE id = ? AND account_id = ?',
-      [category, '$id', '${await aM.getAccountId()}'],
-    );
-    notifyListeners();
-    return count;
   }
 
-  Future<int?> handleTxAdd(
-    Map<String, dynamic> transaction,
-    int account_id,
-  ) async {
-    var rowID;
-    await insertTransaction(
-      TransactionObj(
-        desc: transaction['desc'],
-        type: transaction['type'],
-        source: transaction['source'],
-        amount: transaction['amount'],
-        date: transaction['date'],
-      ),
-    ).then((rwid) async {
-      rowID = rwid;
+  // Future<int?> handleTxAdd(
+  //   Map<String, dynamic> transaction,
+  //   int account_id,
+  // ) async {
+  //   var rowID;
+  //   await insertTransaction(
+  //     TransactionObj(
+  //       desc: transaction['desc'],
+  //       type: transaction['type'],
+  //       source: transaction['source'],
+  //       amount: transaction['amount'],
+  //       date: transaction['date'],
+  //     ),
+  //   ).then((rwid) async {
+  //     rowID = rwid;
+  //
+  //     transactions = getTransactions();
+  //   });
+  //   notifyListeners();
+  //   return rowID;
+  // }
 
-      transactions = getTransactions();
-    });
-    notifyListeners();
-    return rowID;
-  }
+  // Future<void> addNewTransaction(
+  //   Map<String, dynamic> transaction,
+  //   int account_id,
+  // ) async {
+  //   insertTransaction(
+  //     TransactionObj(
+  //       desc: transaction['desc'],
+  //       type: transaction["type"],
+  //       source: transaction["source"],
+  //       amount: transaction['amount'],
+  //       date: transaction['date'],
+  //       accountId: account_id,
+  //     ),
+  //   ).then((_) {
+  //     transactions = getTransactions();
+  //   });
+  //   notifyListeners();
+  // }
 
-  Future<void> addNewTransaction(
-    Map<String, dynamic> transaction,
-    int account_id,
-  ) async {
-    insertTransaction(
-      TransactionObj(
-        desc: transaction['desc'],
-        type: transaction["type"],
-        source: transaction["source"],
-        amount: transaction['amount'],
-        date: transaction['date'],
-        accountId: account_id,
-      ),
-    ).then((_) {
-      transactions = getTransactions();
-    });
-    notifyListeners();
-  }
-
-  Future<List<TransactionObj>> getTxById(int id) async {
-    final db = await getDb();
-    final List<Map<String, Object?>> transactionMaps = await db.query(
-      "transactions",
-      where: '"id=$id"',
-    );
-
-    log("found ${transactionMaps.length} uncategorized transaction");
-    return [
-      for (final {
-            'id': id as int,
-            'type': type as String,
-            'date': date as String,
-            'amount': amount as double,
-            'source': source as String,
-            'category': category as String?,
-            'account_id': accountId as int,
-            'desc': desc as String,
-          }
-          in transactionMaps)
-        TransactionObj(
-          id: id,
-          type: type,
-          amount: amount,
-          source: source,
-          date: date,
-          category: category,
-          accountId: accountId,
-          desc: desc,
-        ),
-    ];
-  }
+  // Future<List<TransactionObj>> getTxById(int id) async {
+  //   final db = await getDb();
+  //   final List<Map<String, Object?>> transactionMaps = await db.query(
+  //     "transactions",
+  //     where: '"id=$id"',
+  //   );
+  //
+  //   log("found ${transactionMaps.length} uncategorized transaction");
+  //   return [
+  //     for (final {
+  //           'id': id as int,
+  //           'type': type as String,
+  //           'date': date as String,
+  //           'amount': amount as double,
+  //           'source': source as String,
+  //           'category': category as String?,
+  //           'account_id': accountId as int,
+  //           'desc': desc as String,
+  //         }
+  //         in transactionMaps)
+  //       TransactionObj(
+  //         id: id,
+  //         type: type,
+  //         amount: amount,
+  //         source: source,
+  //         date: date,
+  //         category: category,
+  //         accountId: accountId,
+  //         desc: desc,
+  //       ),
+  //   ];
+  // }
 
   Future<List<TransactionObj>> getUncategorizedTx() async {
     List<TransactionObj> x = [];
@@ -216,6 +228,8 @@ class TransactionsModel extends ChangeNotifier {
           category: tx["category"] as String?,
           accountId: tx['account_id'] as int?,
           desc: tx['desc'] as String,
+
+          messageHashCode: tx['message_hash_code'] as String?,
         ).toString(),
       );
     });
@@ -230,6 +244,8 @@ class TransactionsModel extends ChangeNotifier {
               'category': category as String?,
               'account_id': accountId as int?,
               'desc': desc as String,
+
+              'message_hash_code': messageHashCode as String?,
             }
             in transactionMaps)
           {
@@ -243,6 +259,8 @@ class TransactionsModel extends ChangeNotifier {
                 category: category,
                 accountId: accountId,
                 desc: desc,
+
+                messageHashCode: messageHashCode,
               ),
             ),
           },
@@ -278,6 +296,8 @@ class TransactionsModel extends ChangeNotifier {
           category: tx["category"] as String?,
           accountId: tx["account_id"] as int,
           desc: tx['desc'] as String,
+
+          messageHashCode: tx['message_hash_code'] as String?,
         ).toString(),
       );
     });
@@ -291,6 +311,7 @@ class TransactionsModel extends ChangeNotifier {
             'category': category as String?,
             'account_id': accountId as int,
             'desc': desc as String,
+            'message_hash_code': messageHashCode as String?,
           }
           in transactionMaps) {
         x.add(
@@ -303,6 +324,7 @@ class TransactionsModel extends ChangeNotifier {
             category: category,
             accountId: accountId,
             desc: desc,
+            messageHashCode: messageHashCode,
           ),
         );
       }
@@ -312,92 +334,133 @@ class TransactionsModel extends ChangeNotifier {
     return x;
   }
 
-  Future<int> insertTransaction(TransactionObj transaction) async {
-    AuthModel aM;
-    if (!di.isRegistered<AuthModel>()) {
-      aM = AuthModel();
-    } else {
-      aM = di<AuthModel>();
-    }
-
-    final db = await getDb();
-
-    log("Inserting transaction");
-    int txId = await db.insert('transactions', transaction.toMap());
-    int? acId = await aM.getAccountId();
-    int updated = await db.rawUpdate(
-      'UPDATE transactions SET account_id = ? WHERE id = ? ',
-      ['$acId', '$txId'],
-    );
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int notiId = prefs.getInt('notification_id')!;
-    if (updated > 0) {
-      switch (transaction.type) {
-        case 'credit':
-          {
-            AwesomeNotifications().createNotification(
-              content: NotificationContent(
-                id: notiId,
-                displayOnForeground: true,
-                channelKey: 'budgetlite_silent',
-                actionType: ActionType.Default,
-                title: 'New transaction',
-                body: 'Credited from ${transaction.source}',
-              ),
-            );
-            break;
-          }
-        case 'from saving':
-          {
-            AwesomeNotifications().createNotification(
-              content: NotificationContent(
-                id: notiId,
-                channelKey: 'budgetlite_silent',
-                actionType: ActionType.Default,
-                title: 'New transaction',
-                body: 'transfered from Savings',
-              ),
-            );
-
-            break;
-          }
-        case 'to saving':
-          {
-            AwesomeNotifications().createNotification(
-              content: NotificationContent(
-                id: notiId,
-                channelKey: 'budgetlite_silent',
-                actionType: ActionType.Default,
-                title: 'New transaction',
-                body: 'transfered to savings',
-              ),
-            );
-
-            break;
-          }
-        case 'spend':
-          {
-            AwesomeNotifications().createNotification(
-              content: NotificationContent(
-                id: notiId,
-                channelKey: 'budgetlite_silent',
-                actionType: ActionType.Default,
-                title: 'New transaction',
-                body: 'Click to set budget category',
-              ),
-            );
-
-            break;
-          }
-
-        default:
-          {}
+  Future<Result<int?>> insertTransaction(TransactionObj transaction) async {
+    try {
+      AuthModel aM;
+      if (!di.isRegistered<AuthModel>()) {
+        aM = AuthModel();
+      } else {
+        aM = di<AuthModel>();
       }
-    }
 
-    prefs.setInt('notification_id', prefs.getInt('notification_id')! + 1);
-    refreshTx();
-    notifyListeners();
-    return txId;
+      final db = await getDb();
+
+      log("Inserting transaction");
+      var txs = await db.query(
+        'transactions',
+        where: 'message_hash_code = ?',
+        whereArgs: ['${transaction.messageHashCode}'],
+      );
+      bool exists = txs.isNotEmpty;
+      if (!exists) {
+        int txId = await db.insert('transactions', transaction.toMap());
+        int? acId = await aM.getAccountId();
+        int updated = await db.rawUpdate(
+          'UPDATE transactions SET account_id = ? WHERE id = ? ',
+          ['$acId', '$txId'],
+        );
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        int notiId = prefs.getInt('notification_id')!;
+        if (updated > 0) {
+          switch (transaction.type) {
+            case 'credit':
+              {
+                AwesomeNotifications().createNotification(
+                  content: NotificationContent(
+                    id: notiId,
+                    displayOnForeground: true,
+                    channelKey: 'budgetlite_silent',
+                    actionType: ActionType.Default,
+                    title: 'New transaction',
+                    body: 'Credited from ${transaction.source}',
+                  ),
+                );
+                prefs.setInt(
+                  'notification_id',
+                  prefs.getInt('notification_id')! + 1,
+                );
+                refreshTx();
+                notifyListeners();
+                return Result.ok(txId);
+              }
+            case 'from saving':
+              {
+                AwesomeNotifications().createNotification(
+                  content: NotificationContent(
+                    id: notiId,
+                    channelKey: 'budgetlite_silent',
+                    actionType: ActionType.Default,
+                    title: 'New transaction',
+                    body: 'transfered from Savings',
+                  ),
+                );
+
+                prefs.setInt(
+                  'notification_id',
+                  prefs.getInt('notification_id')! + 1,
+                );
+                refreshTx();
+                notifyListeners();
+                return Result.ok(txId);
+              }
+            case 'to saving':
+              {
+                AwesomeNotifications().createNotification(
+                  content: NotificationContent(
+                    id: notiId,
+                    channelKey: 'budgetlite_silent',
+                    actionType: ActionType.Default,
+                    title: 'New transaction',
+                    body: 'transfered to savings',
+                  ),
+                );
+
+                prefs.setInt(
+                  'notification_id',
+                  prefs.getInt('notification_id')! + 1,
+                );
+                refreshTx();
+                notifyListeners();
+                return Result.ok(txId);
+              }
+            case 'spend':
+              {
+                AwesomeNotifications().createNotification(
+                  content: NotificationContent(
+                    id: notiId,
+                    channelKey: 'budgetlite_silent',
+                    actionType: ActionType.Default,
+                    title: 'New transaction',
+                    body: 'Click to set budget category',
+                  ),
+                );
+
+                prefs.setInt(
+                  'notification_id',
+                  prefs.getInt('notification_id')! + 1,
+                );
+                refreshTx();
+                notifyListeners();
+                return Result.ok(txId);
+              }
+
+            default:
+              {
+                refreshTx();
+                notifyListeners();
+                return Result.ok(txId);
+              }
+          }
+        } else {
+          return Result.ok(txId);
+        }
+      } else {
+        return Result.error(TransactionExists());
+      }
+    } on Exception catch (e) {
+      debugPrint('Error occured inserting tx:$e');
+      log('Error occured inserting tx:', error: e);
+      return Result.error(e);
+    }
   }
 }

@@ -27,6 +27,7 @@ class InitialBalanceState extends State<InitialBalance> {
     return Scaffold(
       body: SafeArea(
         child: Container(
+          height: double.infinity,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.centerLeft,

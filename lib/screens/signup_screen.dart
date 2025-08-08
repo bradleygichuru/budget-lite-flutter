@@ -302,6 +302,25 @@ class SignUpFormState extends State<SignupForm> {
                                                   }
                                               }
                                             }
+                                          default:
+                                            {
+                                              {
+                                                setState(() {
+                                                  _isLoading = false;
+                                                });
+                                                signUpScaffoldKey.currentState!
+                                                    .showSnackBar(
+                                                      SnackBar(
+                                                        behavior:
+                                                            SnackBarBehavior
+                                                                .floating,
+                                                        content: const Text(
+                                                          "Error Signing Up",
+                                                        ),
+                                                      ),
+                                                    );
+                                              }
+                                            }
                                         }
                                       } catch (e) {
                                         log('SignUp Error:$e');

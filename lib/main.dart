@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'package:another_telephony/telephony.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter_application_1/data_models/categories_data_model.dart';
 import 'package:loading_overlay/loading_overlay.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -57,29 +59,47 @@ setUpNotificationIds() async {
   }
 }
 
+Future<void> requestSmsPermission() async {
+  AwesomeNotifications().isNotificationAllowed();
+  final permission = await AwesomeNotifications().isNotificationAllowed();
+
+  // SharedPreferences prefs = await SharedPreferences.getInstance();
+
+  if (!permission) {
+    log("sms permissions: false");
+    var status = await AwesomeNotifications()
+        .requestPermissionToSendNotifications();
+    if (status) {}
+  }
+  if (permission) {
+    log("sms permissions: true");
+  }
+}
+
 Future<void> main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   await dotenv.load(fileName: ".env");
   // final db = await getDb();
   // await db.execute(
-  //   'ALTER TABLE accounts ADD COLUMN resetPending TEXT default 0',
+  //   'ALTER TABLE transactions ADD COLUMN message_hash_code INTEGER UNIQUE',
   // );
+  // await db.execute('DELETE FROM transactions');
   // await deleteDatabase(
   //   join(await getDatabasesPath(), 'budget_lite_database.db'),
   // );
-  await appDbInit();
   // SharedPreferences prefs = await SharedPreferences.getInstance();
   // prefs.remove("budget_lite_current_account_id");
 
   setUpNotificationIds();
+  requestSmsPermission();
   AwesomeNotifications().initialize(
     // set the icon to null if you want to use the default app icon
     null,
     [
       NotificationChannel(
-        importance: NotificationImportance.High,
-        channelGroupKey: 'service_channel_group',
+        importance: NotificationImportance.Low,
+        // channelGroupKey: 'service_channel_group',
         channelKey: 'service_channel',
         channelName: 'Budgetlite Service silent notifications',
         channelDescription: 'Budgetlite Service silent notifications channel',
@@ -87,9 +107,8 @@ Future<void> main() async {
         ledColor: Colors.white,
         playSound: false,
       ),
-
       NotificationChannel(
-        channelGroupKey: 'budgetlite_silent_group',
+        // channelGroupKey: 'budgetlite_silent_group',
         channelKey: 'budgetlite_silent',
         channelName: 'Budgetlite silent notifications',
         channelDescription: 'Budgetlite silent notifications channel',
@@ -98,7 +117,7 @@ Future<void> main() async {
         playSound: false,
       ),
       NotificationChannel(
-        channelGroupKey: 'basic_channel_group',
+        // channelGroupKey: 'basic_channel_group',
         channelKey: 'basic_channel',
         channelName: 'Basic notifications',
         channelDescription: 'Default Notification channel',
@@ -108,15 +127,17 @@ Future<void> main() async {
       ),
     ],
     // Channel groups are only visual and are not required
-    channelGroups: [
-      NotificationChannelGroup(
-        channelGroupKey: 'basic_channel_group',
-        channelGroupName: 'Basic group',
-      ),
-    ],
-    debug: true,
+    // channelGroups: [
+    //   NotificationChannelGroup(
+    //     channelGroupKey: 'basic_channel_group',
+    //     channelGroupName: 'Basic group',
+    //   ),
+    // ],
+    debug: kDebugMode,
   );
   // await Upgrader.clearSavedSettings();
+
+  await appDbInit();
   setup();
   // await SentryFlutter.init((options) {
   //   options.dsn = dotenv.env['SENTRY_DSN'];
@@ -150,6 +171,7 @@ class MyApp extends StatefulWidget with WatchItStatefulWidgetMixin {
 }
 
 class MyAppState extends State<MyApp> {
+  final telephony = Telephony.instance;
   Future<List<TransactionObj>> unCategorizedTxs = Future.value([]);
   String newApkUrl = '';
   bool isUpdating = false;
@@ -220,26 +242,176 @@ class MyAppState extends State<MyApp> {
     });
     FlutterNativeSplash.remove();
     super.initState();
+    // initPlatformState();
   }
 
-  // Future<void> initPlatformState() async {
-  //   // Platform messages may fail, so we use a try/catch PlatformException.
-  //   // If the widget was removed from the tree while the asynchronous platform
-  //   // message was in flight, we want to discard the reply rather than calling
-  //   // setState to update our non-existent appearance.
-  //   if (await di.get<AuthModel>().getRegion() == Country.kenya.name) {
-  //     final bool? result = await telephony.requestPhoneAndSmsPermissions;
+  // onMessageForeground(SmsMessage message) async {
+  //   try {
+  //     TransactionsModel txM = di.get<TransactionsModel>();
+  //     WalletModel wM = di.get<WalletModel>();
+  //     AuthModel aM = di.get<AuthModel>();
+  //     String? currentRegion = aM.region;
   //
-  //     if (result != null && result) {
-  //       telephony.listenIncomingSms(
-  //         onNewMessage: onMessage,
-  //         onBackgroundMessage: backgroundMessageHandler,
-  //       );
+  //     log('from:${message.address} message:${message.body}');
+  //     log('tx parsing for region: $currentRegion');
+  //
+  //     int? accountId = await aM.getAccountId();
+  //     if (message.address == 'MPESA') {
+  //       log('parsing mpesa tx message');
+  //       var transaction = parseMpesa(message);
+  //
+  //       log('foreground_transaction:$transaction');
+  //       if (transaction != null && accountId != null) {
+  //         if (transaction['type'] == TxType.credit.val) {
+  //           TransactionObj tx = TransactionObj(
+  //             desc: transaction['desc'],
+  //             type: transaction['type'],
+  //             source: transaction['source'],
+  //             amount: transaction['amount'],
+  //             date: transaction['date'],
+  //             category: 'credit',
+  //           );
+  //           wM.creditDefaultWallet(tx);
+  //         } else if (transaction['type'] == TxType.fromSaving.val) {
+  //           TransactionObj tx = TransactionObj(
+  //             desc: transaction['desc'],
+  //             type: transaction['type'],
+  //             category: 'credit',
+  //             source: transaction['source'],
+  //             amount: transaction['amount'],
+  //             date: transaction['date'],
+  //           );
+  //           wM.removeFromSavings(tx);
+  //         } else if (transaction['type'] == TxType.toSaving.val) {
+  //           TransactionObj tx = TransactionObj(
+  //             desc: transaction['desc'],
+  //             type: transaction['type'],
+  //             source: transaction['source'],
+  //             category: 'savings',
+  //             amount: transaction['amount'],
+  //             date: transaction['date'],
+  //           );
+  //           wM.addToSavings(tx);
+  //         } else {
+  //           TransactionObj tx = TransactionObj(
+  //             desc: transaction['desc'],
+  //             type: transaction['type'],
+  //             source: transaction['source'],
+  //             amount: transaction['amount'],
+  //             date: transaction['date'],
+  //           );
+  //           txM.insertTransaction(tx);
+  //         }
+  //       }
   //     }
-  //   }
+  //     if (message.address == 'NCBA_BANK') {
+  //       var transaction = parseNCBA(message);
   //
-  //   if (!mounted) return;
+  //       log('foreground_transaction:$transaction');
+  //       if (transaction != null && accountId != null) {
+  //         if (transaction['type'] == TxType.credit.val) {
+  //           TransactionObj tx = TransactionObj(
+  //             desc: transaction['desc'],
+  //             type: transaction['type'],
+  //             source: transaction['source'],
+  //             amount: transaction['amount'],
+  //             date: transaction['date'],
+  //             category: 'credit',
+  //           );
+  //           wM.creditDefaultWallet(tx);
+  //         } else if (transaction['type'] == TxType.fromSaving.val) {
+  //           TransactionObj tx = TransactionObj(
+  //             desc: transaction['desc'],
+  //             type: transaction['type'],
+  //             category: 'credit',
+  //             source: transaction['source'],
+  //             amount: transaction['amount'],
+  //             date: transaction['date'],
+  //           );
+  //           wM.removeFromSavings(tx);
+  //         } else if (transaction['type'] == TxType.toSaving.val) {
+  //           TransactionObj tx = TransactionObj(
+  //             desc: transaction['desc'],
+  //             type: transaction['type'],
+  //             source: transaction['source'],
+  //             category: 'savings',
+  //             amount: transaction['amount'],
+  //             date: transaction['date'],
+  //           );
+  //           wM.addToSavings(tx);
+  //         } else if (transaction['type'] == TxType.spend.val) {
+  //           TransactionObj tx = TransactionObj(
+  //             desc: transaction['desc'],
+  //             type: transaction['type'],
+  //             source: transaction['source'],
+  //             amount: transaction['amount'],
+  //             date: transaction['date'],
+  //           );
+  //           txM.insertTransaction(tx);
+  //         }
+  //       }
+  //     }
+  //
+  //     if (message.address == 'Equity Bank') {
+  //       log('parsing Equity tx message');
+  //       var transaction = parseEquity(message);
+  //
+  //       log('foreground_transaction:$transaction');
+  //       log('from:${message.address} message:${message.body}');
+  //       if (transaction != null) {
+  //         if (transaction['type'] == TxType.spend.val) {
+  //           TransactionObj tx = TransactionObj(
+  //             desc: transaction['desc'],
+  //             type: transaction['type'],
+  //             source: transaction['source'],
+  //             amount: transaction['amount'],
+  //             date: transaction['date'],
+  //           );
+  //           txM.insertTransaction(tx);
+  //         }
+  //       }
+  //     }
+  //   } catch (e) {
+  //     log('Error in background message', error: e);
+  //   }
   // }
+
+  Future<void> initPlatformState() async {
+    // Platform messages may fail, so we use a try/catch PlatformException.
+    // If the widget was removed from the tree while the asynchronous platform
+    // message was in flight, we want to discard the reply rather than calling
+    // setState to update our non-existent appearance.
+    // if (await di.get<AuthModel>().getRegion() == Country.kenya.name) {
+    //   final bool? result = await telephony.requestPhoneAndSmsPermissions;
+    //
+    //   if (result != null && result) {
+    //     telephony.listenIncomingSms(
+    //       onNewMessage: onMessage,
+    //       onBackgroundMessage: backgroundMessageHandler,
+    //     );
+    //   }
+    // }
+
+    final bool? result = await telephony.requestPhoneAndSmsPermissions;
+
+    if (result != null && result) {
+      List<SmsMessage> messages = await telephony.getInboxSms(
+        columns: [SmsColumn.ADDRESS, SmsColumn.BODY],
+        filter: SmsFilter.where(SmsColumn.ADDRESS).equals("MPESA"),
+        sortOrder: [
+          OrderBy(SmsColumn.ADDRESS, sort: Sort.ASC),
+          OrderBy(SmsColumn.BODY),
+        ],
+      );
+      for (var message in messages) {
+        debugPrint(
+          'messageHashCode:${message.hashCode},messageSentDate:${message.dateSent},messageId:${message.id},messageBody:${message.body}',
+        );
+      }
+    }
+
+    if (!mounted) return;
+  }
 
   void _onStateChanged(AppLifecycleState state) {
     switch (state) {
@@ -358,7 +530,7 @@ class MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return isUpdating
         ? isUpdatingDialog()
-        : handleUncategorized
+        : (handleUncategorized && !di<AuthModel>().isNewUser)
         ? MaterialApp(
             navigatorKey: AppGlobal.navigatorKey,
             theme: ThemeData(
@@ -542,7 +714,7 @@ class MyAppState extends State<MyApp> {
                                               ),
                                               onPressed: categorizing
                                                   ? null
-                                                  : () {
+                                                  : () async {
                                                       if (category.isNotEmpty &&
                                                           snapshot
                                                                   .data![index]
@@ -551,60 +723,112 @@ class MyAppState extends State<MyApp> {
                                                         setState(() {
                                                           categorizing = true;
                                                         });
-                                                        txM
-                                                            .setTxCategory(
+                                                        Result res = await ctm
+                                                            .handleCatBalanceCompute(
                                                               category,
                                                               snapshot
-                                                                  .data![index]
-                                                                  .id!,
-                                                            )
-                                                            .then((
-                                                              count,
-                                                            ) async {
-                                                              if (count > 0) {
-                                                                Result
-                                                                res = await ctm
-                                                                    .handleCatBalanceCompute(
-                                                                      category,
-                                                                      snapshot
-                                                                          .data![index],
-                                                                    );
-                                                                switch (res) {
-                                                                  case Ok():
-                                                                    {
-                                                                      unCategorizedTxs =
-                                                                          txM.getUncategorizedTx();
-                                                                      txM.refreshTx();
-                                                                      setState(() {
-                                                                        categorizing =
-                                                                            false;
-                                                                      });
+                                                                  .data![index],
+                                                            );
+                                                        switch (res) {
+                                                          case Ok():
+                                                            {
+                                                              ScaffoldMessenger.of(
+                                                                context,
+                                                              ).showSnackBar(
+                                                                SnackBar(
+                                                                  content: Text(
+                                                                    'Tx of id ${snapshot.data![index].id} categorized',
+                                                                    style: TextStyle(
+                                                                      color: Colors
+                                                                          .green,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              );
+                                                              setState(() {
+                                                                unCategorizedTxs =
+                                                                    txM.getUncategorizedTx();
+                                                              });
+                                                              txM.refreshTx();
+                                                              setState(() {
+                                                                categorizing =
+                                                                    false;
+                                                              });
 
-                                                                      break;
-                                                                    }
-
-                                                                  default:
-                                                                    {
-                                                                      ScaffoldMessenger.of(
-                                                                        context,
-                                                                      ).showSnackBar(
-                                                                        SnackBar(
-                                                                          content: Text(
-                                                                            'error occured',
-                                                                            style: TextStyle(
-                                                                              color: Colors.red,
-                                                                            ),
+                                                              break;
+                                                            }
+                                                          case Error():
+                                                            {
+                                                              switch (res
+                                                                  .error) {
+                                                                case ErrorUpdatingCategory():
+                                                                  {
+                                                                    ScaffoldMessenger.of(
+                                                                      context,
+                                                                    ).showSnackBar(
+                                                                      SnackBar(
+                                                                        content: Text(
+                                                                          'Error updating category',
+                                                                          style: TextStyle(
+                                                                            color:
+                                                                                Colors.red,
                                                                           ),
                                                                         ),
-                                                                      );
-                                                                      setState(() {
-                                                                        categorizing =
-                                                                            false;
-                                                                      });
-                                                                    }
-                                                                }
+                                                                      ),
+                                                                    );
+                                                                    setState(() {
+                                                                      categorizing =
+                                                                          false;
+                                                                    });
+                                                                    break;
+                                                                  }
+                                                                default:
+                                                                  {
+                                                                    ScaffoldMessenger.of(
+                                                                      context,
+                                                                    ).showSnackBar(
+                                                                      SnackBar(
+                                                                        content: Text(
+                                                                          'Error occured while categorizing transaction',
+                                                                          style: TextStyle(
+                                                                            color:
+                                                                                Colors.red,
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                    );
+                                                                    setState(() {
+                                                                      categorizing =
+                                                                          false;
+                                                                    });
+
+                                                                    break;
+                                                                  }
                                                               }
-                                                            });
+                                                            }
+
+                                                          default:
+                                                            {
+                                                              ScaffoldMessenger.of(
+                                                                context,
+                                                              ).showSnackBar(
+                                                                SnackBar(
+                                                                  content: Text(
+                                                                    'Error occured',
+                                                                    style: TextStyle(
+                                                                      color: Colors
+                                                                          .red,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              );
+                                                              setState(() {
+                                                                categorizing =
+                                                                    false;
+                                                              });
+                                                              break;
+                                                            }
+                                                        }
                                                       }
                                                     },
                                               child: Text(

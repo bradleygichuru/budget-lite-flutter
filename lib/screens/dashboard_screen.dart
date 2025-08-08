@@ -337,7 +337,20 @@ class DashboardState extends State<Dashboard> {
                   }
                   if ((snapshot.data ?? []).isEmpty) {
                     return SliverToBoxAdapter(
-                      child: Center(child: Text("No transactions found")),
+                      child: Padding(
+                        padding: EdgeInsetsGeometry.symmetric(horizontal: 5),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: EdgeInsetsGeometry.symmetric(
+                                horizontal: 5,
+                              ),
+                              child: Text("No transactions found"),
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   }
                 }

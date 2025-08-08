@@ -20,7 +20,7 @@ Future<Database> getDb() async {
         "CREATE TABLE IF NOT EXISTS wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT,savings REAL, account_id INTEGER,FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)",
       );
       db.execute(
-        'CREATE TABLE IF NOT EXISTS transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT,category TEXT,desc TEXT,account_id INTEGER,FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)',
+        'CREATE TABLE IF NOT EXISTS transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT,category TEXT,desc TEXT,account_id INTEGER,message_hash_code TEXT UNIQUE,FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)',
       );
       db.execute(
         "CREATE TABLE IF NOT EXISTS categories(id INTEGER PRIMARY KEY,budget REAL,category_name TEXT,spent REAL,account_id INTEGER,FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)",
@@ -56,7 +56,7 @@ appDbInit() async {
         "CREATE TABLE IF NOT EXISTS wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT,savings REAL, account_id INTEGER,FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)",
       );
       db.execute(
-        'CREATE TABLE IF NOT EXISTS transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT,category TEXT,desc TEXT,account_id INTEGER,FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)',
+        'CREATE TABLE IF NOT EXISTS transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT,category TEXT,desc TEXT,account_id INTEGER, message_hash_code TEXT UNIQUE,FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)',
       );
       db.execute(
         "CREATE TABLE IF NOT EXISTS categories(id INTEGER PRIMARY KEY,budget REAL,category_name TEXT,spent REAL,account_id INTEGER,FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)",

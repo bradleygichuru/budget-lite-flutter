@@ -18,6 +18,7 @@ import 'package:flutter_application_1/view_models/goals.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const notificationChannelId = 'service_channel';
@@ -25,7 +26,41 @@ const notificationChannelId = 'service_channel';
 // this will be used for notification id, So you can update your custom notification with this id.
 const notificationId = 888;
 
+Future<void> requestSmsPermissions() async {
+  AwesomeNotifications().isNotificationAllowed();
+  final permission = await AwesomeNotifications().isNotificationAllowed();
+
+  // SharedPreferences prefs = await SharedPreferences.getInstance();
+
+  if (!permission) {
+    log("sms permissions: false");
+    var status = await AwesomeNotifications()
+        .requestPermissionToSendNotifications();
+    if (status) {}
+  }
+  if (permission) {
+    log("sms permissions: true");
+  }
+}
+
+Future<void> requestListeningPermissions() async {
+  final permission = Permission.sms;
+  // SharedPreferences prefs = await SharedPreferences.getInstance();
+
+  await Telephony.instance.requestPhoneAndSmsPermissions;
+  if (await permission.isDenied) {
+    log("sms permissions: false");
+    var status = await permission.request();
+    if (status.isGranted) {}
+  }
+  if (await permission.isGranted) {
+    log("sms permissions: true");
+  }
+}
+
 Future<void> initializeService() async {
+  await requestSmsPermissions();
+  await requestListeningPermissions();
   final service = FlutterBackgroundService();
   await service.configure(
     androidConfiguration: AndroidConfiguration(
@@ -35,7 +70,7 @@ Future<void> initializeService() async {
 
       // auto start service
       autoStart: true,
-      isForegroundMode: false,
+      isForegroundMode: true,
       notificationChannelId: 'service_channel',
       foregroundServiceNotificationId: 888,
       initialNotificationTitle: 'Budgetlite tx discovery service',
@@ -53,52 +88,6 @@ Future<void> initializeService() async {
       onBackground: onIosBackground,
     ),
   );
-  // final service = FlutterBackgroundService();
-  //
-  // const AndroidNotificationChannel channel = AndroidNotificationChannel(
-  //   notificationChannelId, // id
-  //   'Budgetlite tx discovery service', // title
-  //   description:
-  //       'This channel is used for important notifications.', // description
-  //   importance: Importance.low, // importance must be at low or higher level
-  // );
-  //
-  // final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-  //     FlutterLocalNotificationsPlugin();
-  //
-  // await flutterLocalNotificationsPlugin
-  //     .resolvePlatformSpecificImplementation<
-  //       AndroidFlutterLocalNotificationsPlugin
-  //     >()
-  //     ?.createNotificationChannel(channel);
-  //
-  // await service.configure(
-  //   androidConfiguration: AndroidConfiguration(
-  //     // this will be executed when app is in foreground or background in separated isolate
-  //     onStart: onStart,
-  //
-  //     autoStartOnBoot: true,
-  //     // auto start service
-  //     autoStart: true,
-  //     isForegroundMode: true,
-  //
-  //     notificationChannelId:
-  //         notificationChannelId, // this must match with notification channel you created above.
-  //     initialNotificationTitle: 'AWESOME SERVICE',
-  //     initialNotificationContent: 'Initializing',
-  //     foregroundServiceNotificationId: notificationId,
-  //   ),
-  //   iosConfiguration: IosConfiguration(
-  //     // auto start service
-  //     autoStart: true,
-  //
-  //     // this will be executed when app is in foreground in separated isolate
-  //     onForeground: onStart,
-  //
-  //     // you have to enable background fetch capability on xcode project
-  //     onBackground: onIosBackground,
-  //   ),
-  // );
 }
 
 // to ensure this is executed
@@ -123,8 +112,9 @@ void onStart(ServiceInstance service) async {
   WidgetsFlutterBinding.ensureInitialized();
   // DartPluginRegistrant.ensureInitialized();
 
-  final telephony = Telephony.backgroundInstance;
+  final telephony = Telephony.instance;
   final cron = Cron();
+  // 0 8 * * *
   cron.schedule(Schedule.parse('0 8 * * *'), dailyBudgetAlert); //every day at 8
   cron.schedule(
     Schedule.parse('0 0 1 * *'),
@@ -153,14 +143,13 @@ void onStart(ServiceInstance service) async {
       locked: true,
     ),
   );
-  final bool? result = await telephony.requestPhoneAndSmsPermissions;
 
-  if (result != null && result) {
-    telephony.listenIncomingSms(
-      onNewMessage: onMessage,
-      onBackgroundMessage: backgroundMessageHandler,
-    );
-  }
+  // if (result != null && result) {
+  //   telephony.listenIncomingSms(
+  //     onNewMessage: onMessageForegroundBGH,
+  //     onBackgroundMessage: backgroundMessageHandler,
+  //   );
+  // }
 
   if (service is AndroidServiceInstance) {
     service.on('setAsForeground').listen((event) {
@@ -175,6 +164,20 @@ void onStart(ServiceInstance service) async {
   service.on('stopService').listen((event) {
     AwesomeNotifications().dismiss(888);
     service.stopSelf();
+  });
+
+  Timer.periodic(Duration(minutes: 2), (timer) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool isNewUser = prefs.getBool("isNewUser") ?? true;
+    debugPrint('Is new user:$isNewUser');
+    int? acid = prefs.getInt("budget_lite_current_account_id");
+    debugPrint('acid:$acid');
+    if (acid != null && !isNewUser) {
+      debugPrint('Running tx discovery');
+      queryMpesa();
+      queryNcba();
+      queryEquity();
+    }
   });
 
   // bring to foreground
@@ -195,311 +198,268 @@ void onStart(ServiceInstance service) async {
   // });
 }
 
-onMessage(SmsMessage message) async {
-  try {
-    TransactionsModel txM = TransactionsModel();
-    WalletModel wM = WalletModel();
-    AuthModel aM = AuthModel();
-    String? currentRegion = aM.region;
-
-    log('from:${message.address} message:${message.body}');
-    log('tx parsing for region: $currentRegion');
-    // if (message.address == '0123456789' && kDebugMode) {
-    //   log('parsing mpesa tx message');
-    //   var transaction = parseMpesa(message);
-    //
-    //   int? accountId = await aM.getAccountId();
-    //   log('foreground_transaction:$transaction');
-    //   if (transaction != null && accountId != null) {
-    //     if (transaction['type'] == TxType.credit.val) {
-    //       TransactionObj tx = TransactionObj(
-    //         desc: transaction['desc'],
-    //         type: transaction['type'],
-    //         source: transaction['source'],
-    //         amount: transaction['amount'],
-    //         date: transaction['date'],
-    //         category: 'credit',
-    //       );
-    //       wM.creditDefaultWallet(tx);
-    //     } else if (transaction['type'] == TxType.fromSaving.val) {
-    //       TransactionObj tx = TransactionObj(
-    //         desc: transaction['desc'],
-    //         type: transaction['type'],
-    //         category: 'credit',
-    //         source: transaction['source'],
-    //         amount: transaction['amount'],
-    //         date: transaction['date'],
-    //       );
-    //       wM.removeFromSavings(tx);
-    //     } else if (transaction['type'] == TxType.toSaving.val) {
-    //       TransactionObj tx = TransactionObj(
-    //         desc: transaction['desc'],
-    //         type: transaction['type'],
-    //         source: transaction['source'],
-    //         category: 'savings',
-    //         amount: transaction['amount'],
-    //         date: transaction['date'],
-    //       );
-    //       wM.addToSavings(tx);
-    //     } else {
-    //       TransactionObj tx = TransactionObj(
-    //         desc: transaction['desc'],
-    //         type: transaction['type'],
-    //         source: transaction['source'],
-    //         amount: transaction['amount'],
-    //         date: transaction['date'],
-    //       );
-    //       txM.insertTransaction(tx);
-    //     }
-    //   }
-    // }
-    if (message.address == 'MPESA') {
-      log('parsing mpesa tx message');
-      var transaction = parseMpesa(message);
-
-      int? accountId = await aM.getAccountId();
-      log('foreground_transaction:$transaction');
-      if (transaction != null && accountId != null) {
-        if (transaction['type'] == TxType.credit.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-            category: 'credit',
-          );
-          wM.creditDefaultWallet(tx);
-        } else if (transaction['type'] == TxType.fromSaving.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            category: 'credit',
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          wM.removeFromSavings(tx);
-        } else if (transaction['type'] == TxType.toSaving.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            category: 'savings',
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          wM.addToSavings(tx);
-        } else {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          txM.insertTransaction(tx);
-        }
-      }
-    }
-    if (message.address == 'Equity Bank') {
-      log('parsing Equity tx message');
-      var transaction = parseEquity(message);
-      log('from:${message.address} message:${message.body}');
-      if (transaction != null) {
-        if (transaction['type'] == TxType.spend.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          txM.insertTransaction(tx);
-        }
-      }
-    }
-  } catch (e) {
-    log('Error in background message', error: e);
-  }
-}
-
-@pragma('vm:entry-point')
-backgroundMessageHandler(SmsMessage message) async {
-  //Handle background message
-  try {
-    TransactionsModel txM = TransactionsModel();
-    WalletModel wM = WalletModel();
-    AuthModel aM = AuthModel();
-    String? currentRegion = aM.region;
-
-    int? accountId = await aM.getAccountId();
-    log('from:${message.address} message:${message.body}');
-
-    log('tx parsing for region: $currentRegion');
-    // if (message.address == '0123456789' && kDebugMode) {
-    //   log('parsing mpesa tx message in debug');
-    //   var transaction = parseMpesa(message);
-    //
-    //   int? accountId = await aM.getAccountId();
-    //   log('foreground_transaction:$transaction');
-    //   if (transaction != null && accountId != null) {
-    //     if (transaction['type'] == TxType.credit.val) {
-    //       TransactionObj tx = TransactionObj(
-    //         desc: transaction['desc'],
-    //         type: transaction['type'],
-    //         source: transaction['source'],
-    //         amount: transaction['amount'],
-    //         date: transaction['date'],
-    //         category: 'credit',
-    //       );
-    //       wM.creditDefaultWallet(tx);
-    //     } else if (transaction['type'] == TxType.fromSaving.val) {
-    //       TransactionObj tx = TransactionObj(
-    //         desc: transaction['desc'],
-    //         type: transaction['type'],
-    //         category: 'credit',
-    //         source: transaction['source'],
-    //         amount: transaction['amount'],
-    //         date: transaction['date'],
-    //       );
-    //       wM.removeFromSavings(tx);
-    //     } else if (transaction['type'] == TxType.toSaving.val) {
-    //       TransactionObj tx = TransactionObj(
-    //         desc: transaction['desc'],
-    //         type: transaction['type'],
-    //         source: transaction['source'],
-    //         category: 'savings',
-    //         amount: transaction['amount'],
-    //         date: transaction['date'],
-    //       );
-    //       wM.addToSavings(tx);
-    //     } else {
-    //       TransactionObj tx = TransactionObj(
-    //         desc: transaction['desc'],
-    //         type: transaction['type'],
-    //         source: transaction['source'],
-    //         amount: transaction['amount'],
-    //         date: transaction['date'],
-    //       );
-    //       txM.insertTransaction(tx);
-    //     }
-    //   }
-    // }
-    if (message.address == 'MPESA') {
-      var transaction = parseMpesa(message);
-      log('from:${message.address} message:${message.body}');
-
-      log('background_transaction:$transaction');
-      if (transaction != null && accountId != null) {
-        if (transaction['type'] == TxType.credit.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-            category: 'credit',
-          );
-          wM.creditDefaultWallet(tx);
-        } else if (transaction['type'] == TxType.fromSaving.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            category: 'credit',
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          wM.removeFromSavings(tx);
-        } else if (transaction['type'] == TxType.toSaving.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            category: 'savings',
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          wM.addToSavings(tx);
-        } else {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          txM.insertTransaction(tx);
-        }
-      }
-    }
-    if (message.address == 'NCBA_BANK') {
-      var transaction = parseNCBA(message);
-      if (transaction != null && accountId != null) {
-        if (transaction['type'] == TxType.credit.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-            category: 'credit',
-          );
-          wM.creditDefaultWallet(tx);
-        } else if (transaction['type'] == TxType.fromSaving.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            category: 'credit',
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          wM.removeFromSavings(tx);
-        } else if (transaction['type'] == TxType.toSaving.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            category: 'savings',
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          wM.addToSavings(tx);
-        } else if (transaction['type'] == TxType.spend.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          txM.insertTransaction(tx);
-        }
-      }
-    }
-
-    if (message.address == 'Equity Bank') {
-      var transaction = parseEquity(message);
-      log('from:${message.address} message:${message.body}');
-      if (transaction != null && accountId != null) {
-        if (transaction['type'] == TxType.spend.val) {
-          TransactionObj tx = TransactionObj(
-            desc: transaction['desc'],
-            type: transaction['type'],
-            source: transaction['source'],
-            amount: transaction['amount'],
-            date: transaction['date'],
-          );
-          txM.insertTransaction(tx);
-        }
-      }
-    }
-  } catch (e) {
-    log('Error in background message', error: e);
-  }
-}
+// onMessageForegroundBGH(SmsMessage message) async {
+//   try {
+//     TransactionsModel txM = TransactionsModel();
+//     WalletModel wM = WalletModel();
+//     AuthModel aM = AuthModel();
+//
+//     log('from:${message.address} message:${message.body}');
+//     log('tx parsing for region: ${aM.region}');
+//
+//     int? accountId = await aM.getAccountId();
+//     if (message.address == 'MPESA') {
+//       log('parsing mpesa tx message');
+//       var transaction = parseMpesa(message);
+//
+//       log('foreground_transaction:$transaction');
+//       if (transaction != null && accountId != null) {
+//         if (transaction['type'] == TxType.credit.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//             category: 'credit',
+//           );
+//           wM.creditDefaultWallet(tx);
+//         } else if (transaction['type'] == TxType.fromSaving.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             category: 'credit',
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           wM.removeFromSavings(tx);
+//         } else if (transaction['type'] == TxType.toSaving.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             category: 'savings',
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           wM.addToSavings(tx);
+//         } else {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           txM.insertTransaction(tx);
+//         }
+//       }
+//     }
+//     if (message.address == 'NCBA_BANK') {
+//       var transaction = parseNCBA(message);
+//
+//       log('foreground_transaction:$transaction');
+//       if (transaction != null && accountId != null) {
+//         if (transaction['type'] == TxType.credit.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//             category: 'credit',
+//           );
+//           wM.creditDefaultWallet(tx);
+//         } else if (transaction['type'] == TxType.fromSaving.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             category: 'credit',
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           wM.removeFromSavings(tx);
+//         } else if (transaction['type'] == TxType.toSaving.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             category: 'savings',
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           wM.addToSavings(tx);
+//         } else if (transaction['type'] == TxType.spend.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           txM.insertTransaction(tx);
+//         }
+//       }
+//     }
+//
+//     if (message.address == 'Equity Bank') {
+//       log('parsing Equity tx message');
+//       var transaction = parseEquity(message);
+//
+//       log('foreground_transaction:$transaction');
+//       log('from:${message.address} message:${message.body}');
+//       if (transaction != null) {
+//         if (transaction['type'] == TxType.spend.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           txM.insertTransaction(tx);
+//         }
+//       }
+//     }
+//   } catch (e) {
+//     log('Error in background message', error: e);
+//   }
+// }
+//
+// @pragma('vm:entry-point')
+// backgroundMessageHandler(SmsMessage message) async {
+//   //Handle background message
+//   try {
+//     TransactionsModel txM = TransactionsModel();
+//     WalletModel wM = WalletModel();
+//     AuthModel aM = AuthModel();
+//     // String? currentRegion = aM.region;
+//
+//     int? accountId = await aM.getAccountId();
+//     log('from:${message.address} message:${message.body}');
+//
+//     log('tx parsing start');
+//     if (message.address == 'MPESA') {
+//       var transaction = parseMpesa(message);
+//       log('from:${message.address} message:${message.body}');
+//
+//       log('background_transaction:$transaction');
+//       if (transaction != null && accountId != null) {
+//         if (transaction['type'] == TxType.credit.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//             category: 'credit',
+//           );
+//           wM.creditDefaultWallet(tx);
+//         } else if (transaction['type'] == TxType.fromSaving.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             category: 'credit',
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           wM.removeFromSavings(tx);
+//         } else if (transaction['type'] == TxType.toSaving.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             category: 'savings',
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           wM.addToSavings(tx);
+//         } else {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           txM.insertTransaction(tx);
+//         }
+//       }
+//     }
+//     if (message.address == 'NCBA_BANK') {
+//       log('from:${message.address} message:${message.body}');
+//       var transaction = parseNCBA(message);
+//
+//       log('background_transaction:$transaction');
+//       if (transaction != null && accountId != null) {
+//         if (transaction['type'] == TxType.credit.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//             category: 'credit',
+//           );
+//           wM.creditDefaultWallet(tx);
+//         } else if (transaction['type'] == TxType.fromSaving.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             category: 'credit',
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           wM.removeFromSavings(tx);
+//         } else if (transaction['type'] == TxType.toSaving.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             category: 'savings',
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           wM.addToSavings(tx);
+//         } else if (transaction['type'] == TxType.spend.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           txM.insertTransaction(tx);
+//         }
+//       }
+//     }
+//
+//     if (message.address == 'Equity Bank') {
+//       var transaction = parseEquity(message);
+//
+//       log('background_transaction:$transaction');
+//       log('from:${message.address} message:${message.body}');
+//       if (transaction != null && accountId != null) {
+//         if (transaction['type'] == TxType.spend.val) {
+//           TransactionObj tx = TransactionObj(
+//             desc: transaction['desc'],
+//             type: transaction['type'],
+//             source: transaction['source'],
+//             amount: transaction['amount'],
+//             date: transaction['date'],
+//           );
+//           txM.insertTransaction(tx);
+//         }
+//       }
+//     }
+//   } catch (e) {
+//     log('Error in background message', error: e);
+//   }
+// }
 
 Future<void> dailyBudgetAlert() async {
   String body = '';

@@ -1,8 +1,13 @@
+import 'dart:convert';
 import 'dart:developer';
 import 'package:another_telephony/telephony.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_application_1/view_models/txs.dart';
+import 'package:flutter_application_1/view_models/wallet.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:crypto/crypto.dart';
 
 const String mpesaReceived = "received";
-
 const String mpesaBought = "bought";
 const String mpesaPaid = "paid to";
 const String mpesaSent = "sent to";
@@ -24,6 +29,7 @@ enum TxType {
 }
 
 class TransactionObj {
+  final String? messageHashCode;
   final int? id;
   final String type;
   final String source;
@@ -35,6 +41,7 @@ class TransactionObj {
 
   TransactionObj({
     this.id,
+    this.messageHashCode,
     required this.type,
     required this.desc,
     required this.source,
@@ -54,12 +61,13 @@ class TransactionObj {
       "date": date,
       "category": ?category,
       'account_id': ?accountId,
+      'message_hash_code': ?messageHashCode,
     };
   }
 
   @override
   String toString() {
-    return 'Transaction{id:$id,type:$type,source:$source,amount:$amount,date:$date,category:$category,account_id:$accountId,desc:$desc}';
+    return 'Transaction{id:$id,type:$type,source:$source,amount:$amount,date:$date,category:$category,account_id:$accountId,desc:$desc,messageHashCode:$messageHashCode}';
   }
 }
 
@@ -238,4 +246,199 @@ Map<String, dynamic>? parseEquity(SmsMessage messageObj) {
   return null;
 }
 
+Future<void> queryEquity() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  TransactionsModel txM = TransactionsModel();
+  WalletModel wM = WalletModel();
+  int? accountId = prefs.getInt("budget_lite_current_account_id");
+  List<SmsMessage> messages = await Telephony.instance.getInboxSms(
+    columns: [SmsColumn.ADDRESS, SmsColumn.BODY],
+    filter: SmsFilter.where(SmsColumn.ADDRESS).equals("Equity Bank"),
+    sortOrder: [
+      OrderBy(SmsColumn.ADDRESS, sort: Sort.ASC),
+      OrderBy(SmsColumn.BODY),
+    ],
+  );
+  for (var message in messages) {
+    log('parsing Equity tx message');
+    var transaction = parseEquity(message);
+
+    log('equity_transaction:$transaction');
+    if (message.body != null) {
+      var bytes = utf8.encode(message.body!); // data being hashed
+
+      var digest = sha1.convert(bytes);
+      debugPrint('equity_transaction:$transaction');
+      log('from:${message.address} message:${message.body}');
+      if (transaction != null) {
+        if (transaction['type'] == TxType.spend.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          txM.insertTransaction(tx);
+        }
+      }
+    }
+  }
+}
+
+Future<void> queryNcba() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  TransactionsModel txM = TransactionsModel();
+  WalletModel wM = WalletModel();
+  int? accountId = prefs.getInt("budget_lite_current_account_id");
+  List<SmsMessage> messages = await Telephony.instance.getInboxSms(
+    columns: [SmsColumn.ADDRESS, SmsColumn.BODY],
+    filter: SmsFilter.where(SmsColumn.ADDRESS).equals("NCBA_BANK"),
+    sortOrder: [
+      OrderBy(SmsColumn.ADDRESS, sort: Sort.ASC),
+      OrderBy(SmsColumn.BODY),
+    ],
+  );
+  for (var message in messages) {
+    if (message.body != null) {
+      var bytes = utf8.encode(message.body!); // data being hashed
+
+      var digest = sha1.convert(bytes);
+      var transaction = parseNCBA(message);
+
+      log('ncba_transaction:$transaction');
+      debugPrint('ncba_transaction:$transaction');
+      if (transaction != null && accountId != null) {
+        if (transaction['type'] == TxType.credit.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+            category: 'credit',
+          );
+          wM.creditDefaultWallet(tx);
+        } else if (transaction['type'] == TxType.fromSaving.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            category: 'credit',
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          wM.removeFromSavings(tx);
+        } else if (transaction['type'] == TxType.toSaving.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            category: 'savings',
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          wM.addToSavings(tx);
+        } else if (transaction['type'] == TxType.spend.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          txM.insertTransaction(tx);
+        }
+      }
+    }
+  }
+}
+
+Future<void> queryMpesa() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+
+  TransactionsModel txM = TransactionsModel();
+  WalletModel wM = WalletModel();
+  int? accountId = prefs.getInt("budget_lite_current_account_id");
+  List<SmsMessage> messages = await Telephony.instance.getInboxSms(
+    columns: [SmsColumn.ADDRESS, SmsColumn.BODY],
+    filter: SmsFilter.where(SmsColumn.ADDRESS).equals("MPESA"),
+    sortOrder: [
+      OrderBy(SmsColumn.ADDRESS, sort: Sort.ASC),
+      OrderBy(SmsColumn.BODY),
+    ],
+  );
+  for (var message in messages) {
+    log('parsing mpesa tx message');
+
+    if (message.body != null) {
+      var bytes = utf8.encode(message.body!); // data being hashed
+
+      var digest = sha1.convert(bytes);
+      var transaction = parseMpesa(message);
+
+      log('mpesa_transaction:$transaction');
+
+      debugPrint('mpesa_transaction:$transaction');
+      if (transaction != null && accountId != null) {
+        if (transaction['type'] == TxType.credit.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+            category: 'credit',
+          );
+          wM.creditDefaultWallet(tx);
+        } else if (transaction['type'] == TxType.fromSaving.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            category: 'credit',
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          wM.removeFromSavings(tx);
+        } else if (transaction['type'] == TxType.toSaving.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            category: 'savings',
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          wM.addToSavings(tx);
+        } else {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          txM.insertTransaction(tx);
+        }
+      }
+    }
+
+    // debugPrint(
+    //   'messageHashCode:${message.hashCode},messageSentDate:${message.dateSent},messageId:${message.id},messageBody:${message.body}',
+    // );
+  }
+}
+
 class TransactionCreationFailed implements Exception {}
+
+class TransactionExists implements Exception {}
