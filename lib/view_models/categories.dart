@@ -2,7 +2,7 @@ import 'dart:developer';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data_models/categories_data_model.dart';
-import 'package:flutter_application_1/data_models/transactions.dart';
+import 'package:flutter_application_1/data_models/txs_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
@@ -29,6 +29,19 @@ class CategoriesModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deletingCategory(int id) async {
+    try {
+      final db = await DatabaseHelper().database;
+      db.transaction((txn) async {
+        txn.delete('categories', where: 'id = ?', whereArgs: [id]);
+      });
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error occured deleting category $e');
+      log('Error occured deleting category', error: e);
+    }
+  }
+
   Future<Result<List<int>>> resetBudgets() async {
     try {
       AuthModel aM;
@@ -39,7 +52,7 @@ class CategoriesModel extends ChangeNotifier {
         aM = di<AuthModel>();
       }
       List<Category> candidateCats = await getCategories();
-      final db = await getDb();
+      final db = await DatabaseHelper().database;
       db.transaction((txn) async {
         for (Category cat in candidateCats) {
           int updated = await txn.rawUpdate(
@@ -90,7 +103,7 @@ class CategoriesModel extends ChangeNotifier {
     } else {
       aM = di<AuthModel>();
     }
-    final db = await getDb();
+    final db = await DatabaseHelper().database;
     int count = await db.rawUpdate(
       'UPDATE categories SET budget = ? WHERE id = ? AND account_id = ?',
       ['$amount', '${category.id}', '${await aM.getAccountId()}'],
@@ -110,7 +123,7 @@ class CategoriesModel extends ChangeNotifier {
     }
     SharedPreferences prefs = await SharedPreferences.getInstance();
     var rowId;
-    final db = await getDb();
+    final db = await DatabaseHelper().database;
     int? acid = await aM.getAccountId();
     await insertCategory(category).then((rowID) {
       rowId = rowID;
@@ -146,7 +159,7 @@ class CategoriesModel extends ChangeNotifier {
       log('new spent: $update');
 
       debugPrint('new spent: $update');
-      final db = await getDb();
+      final db = await DatabaseHelper().database;
 
       await db.update(
         'transactions',
@@ -208,7 +221,7 @@ class CategoriesModel extends ChangeNotifier {
     } else {
       aM = di<AuthModel>();
     }
-    final db = await getDb();
+    final db = await DatabaseHelper().database;
     int ctID = await db.insert("categories", category.toMap());
     await db.rawUpdate('UPDATE categories SET account_id = ? WHERE id = ?', [
       '${await aM.getAccountId()}',
@@ -227,7 +240,7 @@ class CategoriesModel extends ChangeNotifier {
     } else {
       aM = di<AuthModel>();
     }
-    final db = await getDb();
+    final db = await DatabaseHelper().database;
     final List<Map<String, Object?>> categoryMaps = await db.rawQuery(
       "SELECT * FROM categories WHERE account_id = ?",
       ['${await aM.getAccountId()}'],
@@ -272,7 +285,7 @@ class CategoriesModel extends ChangeNotifier {
     } else {
       aM = di<AuthModel>();
     }
-    final db = await getDb();
+    final db = await DatabaseHelper().database;
     List<int> rwIds = [];
     int? acId = await aM.getAccountId();
     await db

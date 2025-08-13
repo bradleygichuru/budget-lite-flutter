@@ -68,48 +68,48 @@ class WalletScreenState extends State<WalletScreen> {
                       fixedSize: Size.fromWidth(double.infinity),
                     ),
                     onPressed: () async {
-                      if (aM.region == Country.kenya.name) {
-                        return showDialog<void>(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: Text('Auto import on'),
-                              content: Text(
-                                'Transaction auto import is automatically enabled in your region.Be careful of transaction duplication on auto imported transactions',
-                              ),
-                              actions: [
-                                FilledButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: Text('Cancel'),
-                                ),
-                                FilledButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const HandleBalance(),
-                                      ),
-                                    );
-                                  },
-                                  child: Text('Continue'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const HandleBalance(),
-                          ),
-                        );
-                      }
+                      // if (aM.region == Country.kenya.name) {
+                      //   return showDialog<void>(
+                      //     context: context,
+                      //     barrierDismissible: false,
+                      //     builder: (context) {
+                      //       return AlertDialog(
+                      //         title: Text('Auto import on'),
+                      //         content: Text(
+                      //           'Transaction auto import is automatically enabled in your region.Be careful of transaction duplication on auto imported transactions',
+                      //         ),
+                      //         actions: [
+                      //           FilledButton(
+                      //             onPressed: () {
+                      //               Navigator.of(context).pop();
+                      //             },
+                      //             child: Text('Cancel'),
+                      //           ),
+                      //           FilledButton(
+                      //             onPressed: () {
+                      //               Navigator.of(context).pop();
+                      //               Navigator.push(
+                      //                 context,
+                      //                 MaterialPageRoute(
+                      //                   builder: (context) =>
+                      //                       const HandleBalance(),
+                      //                 ),
+                      //               );
+                      //             },
+                      //             child: Text('Continue'),
+                      //           ),
+                      //         ],
+                      //       );
+                      //     },
+                      //   );
+                      // } else {
+                      //   Navigator.push(
+                      //     context,
+                      //     MaterialPageRoute(
+                      //       builder: (context) => const HandleBalance(),
+                      //     ),
+                      //   );
+                      // }
                     },
                     child: SizedBox(
                       width: double.infinity,
@@ -190,48 +190,48 @@ class WalletScreenState extends State<WalletScreen> {
                       fixedSize: Size.fromWidth(double.infinity),
                     ),
                     onPressed: () async {
-                      if (aM.region == Country.kenya.name) {
-                        return showDialog<void>(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: Text('Auto import on'),
-                              content: Text(
-                                'Transaction auto import is automatically enabled in your region.Be careful on transaction duplication on auto iported transactions',
-                              ),
-                              actions: [
-                                FilledButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: Text('Cancel'),
-                                ),
-                                FilledButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const HandleSavings(),
-                                      ),
-                                    );
-                                  },
-                                  child: Text('Continue'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const HandleSavings(),
-                          ),
-                        );
-                      }
+                      // if (aM.region == Country.kenya.name) {
+                      //   return showDialog<void>(
+                      //     context: context,
+                      //     barrierDismissible: false,
+                      //     builder: (context) {
+                      //       return AlertDialog(
+                      //         title: Text('Auto import on'),
+                      //         content: Text(
+                      //           'Transaction auto import is automatically enabled in your region.Be careful on transaction duplication on auto iported transactions',
+                      //         ),
+                      //         actions: [
+                      //           FilledButton(
+                      //             onPressed: () {
+                      //               Navigator.of(context).pop();
+                      //             },
+                      //             child: Text('Cancel'),
+                      //           ),
+                      //           FilledButton(
+                      //             onPressed: () {
+                      //               Navigator.of(context).pop();
+                      //               Navigator.push(
+                      //                 context,
+                      //                 MaterialPageRoute(
+                      //                   builder: (context) =>
+                      //                       const HandleSavings(),
+                      //                 ),
+                      //               );
+                      //             },
+                      //             child: Text('Continue'),
+                      //           ),
+                      //         ],
+                      //       );
+                      //     },
+                      //   );
+                      // } else {
+                      //   Navigator.push(
+                      //     context,
+                      //     MaterialPageRoute(
+                      //       builder: (context) => const HandleSavings(),
+                      //     ),
+                      //   );
+                      // }
                     },
                     child: SizedBox(
                       width: double.infinity,

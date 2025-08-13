@@ -1,10 +1,10 @@
 import 'dart:developer';
+import 'package:intl/intl.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
-import 'package:flutter_application_1/data_models/transactions.dart';
 import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
@@ -12,23 +12,41 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/utils/utils.dart';
 import 'package:toastification/toastification.dart';
 import 'package:watch_it/watch_it.dart';
+import 'package:flutter_application_1/data_models/txs_data_model.dart';
 
 class TransactionsModel extends ChangeNotifier {
   TransactionsModel() {
     initTxs();
   }
+  bool handleUncategorized = false;
+  bool shouldCategorize = false;
   late Future<List<TransactionObj>> transactions;
   Future<double> readyToAssign = Future.value(0);
   Future<double> totalSpent = Future.value(0);
   Future<double> totalTransacted = Future.value(0);
   late int pages;
   // List<Widget> composedTranactions = [];
-  void initTxs() {
+  void initTxs() async {
     transactions = getTransactions();
+    final x = await getUncategorizedTx();
+    shouldCategorize = x.isNotEmpty;
     notifyListeners();
   }
 
-  void refreshTx() {
+  toogleCategorizationOff() {
+    handleUncategorized = false;
+
+    notifyListeners();
+  }
+
+  toogleCategorizationOn() {
+    handleUncategorized = true;
+    notifyListeners();
+  }
+
+  void refreshTx() async {
+    final x = await getUncategorizedTx();
+    shouldCategorize = x.isNotEmpty;
     transactions = getTransactions();
     notifyListeners();
   }
@@ -41,7 +59,7 @@ class TransactionsModel extends ChangeNotifier {
       aM = di<AuthModel>();
     }
     List<TransactionObj> x = [];
-    final db = await getDb();
+    final db = await DatabaseHelper().database;
 
     log("Getting Transactions");
     int offset = (page - 1) * pageSize;
@@ -51,7 +69,7 @@ class TransactionsModel extends ChangeNotifier {
       whereArgs: ['${await aM.getAccountId()}'],
       limit: pageSize,
       offset: offset,
-      orderBy: 'date',
+      orderBy: 'id',
     );
     // final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
     //   'SELECT * FROM transactions ORDER BY date LIMIT ? OFFSET ? WHERE account_id = ?',
@@ -104,7 +122,7 @@ class TransactionsModel extends ChangeNotifier {
         );
       }
     }
-    return x;
+    return x.reversed.toList();
   }
 
   Future<Result<int>> setTxCategory(String category, int id) async {
@@ -115,7 +133,7 @@ class TransactionsModel extends ChangeNotifier {
       } else {
         aM = di<AuthModel>();
       }
-      final db = await getDb();
+      final db = await DatabaseHelper().database;
       log("categorizing tx of id:$id");
       int count = await db.rawUpdate(
         'UPDATE transactions SET category = ? WHERE id = ? AND account_id = ?',
@@ -170,7 +188,7 @@ class TransactionsModel extends ChangeNotifier {
   // }
 
   // Future<List<TransactionObj>> getTxById(int id) async {
-  //   final db = await getDb();
+  //   final db = await DatabaseHelper().database;
   //   final List<Map<String, Object?>> transactionMaps = await db.query(
   //     "transactions",
   //     where: '"id=$id"',
@@ -211,7 +229,7 @@ class TransactionsModel extends ChangeNotifier {
     } else {
       aM = di<AuthModel>();
     }
-    final db = await getDb();
+    final db = await DatabaseHelper().database;
     final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
       "SELECT * from transactions WHERE category is null AND account_id = ?",
       ['${await aM.getAccountId()}'],
@@ -278,7 +296,7 @@ class TransactionsModel extends ChangeNotifier {
       aM = di<AuthModel>();
     }
     List<TransactionObj> x = [];
-    final db = await getDb();
+    final db = await DatabaseHelper().database;
     log("Getting Transactions");
     final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
       'SELECT * FROM transactions WHERE account_id = ?',
@@ -343,7 +361,7 @@ class TransactionsModel extends ChangeNotifier {
         aM = di<AuthModel>();
       }
 
-      final db = await getDb();
+      final db = await DatabaseHelper().database;
 
       log("Inserting transaction");
       var txs = await db.query(

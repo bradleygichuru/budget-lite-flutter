@@ -1,7 +1,7 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data_models/categories_data_model.dart';
-import 'package:flutter_application_1/data_models/transactions.dart';
+import 'package:flutter_application_1/data_models/txs_data_model.dart';
 import 'package:flutter_application_1/view_models/categories.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
@@ -55,73 +55,95 @@ class DashboardState extends State<Dashboard> {
       color: Colors.white,
       child: CustomScrollView(
         slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.all(8),
-            sliver: SliverToBoxAdapter(
-              child: Card(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10.0),
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [Colors.blue.shade500, Colors.indigo.shade600],
+          // SliverPadding(
+          //   padding: const EdgeInsets.all(8),
+          //   sliver: SliverToBoxAdapter(
+          //     child: Card(
+          //       child: Container(
+          //         decoration: BoxDecoration(
+          //           borderRadius: BorderRadius.circular(10.0),
+          //           gradient: LinearGradient(
+          //             begin: Alignment.centerLeft,
+          //             end: Alignment.centerRight,
+          //             colors: [Colors.blue.shade500, Colors.indigo.shade600],
+          //           ),
+          //         ),
+          //         child: Column(
+          //           children: [
+          //             Padding(
+          //               padding: EdgeInsets.all(10),
+          //               child: Align(
+          //                 alignment: Alignment.topLeft,
+          //                 child: Text(
+          //                   "Total Balance",
+          //                   style: TextStyle(
+          //                     fontSize: 20,
+          //                     fontWeight: FontWeight.w600,
+          //                     color: Colors.white,
+          //                   ),
+          //                 ),
+          //               ),
+          //             ),
+          //             Padding(
+          //               padding: EdgeInsets.all(10),
+          //               child: Align(
+          //                 alignment: Alignment.topLeft,
+          //                 child: FutureBuilder<double>(
+          //                   future: watchPropertyValue(
+          //                     (WalletModel m) => m.totalBalance,
+          //                   ),
+          //                   builder: (context, snapshot) {
+          //                     if (snapshot.connectionState ==
+          //                         ConnectionState.waiting) {
+          //                       return Center(
+          //                         child: CircularProgressIndicator(),
+          //                       );
+          //                     } else if (snapshot.hasError) {
+          //                       return Text('An error occured');
+          //                     } else if (snapshot.hasData) {
+          //                       return Text(
+          //                         "KSh ${snapshot.data}",
+          //                         style: TextStyle(
+          //                           color: Colors.white,
+          //                           fontSize: 30,
+          //                           fontWeight: FontWeight.w600,
+          //                         ),
+          //                       );
+          //                     }
+          //                     return Text("Error");
+          //                   },
+          //                 ),
+          //               ),
+          //             ),
+          //           ],
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+          // ),
+          watch(di<TransactionsModel>()).shouldCategorize
+              ? SliverPadding(
+                  padding: EdgeInsets.all(10),
+                  sliver: SliverToBoxAdapter(
+                    child: Card(
+                      color: Colors.red.shade100,
+                      child: ListTile(
+                        subtitle: OutlinedButton(
+                          onPressed: () {
+                            di<TransactionsModel>().toogleCategorizationOn();
+                          },
+                          child: Text('Categorize'),
+                        ),
+                        leading: Icon(
+                          Icons.cancel_outlined,
+                          color: Colors.red.shade900,
+                        ),
+                        title: Text('You have uncategorized transactions'),
+                      ),
                     ),
                   ),
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.all(10),
-                        child: Align(
-                          alignment: Alignment.topLeft,
-                          child: Text(
-                            "Total Balance",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.all(10),
-                        child: Align(
-                          alignment: Alignment.topLeft,
-                          child: FutureBuilder<double>(
-                            future: watchPropertyValue(
-                              (WalletModel m) => m.totalBalance,
-                            ),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return Center(
-                                  child: CircularProgressIndicator(),
-                                );
-                              } else if (snapshot.hasError) {
-                                return Text('An error occured');
-                              } else if (snapshot.hasData) {
-                                return Text(
-                                  "KSh ${snapshot.data}",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 30,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                );
-                              }
-                              return Text("Error");
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
+                )
+              : SliverToBoxAdapter(),
           SliverPadding(
             padding: EdgeInsets.all(10),
             sliver: SliverToBoxAdapter(

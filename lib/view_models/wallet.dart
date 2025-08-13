@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_application_1/data_models/transactions.dart';
+import 'package:flutter_application_1/data_models/txs_data_model.dart';
 import 'package:flutter_application_1/data_models/wallet_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
@@ -42,8 +42,7 @@ class WalletModel extends ChangeNotifier {
 
   Future<Wallet?> getAccountWallet(int acid) async {
     try {
-      final db = await getDb();
-      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final db = await DatabaseHelper().database;
       final List<Map<String, Object?>> walletMap = await db.rawQuery(
         "SELECT * FROM wallets WHERE account_id = ?",
         [acid],
@@ -75,7 +74,7 @@ class WalletModel extends ChangeNotifier {
 
   Future<int?> onBoaringWalletInit(double savings, double balance) async {
     try {
-      final db = await getDb();
+      final db = await DatabaseHelper().database;
 
       AuthModel aM;
       if (!di.isRegistered<AuthModel>()) {
@@ -117,7 +116,7 @@ class WalletModel extends ChangeNotifier {
 
   Future<Result<int?>> creditDefaultWallet(TransactionObj tx) async {
     try {
-      final db = await getDb();
+      final db = await DatabaseHelper().database;
       AuthModel aM;
       TransactionsModel txM;
       if (!di.isRegistered<AuthModel>()) {
@@ -206,7 +205,7 @@ class WalletModel extends ChangeNotifier {
         cM = di<CategoriesModel>();
       }
 
-      final db = await getDb();
+      final db = await DatabaseHelper().database;
       int count = 0;
 
       int? acid = await aM.getAccountId();
@@ -240,34 +239,34 @@ class WalletModel extends ChangeNotifier {
         log('new spent: $update');
 
         debugPrint('new spent: $update');
-        await db.update(
+        count = await db.update(
           'categories',
           {'spent': update},
           where: 'id = ? AND account_id = ?',
           whereArgs: ['${candidate.id}', '$acid'],
         );
-        // await txn.rawUpdate(
+        // await db.rawUpdate(
         //   'UPDATE categories SET spent = ? WHERE id = ? AND account_id = ?',
         //   ['$update', '${candidate.id},$acid'],
         // );
-        double newBalance = accountWallet.balance - tx.amount;
-        debugPrint('newbalance:$newBalance');
-        count = await db.update(
-          'wallets',
-          {'balance': newBalance},
-          where: 'account_id = ?',
-          whereArgs: ['$acid'],
-        );
-        // count = await txn.rawUpdate(
-        //   "UPDATE wallets SET balance = ? WHERE account_id = ? ",
-        //   ['$newBalance', '$acid}'],
+        // double newBalance = accountWallet.balance - tx.amount;
+        // debugPrint('newbalance:$newBalance');
+        // count = await db.update(
+        //   'wallets',
+        //   {'balance': newBalance},
+        //   where: 'account_id = ?',
+        //   whereArgs: ['$acid'],
         // );
-
-        log('Wallet debited');
-        log('Wallet cols updated:$count');
-
-        debugPrint('Wallet debited');
-        debugPrint('Wallet cols updated:$count');
+        // // count = await txn.rawUpdate(
+        // //   "UPDATE wallets SET balance = ? WHERE account_id = ? ",
+        // //   ['$newBalance', '$acid}'],
+        // // );
+        //
+        // log('Wallet debited');
+        // log('Wallet cols updated:$count');
+        //
+        // debugPrint('Wallet debited');
+        // debugPrint('Wallet cols updated:$count');
         refresh();
         notifyListeners();
         if (count > 0) {
@@ -315,7 +314,7 @@ class WalletModel extends ChangeNotifier {
       } else {
         txM = di<TransactionsModel>();
       }
-      final db = await getDb();
+      final db = await DatabaseHelper().database;
       int? acid = await aM.getAccountId();
       Wallet? accountWallet;
       if (acid != null) {
@@ -328,76 +327,37 @@ class WalletModel extends ChangeNotifier {
           {
             int? count;
             if (accountWallet != null && acid != null) {
-              if (tx.source == 'Mpesa') {
-                {
-                  log('Adding to ${accountWallet.toString()}');
-                  double newSavings = accountWallet.savings + tx.amount;
-                  double balance = accountWallet.balance == 0.0
-                      ? 0
-                      : accountWallet.balance - tx.amount;
-                  count = await db.rawUpdate(
-                    "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ?",
-                    ['$balance', '$newSavings', '$acid'],
+              if (accountWallet.balance >= tx.amount) {
+                log('Adding to ${accountWallet.toString()}');
+                double newSavings = accountWallet.savings + tx.amount;
+                count = await db.rawUpdate(
+                  "UPDATE wallets SET savings = ? WHERE account_id = ?",
+                  ['$newSavings', '$acid'],
+                );
+                log('colums updated ($count)');
+                refresh();
+                notifyListeners();
+                if (count > 0) {
+                  SharedPreferences prefs =
+                      await SharedPreferences.getInstance();
+                  AwesomeNotifications().createNotification(
+                    content: NotificationContent(
+                      id: prefs.getInt('notification_id')!,
+                      channelKey: 'budgetlite_silent',
+                      actionType: ActionType.Default,
+                      title: 'Savings',
+                      body: '${tx.amount} kes transferred to savings',
+                    ),
                   );
-                  log('colums updated ($count)');
-                  refresh();
-                  notifyListeners();
-                  if (count > 0) {
-                    SharedPreferences prefs =
-                        await SharedPreferences.getInstance();
-                    AwesomeNotifications().createNotification(
-                      content: NotificationContent(
-                        id: prefs.getInt('notification_id')!,
-                        channelKey: 'budgetlite_silent',
-                        actionType: ActionType.Default,
-                        title: 'Savings',
-                        body: '${tx.amount} kes transferred to savings',
-                      ),
-                    );
 
-                    prefs.setInt(
-                      'notification_id',
-                      prefs.getInt('notification_id')! + 1,
-                    );
-                  }
-                  return Result.ok(count);
+                  prefs.setInt(
+                    'notification_id',
+                    prefs.getInt('notification_id')! + 1,
+                  );
                 }
+                return Result.ok(count);
               } else {
-                if (accountWallet.balance >= tx.amount) {
-                  log('Adding to ${accountWallet.toString()}');
-                  double newSavings = accountWallet.savings + tx.amount;
-                  double balance = accountWallet.balance == 0.0
-                      ? 0
-                      : accountWallet.balance - tx.amount;
-                  count = await db.rawUpdate(
-                    "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ?",
-                    ['$balance', '$newSavings', '$acid'],
-                  );
-                  log('colums updated ($count)');
-                  refresh();
-                  notifyListeners();
-                  if (count > 0) {
-                    SharedPreferences prefs =
-                        await SharedPreferences.getInstance();
-                    AwesomeNotifications().createNotification(
-                      content: NotificationContent(
-                        id: prefs.getInt('notification_id')!,
-                        channelKey: 'budgetlite_silent',
-                        actionType: ActionType.Default,
-                        title: 'Savings',
-                        body: '${tx.amount} kes transferred to savings',
-                      ),
-                    );
-
-                    prefs.setInt(
-                      'notification_id',
-                      prefs.getInt('notification_id')! + 1,
-                    );
-                  }
-                  return Result.ok(count);
-                } else {
-                  return Result.error(NotEnoughException());
-                }
+                return Result.error(NotEnoughException());
               }
             } else {
               return Result.error(AccountWalletNotFoundException());
@@ -430,20 +390,20 @@ class WalletModel extends ChangeNotifier {
       } else {
         txM = di<TransactionsModel>();
       }
-      final db = await getDb();
+      final db = await DatabaseHelper().database;
       int? count;
 
-      Result txInsert = await txM.insertTransaction(tx);
-      switch (txInsert) {
-        case Ok():
-          {
-            int? acid = await aM.getAccountId();
-            Wallet? accountWallet;
-            if (acid != null) {
-              accountWallet = await getAccountWallet(acid);
-            }
-            if (accountWallet != null && acid != null) {
-              if (tx.source == 'Mpesa') {
+      int? acid = await aM.getAccountId();
+      Wallet? accountWallet;
+      if (acid != null) {
+        accountWallet = await getAccountWallet(acid);
+      }
+      if (accountWallet != null && acid != null) {
+        if (accountWallet.savings >= tx.amount) {
+          Result txInsert = await txM.insertTransaction(tx);
+          switch (txInsert) {
+            case Ok():
+              {
                 double newSavings = accountWallet.savings - tx.amount;
                 double balance = accountWallet.balance + tx.amount;
                 count = await db.rawUpdate(
@@ -453,64 +413,35 @@ class WalletModel extends ChangeNotifier {
                 refresh();
                 notifyListeners();
                 if (count > 0) {
-                  SharedPreferences prefs =
-                      await SharedPreferences.getInstance();
-                  AwesomeNotifications().createNotification(
-                    content: NotificationContent(
-                      id: prefs.getInt('notification_id')!,
-                      channelKey: 'budgetlite_silent',
-                      actionType: ActionType.Default,
-                      title: 'Savings',
-                      body: '${tx.amount} kes removed from savings',
-                    ),
-                  );
-                  prefs.setInt(
-                    'notification_id',
-                    prefs.getInt('notification_id')! + 1,
-                  );
+                  // SharedPreferences prefs =
+                  //     await SharedPreferences.getInstance();
+                  //
+                  // AwesomeNotifications().createNotification(
+                  //   content: NotificationContent(
+                  //     id: prefs.getInt('notification_id')!,
+                  //     channelKey: 'budgetlite_silent',
+                  //     actionType: ActionType.Default,
+                  //     title: 'Savings',
+                  //     body: '${tx.amount} kes removed from savings',
+                  //   ),
+                  // );
+                  // prefs.setInt(
+                  //   'notification_id',
+                  //   prefs.getInt('notification_id')! + 1,
+                  // );
                 }
                 return Result.ok(count);
-              } else {
-                if (accountWallet.savings >= tx.amount) {
-                  double newSavings = accountWallet.savings - tx.amount;
-                  double balance = accountWallet.balance + tx.amount;
-                  count = await db.rawUpdate(
-                    "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ?",
-                    ['$balance', '$newSavings', '$acid'],
-                  );
-                  refresh();
-                  notifyListeners();
-                  if (count > 0) {
-                    SharedPreferences prefs =
-                        await SharedPreferences.getInstance();
-
-                    AwesomeNotifications().createNotification(
-                      content: NotificationContent(
-                        id: prefs.getInt('notification_id')!,
-                        channelKey: 'budgetlite_silent',
-                        actionType: ActionType.Default,
-                        title: 'Savings',
-                        body: '${tx.amount} kes removed from savings',
-                      ),
-                    );
-                    prefs.setInt(
-                      'notification_id',
-                      prefs.getInt('notification_id')! + 1,
-                    );
-                  }
-                  return Result.ok(count);
-                } else {
-                  return Result.error(NotEnoughSavingsException());
-                }
               }
-            } else {
-              return Result.error(AccountWalletNotFoundException());
-            }
+            case Error():
+              {
+                return Result.error(txInsert.error);
+              }
           }
-        case Error():
-          {
-            return Result.error(txInsert.error);
-          }
+        } else {
+          return Result.error(NotEnoughSavingsException());
+        }
+      } else {
+        return Result.error(AccountWalletNotFoundException());
       }
     } on Exception catch (e) {
       log('Error debiting default wallet', error: e);

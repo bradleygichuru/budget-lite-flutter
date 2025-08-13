@@ -1,9 +1,3 @@
-import 'dart:developer';
-import 'package:flutter_application_1/data_models/auth_data_model.dart';
-import 'package:flutter_application_1/data_models/transactions.dart';
-import 'package:flutter_application_1/db/db.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 class Wallet {
   final int? id;
   final String name;

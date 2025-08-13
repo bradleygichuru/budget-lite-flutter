@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
+import 'dart:ui';
 import 'package:another_telephony/telephony.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:cron/cron.dart';
@@ -10,7 +11,7 @@ import 'package:flutter_application_1/data_models/categories_data_model.dart'
     as Ct;
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/data_models/goal_data_model.dart';
-import 'package:flutter_application_1/data_models/transactions.dart';
+import 'package:flutter_application_1/data_models/txs_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/categories.dart';
@@ -96,6 +97,8 @@ Future<void> initializeService() async {
 @pragma('vm:entry-point')
 Future<bool> onIosBackground(ServiceInstance service) async {
   WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
+
   //DartPluginRegistrant.ensureInitialized();
 
   SharedPreferences preferences = await SharedPreferences.getInstance();
@@ -112,7 +115,6 @@ void onStart(ServiceInstance service) async {
   WidgetsFlutterBinding.ensureInitialized();
   // DartPluginRegistrant.ensureInitialized();
 
-  final telephony = Telephony.instance;
   final cron = Cron();
   // 0 8 * * *
   cron.schedule(Schedule.parse('0 8 * * *'), dailyBudgetAlert); //every day at 8
@@ -166,6 +168,7 @@ void onStart(ServiceInstance service) async {
     service.stopSelf();
   });
 
+  SharedPreferences prefs = await SharedPreferences.getInstance();
   Timer.periodic(Duration(minutes: 2), (timer) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     bool isNewUser = prefs.getBool("isNewUser") ?? true;
@@ -173,10 +176,23 @@ void onStart(ServiceInstance service) async {
     int? acid = prefs.getInt("budget_lite_current_account_id");
     debugPrint('acid:$acid');
     if (acid != null && !isNewUser) {
+      AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          criticalAlert: false,
+          autoDismissible: false,
+          id: 999,
+          channelKey: 'service_channel',
+          actionType: ActionType.SilentBackgroundAction,
+          title: 'Retrieving transactions',
+          body: 'running',
+          locked: true,
+        ),
+      );
       debugPrint('Running tx discovery');
       queryMpesa();
-      queryNcba();
-      queryEquity();
+      // queryNcba();
+      // queryEquity();
+      AwesomeNotifications().dismiss(999);
     }
   });
 
@@ -497,7 +513,7 @@ Future<void> dailyBudgetAlert() async {
 }
 
 Future<void> queueResetBudget() async {
-  final db = await getDb();
+  final db = await DatabaseHelper().database;
   print('Queueing reset');
   await db.rawUpdate('UPDATE accounts SET resetPending = 1 WHERE id = ?', [
     '${await AuthModel().getAccountId()}',

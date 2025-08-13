@@ -84,19 +84,19 @@ class SelectRegionState extends State<SelectRegion> {
                             ),
                           ),
                           onPressed: () {
-                            aM.setRegion(Country.kenya.name).then((updated) {
-                              if (updated == 1) {
-                                if (aM.region == Country.kenya.name) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          AutoImportAvailabilityScreen(),
-                                    ),
-                                  );
-                                }
-                              }
-                            });
+                            // aM.setRegion(Country.kenya.name).then((updated) {
+                            //   if (updated == 1) {
+                            //     if (aM.region == Country.kenya.name) {
+                            //       Navigator.push(
+                            //         context,
+                            //         MaterialPageRoute(
+                            //           builder: (context) =>
+                            //               AutoImportAvailabilityScreen(),
+                            //         ),
+                            //       );
+                            //     }
+                            //   }
+                            // });
                             // Navigate back to first route when tapped.
                           },
                           child: const Row(
@@ -125,19 +125,19 @@ class SelectRegionState extends State<SelectRegion> {
                           ),
                           onPressed: () {
                             // Navigate back to first route when tapped.
-                            aM.setRegion('other').then((updated) {
-                              if (updated == 1) {
-                                if (aM.region != Country.kenya.name) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          AutoImportAvailabilityScreen(),
-                                    ),
-                                  );
-                                }
-                              }
-                            });
+                            // aM.setRegion('other').then((updated) {
+                            //   if (updated == 1) {
+                            //     if (aM.region != Country.kenya.name) {
+                            //       Navigator.push(
+                            //         context,
+                            //         MaterialPageRoute(
+                            //           builder: (context) =>
+                            //               AutoImportAvailabilityScreen(),
+                            //         ),
+                            //       );
+                            //     }
+                            //   }
+                            // });
                           },
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.start,

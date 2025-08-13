@@ -60,7 +60,7 @@ class GoalModel extends ChangeNotifier {
         wM = di<WalletModel>();
       }
       int? count;
-      final db = await getDb();
+      final db = await DatabaseHelper().database;
       List<Goal> goalsN = await getGoals();
       double totalAllocatedToGoals = 0;
       for (final goal in goalsN) {
@@ -113,7 +113,7 @@ class GoalModel extends ChangeNotifier {
       } else {
         aM = di<AuthModel>();
       }
-      final db = await getDb();
+      final db = await DatabaseHelper().database;
 
       List<Goal> goalsN = await getGoals();
       Goal candidate = goalsN.firstWhere((goal) => goal.name == goalName);
@@ -145,7 +145,7 @@ class GoalModel extends ChangeNotifier {
     } else {
       aM = di<AuthModel>();
     }
-    final db = await getDb();
+    final db = await DatabaseHelper().database;
     final List<Map<String, Object?>> goalMaps = await db.rawQuery(
       'SELECT * FROM goals WHERE account_id = ?',
       ['${await aM.getAccountId()}'],
@@ -194,7 +194,7 @@ class GoalModel extends ChangeNotifier {
       aM = di<AuthModel>();
     }
     var rowId;
-    final db = await getDb();
+    final db = await DatabaseHelper().database;
     log("inserting goal ${goal.toString()}");
     await db.insert("goals", goal.toMap()).then((rwid) {
       rowId = rwid;
