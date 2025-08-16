@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter_application_1/db/db.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqlite_api.dart';
@@ -26,20 +28,27 @@ class WeeklyReport {
       'id': ?id,
     };
   }
+
+  @override
+  String toString() {
+    // TODO: implement toString
+    return 'WeeklyReport{id:$id,report_data:$reportData,account_id:$accountId,from_date:$fromDate,to_date:$toDate}';
+  }
 }
 
-insertWeeklyReport(WeeklyReport wk) async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  int? accountId = prefs.getInt("budget_lite_current_account_id");
-  final db = await DatabaseHelper().database;
-  var res = await db.query(
-    'weekly_reports',
-    where: 'from_date = ? AND to_date = ?',
-    whereArgs: [wk.fromDate, wk.toDate],
-  );
-  bool exists = res.isNotEmpty;
-  if (!exists) {
-    await db.transaction((txn) async {
+insertWeeklyReport(WeeklyReport wk, Transaction txn) async {
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int? accountId = prefs.getInt("budget_lite_current_account_id");
+    log('inserting weeklyreport for account_id:$accountId');
+    List<Map<String, Object?>> res = await txn.query(
+      'weekly_reports',
+      where: 'from_date = ? AND to_date = ? AND account_id = ?',
+      whereArgs: [wk.fromDate, wk.toDate, accountId],
+    );
+    bool exists = res.isNotEmpty;
+    if (!exists) {
+      log('Not duplicate report');
       int wkID = await txn.insert('weekly_reports', wk.toMap());
       await txn.update(
         'weekly_reports',
@@ -47,6 +56,16 @@ insertWeeklyReport(WeeklyReport wk) async {
         where: 'id = ?',
         whereArgs: [wkID],
       );
-    });
-  } else {}
+    } else if (exists && (res.first['report_data'] != wk.reportData)) {
+      await txn.update(
+        'weekly_reports',
+        {'report_data': wk.reportData},
+        where: 'from_date = ? AND to_date = ? AND account_id = ?',
+        whereArgs: [wk.fromDate, wk.toDate, accountId],
+      );
+      log('Weekly report already exists');
+    }
+  } catch (e) {
+    log('Error occurred inserting Weekly report', error: e);
+  }
 }

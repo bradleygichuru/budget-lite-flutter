@@ -247,17 +247,17 @@ class CategoriesModel extends ChangeNotifier {
     );
     log("found ${categoryMaps.length} categories");
 
-    categoryMaps.forEach((cat) {
-      log(
-        Category(
-          categoryName: cat['category_name'] as String,
-          budget: cat['budget'] as double,
-          spent: cat['spent'] as double,
-          id: cat['id'] as int,
-          accountId: cat['account_id'] as int,
-        ).toString(),
-      );
-    });
+    // categoryMaps.forEach((cat) {
+    //   log(
+    //     Category(
+    //       categoryName: cat['category_name'] as String,
+    //       budget: cat['budget'] as double,
+    //       spent: cat['spent'] as double,
+    //       id: cat['id'] as int,
+    //       accountId: cat['account_id'] as int,
+    //     ).toString(),
+    //   );
+    // });
 
     return [
       for (final {

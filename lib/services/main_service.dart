@@ -60,6 +60,7 @@ Future<void> requestListeningPermissions() async {
 }
 
 Future<void> initializeService() async {
+  // await calculateWeekInsights();
   await requestSmsPermissions();
   await requestListeningPermissions();
   final service = FlutterBackgroundService();
@@ -190,6 +191,9 @@ void onStart(ServiceInstance service) async {
       );
       debugPrint('Running tx discovery');
       queryMpesa();
+      debugPrint('Calculating weekly insights');
+
+      await calculateWeekInsights();
       // queryNcba();
       // queryEquity();
       AwesomeNotifications().dismiss(999);

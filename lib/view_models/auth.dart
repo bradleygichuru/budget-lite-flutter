@@ -145,7 +145,7 @@ class AuthModel extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setBool("isNewUser", false);
     prefs.remove('last_onboarding_step');
-    AppGlobal.analytics.logEvent(name: 'onboarding_complete');
+    // AppGlobal.analytics.logEvent(name: 'onboarding_complete');
 
     refreshAuth();
     notifyListeners();
@@ -237,9 +237,9 @@ class AuthModel extends ChangeNotifier {
             switch (getacid) {
               case Ok():
                 {
-                  AppGlobal.analytics.logLogin(
-                    loginMethod: 'password-authentication',
-                  );
+                  // AppGlobal.analytics.logLogin(
+                  //   loginMethod: 'password-authentication',
+                  // );
                   log('Login: setAccount id:${getacid.value}');
                   SharedPreferences prefs =
                       await SharedPreferences.getInstance();
@@ -276,9 +276,9 @@ class AuthModel extends ChangeNotifier {
                         switch (accountCreation) {
                           case Ok():
                             {
-                              AppGlobal.analytics.logSignUp(
-                                signUpMethod: "password-authenctication",
-                              );
+                              // AppGlobal.analytics.logSignUp(
+                              //   signUpMethod: "password-authenctication",
+                              // );
                               return Result.ok(accountCreation.value);
                             }
                           case Error():
@@ -312,9 +312,9 @@ class AuthModel extends ChangeNotifier {
                         switch (accountCreation) {
                           case Ok():
                             {
-                              AppGlobal.analytics.logSignUp(
-                                signUpMethod: "password-authenctication",
-                              );
+                              // AppGlobal.analytics.logSignUp(
+                              //   signUpMethod: "password-authenctication",
+                              // );
                               return Result.ok(accountCreation.value);
                             }
                           case Error():
@@ -365,9 +365,9 @@ class AuthModel extends ChangeNotifier {
             switch (getacid) {
               case Ok():
                 {
-                  AppGlobal.analytics.logLogin(
-                    loginMethod: 'password-authentication',
-                  );
+                  // AppGlobal.analytics.logLogin(
+                  //   loginMethod: 'password-authentication',
+                  // );
                   log('Login: setAccount id:${getacid.value}');
                   SharedPreferences prefs =
                       await SharedPreferences.getInstance();
@@ -414,9 +414,9 @@ class AuthModel extends ChangeNotifier {
                         switch (accountCreation) {
                           case Ok():
                             {
-                              AppGlobal.analytics.logSignUp(
-                                signUpMethod: "password-authenctication",
-                              );
+                              // AppGlobal.analytics.logSignUp(
+                              //   signUpMethod: "password-authenctication",
+                              // );
                               return Result.ok(accountCreation.value);
                             }
                           case Error():

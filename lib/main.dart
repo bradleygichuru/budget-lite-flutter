@@ -3,6 +3,9 @@ import 'package:another_telephony/telephony.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/data_models/categories_data_model.dart';
+import 'package:flutter_application_1/db/db.dart';
+import 'package:flutter_application_1/screens/reports_screen.dart';
+import 'package:flutter_application_1/view_models/weekly_reports.dart';
 import 'package:loading_overlay/loading_overlay.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -40,14 +43,11 @@ import 'package:flutter_application_1/firebase_options.dart';
 void setup() {
   //intialize changenotifier singletons
   di.registerSingleton<TransactionsModel>(TransactionsModel());
-
   di.registerSingleton<AuthModel>(AuthModel());
-
   di.registerSingleton<CategoriesModel>(CategoriesModel());
-
   di.registerSingleton<GoalModel>(GoalModel());
-
   di.registerSingleton<WalletModel>(WalletModel());
+  di.registerSingleton<WeeklyReportsModel>(WeeklyReportsModel());
 }
 
 setUpNotificationIds() async {
@@ -82,17 +82,13 @@ Future<void> main() async {
   //   SystemUiOverlayStyle(statusBarColor: Colors.transparent),
   // );
   await dotenv.load(fileName: ".env");
-  // final db = await getDb();
-  // await db.execute(
-  //   'ALTER TABLE transactions ADD COLUMN message_hash_code INTEGER UNIQUE',
-  // );
-  // await db.execute('DELETE FROM transactions');
+  // final db = await DatabaseHelper().database;
+  // await db.execute('DELETE FROM weekly_reports');
   // await deleteDatabase(
   //   join(await getDatabasesPath(), 'budget_lite_database.db'),
   // );
   // SharedPreferences prefs = await SharedPreferences.getInstance();
   // prefs.remove("budget_lite_current_account_id");
-
   setUpNotificationIds();
   requestSmsPermission();
   AwesomeNotifications().initialize(
@@ -148,20 +144,24 @@ Future<void> main() async {
   //   // visit: https://docs.sentry.io/platforms/dart/data-management/data-collected/ for more info
   //   options.sendDefaultPii = true;
   // }, appRunner: () => runApp(SentryWidget(child: MyApp())));
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  bool weWantFatalErrorRecording = true;
-  FlutterError.onError = (errorDetails) {
-    if (weWantFatalErrorRecording) {
-      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-    } else {
-      FirebaseCrashlytics.instance.recordFlutterError(errorDetails);
-    }
-  };
-  // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
-  PlatformDispatcher.instance.onError = (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    return true;
-  };
+  if (!kDebugMode) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    bool weWantFatalErrorRecording = true;
+    FlutterError.onError = (errorDetails) {
+      if (weWantFatalErrorRecording) {
+        FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+      } else {
+        FirebaseCrashlytics.instance.recordFlutterError(errorDetails);
+      }
+    };
+    // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  }
   initializeService();
   runApp(const MyApp());
 }
@@ -453,6 +453,7 @@ class MyAppState extends State<MyApp> {
       di.get<CategoriesModel>().refreshCats();
       di.get<GoalModel>().refreshGoals();
       di.get<AuthModel>().refreshAuth();
+      di.get<WeeklyReportsModel>().refresh();
       setState(() {
         shouldReset = di<AuthModel>().pendingBudgetReset;
       });
@@ -1018,21 +1019,11 @@ class MyAppState extends State<MyApp> {
                                 icon: Icon(Icons.crisis_alert_outlined),
                                 label: 'Goals',
                               ),
-
-                              // NavigationDestination(
-                              //   selectedIcon: Icon(
-                              //     Icons.account_balance_wallet,
-                              //   ),
-                              //   icon: Icon(
-                              //     Icons.account_balance_wallet_outlined,
-                              //   ),
-                              //   label: 'Wallet',
-                              // ),
-                              // NavigationDestination(
-                              //   icon: Icon(Icons.settings_outlined),
-                              //   selectedIcon: Icon(Icons.settings),
-                              //   label: 'Settings',
-                              // ),
+                              NavigationDestination(
+                                selectedIcon: Icon(Icons.analytics),
+                                icon: Icon(Icons.analytics_outlined),
+                                label: 'Reports',
+                              ),
                             ],
                           ),
                           body: UpgradeAlert(
@@ -1094,6 +1085,7 @@ class MyAppState extends State<MyApp> {
                               Dashboard(),
                               EnvelopesView(),
                               GoalsPage(),
+                              ReportsScreen(),
                               //WalletScreen(),
                               // SettingsPage(),
                             ][currentPageIndex],

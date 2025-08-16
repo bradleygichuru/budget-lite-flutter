@@ -4,6 +4,7 @@ import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
+import 'package:flutter_application_1/view_models/weekly_reports.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -383,6 +384,16 @@ class SettingsPageState extends State<SettingsPage> {
                             authM.refreshAuth();
                           },
                           child: Text("Dev Reset App"),
+                        ),
+
+                        FilledButton(
+                          onPressed: () async {
+                            final db = await DatabaseHelper().database;
+                            await db.execute('DELETE FROM weekly_reports');
+
+                            di<WeeklyReportsModel>().refresh();
+                          },
+                          child: Text("Reset reports"),
                         ),
 
                         FilledButton(

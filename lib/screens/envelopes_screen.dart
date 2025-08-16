@@ -683,7 +683,9 @@ class EnvelopeViewState extends State<EnvelopesView> {
                                           ),
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
-                                                Colors.green.shade600,
+                                                getEnvelopecolor(
+                                                  snapshot.data![index],
+                                                )["textColor"]!,
                                               ),
                                           value:
                                               (snapshot.data![index].spent /

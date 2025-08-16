@@ -241,6 +241,8 @@ class InitialBalanceState extends State<InitialBalance> {
 
                                       Navigator.pop(context);
                                     }
+
+                                    di.get<AuthModel>().completeOnboarding();
                                     Navigator.pushReplacement(
                                       context,
                                       MaterialPageRoute(

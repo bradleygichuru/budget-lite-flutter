@@ -29,7 +29,9 @@ class TransactionsModel extends ChangeNotifier {
   void initTxs() async {
     transactions = getTransactions();
     final x = await getUncategorizedTx();
-    shouldCategorize = x.isNotEmpty;
+    if (x.isNotEmpty) {
+      shouldCategorize = x.isNotEmpty;
+    }
     notifyListeners();
   }
 
@@ -69,29 +71,29 @@ class TransactionsModel extends ChangeNotifier {
       whereArgs: ['${await aM.getAccountId()}'],
       limit: pageSize,
       offset: offset,
-      orderBy: 'id',
+      orderBy: 'DATE(date) DESC',
     );
     // final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
     //   'SELECT * FROM transactions ORDER BY date LIMIT ? OFFSET ? WHERE account_id = ?',
     //   ['$pageSize', '$offset', '${await aM.getAccountId()}'],
     // );
     log("found ${transactionMaps.length} transaction");
-    transactionMaps.forEach((tx) {
-      log(
-        TransactionObj(
-          id: tx["id"] as int,
-          type: tx["type"] as String,
-          amount: tx["amount"] as double,
-          source: tx["source"] as String,
-          date: tx["date"] as String,
-          category: tx["category"] as String?,
-          accountId: tx["account_id"] as int,
-          desc: tx['desc'] as String,
-
-          messageHashCode: tx['message_hash_code'] as String?,
-        ).toString(),
-      );
-    });
+    // transactionMaps.forEach((tx) {
+    //   log(
+    //     TransactionObj(
+    //       id: tx["id"] as int,
+    //       type: tx["type"] as String,
+    //       amount: tx["amount"] as double,
+    //       source: tx["source"] as String,
+    //       date: tx["date"] as String,
+    //       category: tx["category"] as String?,
+    //       accountId: tx["account_id"] as int,
+    //       desc: tx['desc'] as String,
+    //
+    //       messageHashCode: tx['message_hash_code'] as String?,
+    //     ).toString(),
+    //   );
+    // });
     if (transactionMaps.isNotEmpty) {
       for (final {
             'id': id as int,
@@ -230,27 +232,34 @@ class TransactionsModel extends ChangeNotifier {
       aM = di<AuthModel>();
     }
     final db = await DatabaseHelper().database;
-    final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
-      "SELECT * from transactions WHERE category is null AND account_id = ?",
-      ['${await aM.getAccountId()}'],
+    // final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
+    //   "SELECT * from transactions WHERE category is null AND account_id = ?",
+    //   ['${await aM.getAccountId()}'],
+    // );
+
+    final List<Map<String, Object?>> transactionMaps = await db.query(
+      'transactions',
+      where: 'category is null AND account_id = ?',
+      whereArgs: [await aM.getAccountId()],
+      orderBy: 'DATE(date) DESC',
     );
     log("found ${transactionMaps.length} uncategorized transaction");
-    transactionMaps.forEach((tx) {
-      log(
-        TransactionObj(
-          id: tx["id"] as int,
-          type: tx["type"] as String,
-          amount: tx["amount"] as double,
-          source: tx["source"] as String,
-          date: tx["date"] as String,
-          category: tx["category"] as String?,
-          accountId: tx['account_id'] as int?,
-          desc: tx['desc'] as String,
-
-          messageHashCode: tx['message_hash_code'] as String?,
-        ).toString(),
-      );
-    });
+    // transactionMaps.forEach((tx) {
+    //   log(
+    //     TransactionObj(
+    //       id: tx["id"] as int,
+    //       type: tx["type"] as String,
+    //       amount: tx["amount"] as double,
+    //       source: tx["source"] as String,
+    //       date: tx["date"] as String,
+    //       category: tx["category"] as String?,
+    //       accountId: tx['account_id'] as int?,
+    //       desc: tx['desc'] as String,
+    //
+    //       messageHashCode: tx['message_hash_code'] as String?,
+    //     ).toString(),
+    //   );
+    // });
     if (transactionMaps.isNotEmpty) {
       [
         for (final {
@@ -298,27 +307,35 @@ class TransactionsModel extends ChangeNotifier {
     List<TransactionObj> x = [];
     final db = await DatabaseHelper().database;
     log("Getting Transactions");
-    final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
-      'SELECT * FROM transactions WHERE account_id = ?',
-      ['${await aM.getAccountId()}'],
+    // final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
+    //   'SELECT * FROM transactions WHERE account_id = ?',
+    //   ['${await aM.getAccountId()}'],
+    // );
+
+    final List<Map<String, Object?>> transactionMaps = await db.query(
+      'transactions',
+      where: 'account_id = ?',
+      whereArgs: ['${await aM.getAccountId()}'],
+
+      orderBy: 'DATE(date) DESC',
     );
     log("found ${transactionMaps.length} transaction");
-    transactionMaps.forEach((tx) {
-      log(
-        TransactionObj(
-          id: tx["id"] as int,
-          type: tx["type"] as String,
-          amount: tx["amount"] as double,
-          source: tx["source"] as String,
-          date: tx["date"] as String,
-          category: tx["category"] as String?,
-          accountId: tx["account_id"] as int,
-          desc: tx['desc'] as String,
-
-          messageHashCode: tx['message_hash_code'] as String?,
-        ).toString(),
-      );
-    });
+    // transactionMaps.forEach((tx) {
+    //   log(
+    //     TransactionObj(
+    //       id: tx["id"] as int,
+    //       type: tx["type"] as String,
+    //       amount: tx["amount"] as double,
+    //       source: tx["source"] as String,
+    //       date: tx["date"] as String,
+    //       category: tx["category"] as String?,
+    //       accountId: tx["account_id"] as int,
+    //       desc: tx['desc'] as String,
+    //
+    //       messageHashCode: tx['message_hash_code'] as String?,
+    //     ).toString(),
+    //   );
+    // });
     if (transactionMaps.isNotEmpty) {
       for (final {
             'id': id as int,
