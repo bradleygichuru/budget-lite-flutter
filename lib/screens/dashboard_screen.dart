@@ -215,7 +215,7 @@ class DashboardState extends State<Dashboard> {
                                         borderRadius: BorderRadius.circular(2),
                                         valueColor:
                                             AlwaysStoppedAnimation<Color>(
-                                              Colors.green.shade600,
+                                              getEnvelopecolor(x)["textColor"]!,
                                             ),
                                         value: (x.spent / x.budget),
                                       ),

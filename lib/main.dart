@@ -6,6 +6,7 @@ import 'package:flutter_application_1/data_models/categories_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/screens/reports_screen.dart';
 import 'package:flutter_application_1/view_models/weekly_reports.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:loading_overlay/loading_overlay.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -83,6 +84,7 @@ Future<void> main() async {
   // );
   await dotenv.load(fileName: ".env");
   // final db = await DatabaseHelper().database;
+  // db.execute('ALTER TABLE weekly_reports ADD COLUMN key TEXT');
   // await db.execute('DELETE FROM weekly_reports');
   // await deleteDatabase(
   //   join(await getDatabasesPath(), 'budget_lite_database.db'),
@@ -162,6 +164,7 @@ Future<void> main() async {
       return true;
     };
   }
+  MobileAds.instance.initialize();
   initializeService();
   runApp(const MyApp());
 }

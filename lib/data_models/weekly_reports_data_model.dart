@@ -11,8 +11,9 @@ class WeeklyReport {
     required this.toDate,
     required this.reportData,
     this.accountId,
+    required this.key,
   });
-
+  final String key;
   final int? id;
   final String fromDate;
   final String toDate;
@@ -21,6 +22,7 @@ class WeeklyReport {
 
   Map<String, Object> toMap() {
     return {
+      'key': key,
       'account_id': ?accountId,
       'report_data': reportData,
       'to_date': toDate,
@@ -32,7 +34,7 @@ class WeeklyReport {
   @override
   String toString() {
     // TODO: implement toString
-    return 'WeeklyReport{id:$id,report_data:$reportData,account_id:$accountId,from_date:$fromDate,to_date:$toDate}';
+    return 'WeeklyReport{id:$id,report_data:$reportData,account_id:$accountId,from_date:$fromDate,to_date:$toDate,key:$key}';
   }
 }
 

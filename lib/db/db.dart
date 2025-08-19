@@ -44,7 +44,7 @@ class DatabaseHelper {
       "CREATE TABLE IF NOT EXISTS goals(id INTEGER PRIMARY KEY,name TEXT,target_amount REAL,target_date TEXT,current_amount REAL,account_id INTEGER, FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)",
     );
     await db.execute(
-      "CREATE TABLE IF NOT EXISTS weekly_reports(id INTEGER PRIMARY KEY, from_date TEXT, to_date TEXT, report_data TEXT,account_id INTEGER, FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)",
+      "CREATE TABLE IF NOT EXISTS weekly_reports(id INTEGER PRIMARY KEY, from_date TEXT, to_date TEXT, report_data TEXT,key TEXT,account_id INTEGER, FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)",
     );
   }
 
