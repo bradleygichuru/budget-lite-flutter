@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDG73rhkMncErtAtABKwXX4Y__XOzkSLRI',
-    appId: '1:925938950295:android:303491db79a2218d3e49d2',
+    appId: '1:925938950295:android:838b8b35dbc752d73e49d2',
     messagingSenderId: '925938950295',
     projectId: 'budgetlite-4d8e9',
     storageBucket: 'budgetlite-4d8e9.firebasestorage.app',
@@ -60,11 +60,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDMPWlSuWeIqyotT21NrV3CbCPEp2GW14M',
-    appId: '1:925938950295:ios:2f252343354bb3ff3e49d2',
+    appId: '1:925938950295:ios:ad81b3e32a96977e3e49d2',
     messagingSenderId: '925938950295',
     projectId: 'budgetlite-4d8e9',
     storageBucket: 'budgetlite-4d8e9.firebasestorage.app',
-    iosBundleId: 'com.example.flutterApplication1',
+    iosBundleId: 'com.budgetlite',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'budgetlite-4d8e9.firebasestorage.app',
     measurementId: 'G-4XKKCQVD9L',
   );
+
 }

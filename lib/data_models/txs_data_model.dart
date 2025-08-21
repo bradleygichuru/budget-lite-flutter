@@ -769,7 +769,7 @@ Future<void> queryMpesa() async {
                   var txs = await txn.query(
                     'transactions',
                     where: 'message_hash_code = ?',
-                    whereArgs: ['${digest.toString()}'],
+                    whereArgs: [digest.toString()],
                   );
 
                   bool exists = txs.isNotEmpty;
@@ -834,6 +834,7 @@ Future<void> queryMpesa() async {
 }
 
 Future<void> calculateWeekInsights() async {
+  debugPrint('Calculating weekly insights');
   DateTime now = DateTime.now();
   if (kDebugMode) {
     int weeks = 4;

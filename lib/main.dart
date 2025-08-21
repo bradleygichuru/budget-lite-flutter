@@ -58,22 +58,22 @@ setUpNotificationIds() async {
   }
 }
 
-Future<void> requestSmsPermission() async {
-  AwesomeNotifications().isNotificationAllowed();
-  final permission = await AwesomeNotifications().isNotificationAllowed();
-
-  // SharedPreferences prefs = await SharedPreferences.getInstance();
-
-  if (!permission) {
-    log("sms permissions: false");
-    var status = await AwesomeNotifications()
-        .requestPermissionToSendNotifications();
-    if (status) {}
-  }
-  if (permission) {
-    log("sms permissions: true");
-  }
-}
+// Future<void> requestSmsPermission() async {
+//   AwesomeNotifications().isNotificationAllowed();
+//   final permission = await AwesomeNotifications().isNotificationAllowed();
+//
+//   // SharedPreferences prefs = await SharedPreferences.getInstance();
+//
+//   if (!permission) {
+//     log("sms permissions: false");
+//     var status = await AwesomeNotifications()
+//         .requestPermissionToSendNotifications();
+//     if (status) {}
+//   }
+//   if (permission) {
+//     log("sms permissions: true");
+//   }
+// }
 
 Future<void> main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -92,7 +92,7 @@ Future<void> main() async {
   // SharedPreferences prefs = await SharedPreferences.getInstance();
   // prefs.remove("budget_lite_current_account_id");
   setUpNotificationIds();
-  requestSmsPermission();
+  requestNotificationPermissions();
   AwesomeNotifications().initialize(
     // set the icon to null if you want to use the default app icon
     null,

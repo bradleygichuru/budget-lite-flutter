@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_application_1/screens/setup_budget.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:watch_it/watch_it.dart';
 
 class SmsPermsRequest extends StatefulWidget {
@@ -32,11 +33,41 @@ class SmsPermsRequestState extends State<SmsPermsRequest> {
         log("sms permissions: false");
         var status = await permission.request();
         if (status.isGranted) {
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+
+          prefs.setBool('auto_import', true);
           if (context.mounted) {
             // prefs.setBool("isNewUser", false);
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const SetupBudget()),
+            );
+          }
+        } else if (status.isDenied) {
+          if (context.mounted) {
+            showDialog(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  title: Text('Permission denied'),
+                  content: Text(
+                    'Continue without permissions? You can enable them later in the financial preferences section, if you would like transactions to be automatically imported',
+                  ),
+                  actions: [
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SetupBudget(),
+                          ),
+                        );
+                      },
+                      child: Text('Continue ?'),
+                    ),
+                  ],
+                );
+              },
             );
           }
         }

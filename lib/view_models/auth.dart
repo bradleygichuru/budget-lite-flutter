@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'package:another_telephony/telephony.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
@@ -18,6 +20,7 @@ import 'package:flutter_application_1/screens/sms_perms_request.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
@@ -100,8 +103,19 @@ class AuthModel extends ChangeNotifier {
 
   Future<void> setAutoImport(bool val) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
+
     prefs.setBool('auto_import', val);
-    autoImport = val;
+    if (val) {
+      bool? res = await Telephony.instance.requestPhoneAndSmsPermissions;
+      if (res != null && res) {
+        autoImport = val;
+      } else {
+        autoImport = false;
+      }
+    } else {
+      //TODO set permission to denied
+      autoImport = val;
+    }
     notifyListeners();
   }
 
@@ -145,7 +159,9 @@ class AuthModel extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setBool("isNewUser", false);
     prefs.remove('last_onboarding_step');
-    // AppGlobal.analytics.logEvent(name: 'onboarding_complete');
+    if (!kDebugMode) {
+      AppGlobal.analytics.logEvent(name: 'onboarding_complete');
+    }
 
     refreshAuth();
     notifyListeners();
@@ -237,9 +253,11 @@ class AuthModel extends ChangeNotifier {
             switch (getacid) {
               case Ok():
                 {
-                  // AppGlobal.analytics.logLogin(
-                  //   loginMethod: 'password-authentication',
-                  // );
+                  if (!kDebugMode) {
+                    AppGlobal.analytics.logLogin(
+                      loginMethod: 'password-authentication',
+                    );
+                  }
                   log('Login: setAccount id:${getacid.value}');
                   SharedPreferences prefs =
                       await SharedPreferences.getInstance();
@@ -276,9 +294,11 @@ class AuthModel extends ChangeNotifier {
                         switch (accountCreation) {
                           case Ok():
                             {
-                              // AppGlobal.analytics.logSignUp(
-                              //   signUpMethod: "password-authenctication",
-                              // );
+                              if (!kDebugMode) {
+                                AppGlobal.analytics.logSignUp(
+                                  signUpMethod: "password-authenctication",
+                                );
+                              }
                               return Result.ok(accountCreation.value);
                             }
                           case Error():
@@ -312,9 +332,11 @@ class AuthModel extends ChangeNotifier {
                         switch (accountCreation) {
                           case Ok():
                             {
-                              // AppGlobal.analytics.logSignUp(
-                              //   signUpMethod: "password-authenctication",
-                              // );
+                              if (!kDebugMode) {
+                                AppGlobal.analytics.logSignUp(
+                                  signUpMethod: "password-authenctication",
+                                );
+                              }
                               return Result.ok(accountCreation.value);
                             }
                           case Error():
@@ -365,9 +387,11 @@ class AuthModel extends ChangeNotifier {
             switch (getacid) {
               case Ok():
                 {
-                  // AppGlobal.analytics.logLogin(
-                  //   loginMethod: 'password-authentication',
-                  // );
+                  if (!kDebugMode) {
+                    AppGlobal.analytics.logLogin(
+                      loginMethod: 'password-authentication',
+                    );
+                  }
                   log('Login: setAccount id:${getacid.value}');
                   SharedPreferences prefs =
                       await SharedPreferences.getInstance();
@@ -414,9 +438,11 @@ class AuthModel extends ChangeNotifier {
                         switch (accountCreation) {
                           case Ok():
                             {
-                              // AppGlobal.analytics.logSignUp(
-                              //   signUpMethod: "password-authenctication",
-                              // );
+                              if (!kDebugMode) {
+                                AppGlobal.analytics.logSignUp(
+                                  signUpMethod: "password-authenctication",
+                                );
+                              }
                               return Result.ok(accountCreation.value);
                             }
                           case Error():
@@ -505,7 +531,7 @@ class AuthModel extends ChangeNotifier {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setString('begin_date', DateTime.now().toString().split(' ')[0]);
 
-      prefs.setBool('auto_import', true);
+      prefs.setBool('auto_import', false);
       bool result = await InternetConnection().hasInternetAccess;
       if (result) {
         bool better_auth = true;

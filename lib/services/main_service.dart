@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:developer';
-import 'dart:io';
 import 'dart:ui';
 import 'package:another_telephony/telephony.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
@@ -27,7 +26,7 @@ const notificationChannelId = 'service_channel';
 // this will be used for notification id, So you can update your custom notification with this id.
 const notificationId = 888;
 
-Future<void> requestSmsPermissions() async {
+Future<void> requestNotificationPermissions() async {
   AwesomeNotifications().isNotificationAllowed();
   final permission = await AwesomeNotifications().isNotificationAllowed();
 
@@ -48,11 +47,12 @@ Future<void> requestListeningPermissions() async {
   final permission = Permission.sms;
   // SharedPreferences prefs = await SharedPreferences.getInstance();
 
-  await Telephony.instance.requestPhoneAndSmsPermissions;
   if (await permission.isDenied) {
     log("sms permissions: false");
-    var status = await permission.request();
-    if (status.isGranted) {}
+    // var status = await permission.request();
+
+    await Telephony.instance.requestPhoneAndSmsPermissions;
+    // if (status.isGranted) {}
   }
   if (await permission.isGranted) {
     log("sms permissions: true");
@@ -61,8 +61,8 @@ Future<void> requestListeningPermissions() async {
 
 Future<void> initializeService() async {
   // await calculateWeekInsights();
-  await requestSmsPermissions();
-  await requestListeningPermissions();
+  // await requestNotificationPermissions();
+  // await requestListeningPermissions();
   final service = FlutterBackgroundService();
   await service.configure(
     androidConfiguration: AndroidConfiguration(
@@ -118,7 +118,14 @@ void onStart(ServiceInstance service) async {
 
   final cron = Cron();
   // 0 8 * * *
+  cron.schedule(Schedule.parse('0 0 * * 0'), calculateWeekInsights);
+  cron.schedule(Schedule.parse('0 0 1 * *'), resetBudgets);
   cron.schedule(Schedule.parse('0 8 * * *'), dailyBudgetAlert); //every day at 8
+
+  cron.schedule(
+    Schedule.parse('0 8 * * *'),
+    notifyShouldCategorize,
+  ); //every day at 8
   cron.schedule(
     Schedule.parse('0 0 1 * *'),
     monthlyGoalAlerts,
@@ -169,14 +176,16 @@ void onStart(ServiceInstance service) async {
     service.stopSelf();
   });
 
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  Timer.periodic(Duration(minutes: 2), (timer) async {
+  Timer.periodic(kDebugMode ? Duration(minutes: 2) : Duration(hours: 1), (
+    timer,
+  ) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     bool isNewUser = prefs.getBool("isNewUser") ?? true;
     debugPrint('Is new user:$isNewUser');
     int? acid = prefs.getInt("budget_lite_current_account_id");
     debugPrint('acid:$acid');
-    if (acid != null && !isNewUser) {
+    final smsPerms = Permission.sms;
+    if (acid != null && !isNewUser && await smsPerms.isGranted) {
       AwesomeNotifications().createNotification(
         content: NotificationContent(
           criticalAlert: false,
@@ -191,295 +200,54 @@ void onStart(ServiceInstance service) async {
       );
       debugPrint('Running tx discovery');
       queryMpesa();
-      debugPrint('Calculating weekly insights');
 
-      await calculateWeekInsights();
       // queryNcba();
       // queryEquity();
       AwesomeNotifications().dismiss(999);
+    } else {
+      debugPrint(
+        'Discovery run skipped ,sms_perm:${await smsPerms.isGranted} ,account_id:$acid ,is_new_user:$isNewUser',
+      );
+      log(
+        'Discovery run skipped ,sms_perm:${await smsPerms.isGranted} ,account_id:$acid ,is_new_user:$isNewUser',
+      );
     }
   });
-
-  // bring to foreground
-  // Timer.periodic(const Duration(seconds: 1), (timer) async {
-  //   if (service is AndroidServiceInstance) {
-  //     if (await service.isForegroundService()) {}
-  //   }
-  //
-  //   /// you can see this log in logcat
-  //   // log('FLUTTER BACKGROUND SERVICE: ${DateTime.now()}');
-  //
-  //   // test using external plugin
-  //
-  //   service.invoke('update', {
-  //     "current_date": DateTime.now().toIso8601String(),
-  //     "device": Platform.operatingSystem,
-  //   });
-  // });
 }
 
-// onMessageForegroundBGH(SmsMessage message) async {
-//   try {
-//     TransactionsModel txM = TransactionsModel();
-//     WalletModel wM = WalletModel();
-//     AuthModel aM = AuthModel();
-//
-//     log('from:${message.address} message:${message.body}');
-//     log('tx parsing for region: ${aM.region}');
-//
-//     int? accountId = await aM.getAccountId();
-//     if (message.address == 'MPESA') {
-//       log('parsing mpesa tx message');
-//       var transaction = parseMpesa(message);
-//
-//       log('foreground_transaction:$transaction');
-//       if (transaction != null && accountId != null) {
-//         if (transaction['type'] == TxType.credit.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//             category: 'credit',
-//           );
-//           wM.creditDefaultWallet(tx);
-//         } else if (transaction['type'] == TxType.fromSaving.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             category: 'credit',
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           wM.removeFromSavings(tx);
-//         } else if (transaction['type'] == TxType.toSaving.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             category: 'savings',
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           wM.addToSavings(tx);
-//         } else {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           txM.insertTransaction(tx);
-//         }
-//       }
-//     }
-//     if (message.address == 'NCBA_BANK') {
-//       var transaction = parseNCBA(message);
-//
-//       log('foreground_transaction:$transaction');
-//       if (transaction != null && accountId != null) {
-//         if (transaction['type'] == TxType.credit.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//             category: 'credit',
-//           );
-//           wM.creditDefaultWallet(tx);
-//         } else if (transaction['type'] == TxType.fromSaving.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             category: 'credit',
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           wM.removeFromSavings(tx);
-//         } else if (transaction['type'] == TxType.toSaving.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             category: 'savings',
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           wM.addToSavings(tx);
-//         } else if (transaction['type'] == TxType.spend.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           txM.insertTransaction(tx);
-//         }
-//       }
-//     }
-//
-//     if (message.address == 'Equity Bank') {
-//       log('parsing Equity tx message');
-//       var transaction = parseEquity(message);
-//
-//       log('foreground_transaction:$transaction');
-//       log('from:${message.address} message:${message.body}');
-//       if (transaction != null) {
-//         if (transaction['type'] == TxType.spend.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           txM.insertTransaction(tx);
-//         }
-//       }
-//     }
-//   } catch (e) {
-//     log('Error in background message', error: e);
-//   }
-// }
-//
-// @pragma('vm:entry-point')
-// backgroundMessageHandler(SmsMessage message) async {
-//   //Handle background message
-//   try {
-//     TransactionsModel txM = TransactionsModel();
-//     WalletModel wM = WalletModel();
-//     AuthModel aM = AuthModel();
-//     // String? currentRegion = aM.region;
-//
-//     int? accountId = await aM.getAccountId();
-//     log('from:${message.address} message:${message.body}');
-//
-//     log('tx parsing start');
-//     if (message.address == 'MPESA') {
-//       var transaction = parseMpesa(message);
-//       log('from:${message.address} message:${message.body}');
-//
-//       log('background_transaction:$transaction');
-//       if (transaction != null && accountId != null) {
-//         if (transaction['type'] == TxType.credit.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//             category: 'credit',
-//           );
-//           wM.creditDefaultWallet(tx);
-//         } else if (transaction['type'] == TxType.fromSaving.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             category: 'credit',
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           wM.removeFromSavings(tx);
-//         } else if (transaction['type'] == TxType.toSaving.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             category: 'savings',
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           wM.addToSavings(tx);
-//         } else {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           txM.insertTransaction(tx);
-//         }
-//       }
-//     }
-//     if (message.address == 'NCBA_BANK') {
-//       log('from:${message.address} message:${message.body}');
-//       var transaction = parseNCBA(message);
-//
-//       log('background_transaction:$transaction');
-//       if (transaction != null && accountId != null) {
-//         if (transaction['type'] == TxType.credit.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//             category: 'credit',
-//           );
-//           wM.creditDefaultWallet(tx);
-//         } else if (transaction['type'] == TxType.fromSaving.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             category: 'credit',
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           wM.removeFromSavings(tx);
-//         } else if (transaction['type'] == TxType.toSaving.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             category: 'savings',
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           wM.addToSavings(tx);
-//         } else if (transaction['type'] == TxType.spend.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           txM.insertTransaction(tx);
-//         }
-//       }
-//     }
-//
-//     if (message.address == 'Equity Bank') {
-//       var transaction = parseEquity(message);
-//
-//       log('background_transaction:$transaction');
-//       log('from:${message.address} message:${message.body}');
-//       if (transaction != null && accountId != null) {
-//         if (transaction['type'] == TxType.spend.val) {
-//           TransactionObj tx = TransactionObj(
-//             desc: transaction['desc'],
-//             type: transaction['type'],
-//             source: transaction['source'],
-//             amount: transaction['amount'],
-//             date: transaction['date'],
-//           );
-//           txM.insertTransaction(tx);
-//         }
-//       }
-//     }
-//   } catch (e) {
-//     log('Error in background message', error: e);
-//   }
-// }
+Future<void> notifyShouldCategorize() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+
+  int? acid = prefs.getInt("budget_lite_current_account_id");
+  final db = await DatabaseHelper().database;
+  // final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
+  //   "SELECT * from transactions WHERE category is null AND account_id = ?",
+  //   ['${await aM.getAccountId()}'],
+  // );
+
+  final List<Map<String, Object?>> transactionMaps = await db.query(
+    'transactions',
+    where: 'category is null AND account_id = ?',
+    whereArgs: [acid],
+    orderBy: 'DATE(date) DESC',
+  );
+  if (transactionMaps.isNotEmpty) {
+    int notiId = prefs.getInt('notification_id')!;
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        notificationLayout: NotificationLayout.BigText,
+        autoDismissible: false,
+        id: notiId,
+        channelKey: 'basic_channel',
+        actionType: ActionType.Default,
+        title: 'Uncategorized transactions',
+        body: 'Hey,you forgot to categorize some transactions',
+      ),
+    );
+
+    prefs.setInt('notification_id', notiId + 1);
+  }
+}
 
 Future<void> dailyBudgetAlert() async {
   String body = '';
@@ -489,12 +257,12 @@ Future<void> dailyBudgetAlert() async {
   for (final cat in categories) {
     if (body.isEmpty) {
       body = '${cat.categoryName} ${(cat.spent / cat.budget * 100)}% spent';
-      print('New body:$body');
+      // print('New body:$body');
     } else {
       body =
           '$body, ${cat.categoryName} ${(cat.spent / cat.budget * 100)}% spent';
 
-      print('New body:$body');
+      // print('New body:$body');
     }
   }
   if (body.isNotEmpty) {
@@ -558,4 +326,61 @@ Future<void> monthlyGoalAlerts() async {
 
     prefs.setInt('notification_id', notiId + 1);
   }
+}
+
+Future<void> resetBudgets() async {
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    int? acid = prefs.getInt("budget_lite_current_account_id");
+    if (acid != null) {
+      final db = await DatabaseHelper().database;
+      final List<Map<String, Object?>> categoryMaps = await db.rawQuery(
+        "SELECT * FROM categories WHERE account_id = ?",
+        ['$acid'],
+      );
+      if (categoryMaps.isNotEmpty) {
+        db.transaction((txn) async {
+          for (final cat in categoryMaps) {
+            await txn.rawUpdate(
+              'UPDATE categories SET spent = 0 WHERE category_name = ? AND account_id = ?',
+              [cat['category_name'], acid],
+            );
+          }
+        });
+      }
+    }
+  } on Exception catch (e) {
+    log('Error reseting budget', error: e);
+  }
+}
+
+Future<List<Ct.Category>> getCategories() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+
+  int? acid = prefs.getInt("budget_lite_current_account_id");
+  final db = await DatabaseHelper().database;
+  final List<Map<String, Object?>> categoryMaps = await db.rawQuery(
+    "SELECT * FROM categories WHERE account_id = ?",
+    ['$acid'],
+  );
+  log("found ${categoryMaps.length} categories");
+
+  return [
+    for (final {
+          "id": id as int,
+          "category_name": categoryName as String,
+          "budget": budget as double,
+          "spent": spent as double,
+          'account_id': accountId as int,
+        }
+        in categoryMaps)
+      Ct.Category(
+        categoryName: categoryName,
+        budget: budget,
+        spent: spent,
+        id: id,
+        accountId: accountId,
+      ),
+  ];
 }
