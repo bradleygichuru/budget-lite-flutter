@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_application_1/data_models/categories_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
 import 'package:flutter_application_1/screens/reports_screen.dart';
+import 'package:flutter_application_1/screens/terms_and_conditions.dart';
 import 'package:flutter_application_1/view_models/weekly_reports.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:loading_overlay/loading_overlay.dart';
@@ -1027,6 +1028,11 @@ class MyAppState extends State<MyApp> {
                                 icon: Icon(Icons.analytics_outlined),
                                 label: 'Reports',
                               ),
+                              NavigationDestination(
+                                selectedIcon: Icon(Icons.analytics),
+                                icon: Icon(Icons.analytics_outlined),
+                                label: 'Terms and Conditions',
+                              ),
                             ],
                           ),
                           body: UpgradeAlert(
@@ -1089,6 +1095,7 @@ class MyAppState extends State<MyApp> {
                               EnvelopesView(),
                               GoalsPage(),
                               ReportsScreen(),
+                              TermsAndConditions(),
                               //WalletScreen(),
                               // SettingsPage(),
                             ][currentPageIndex],

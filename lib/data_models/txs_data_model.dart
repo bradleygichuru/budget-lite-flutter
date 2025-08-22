@@ -836,72 +836,71 @@ Future<void> queryMpesa() async {
 Future<void> calculateWeekInsights() async {
   debugPrint('Calculating weekly insights');
   DateTime now = DateTime.now();
-  if (kDebugMode) {
-    int weeks = 4;
 
-    // Calculate the start of the current week (Monday)
-    // DateTime.monday is 1, DateTime.sunday is 7
-    int daysToSubtract = now.weekday;
-    DateTime startOfCurrentWeek = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    ).subtract(Duration(days: daysToSubtract));
+  int weeks = 4;
 
-    // Iterate to get the start days of the previous 4 weeks
-    for (int i = 0; i < weeks; i++) {
-      Map<String, dynamic> report = {};
-      DateTime weekStartDate = startOfCurrentWeek.subtract(
-        Duration(days: 7 * (i + 1)),
+  // Calculate the start of the current week (Monday)
+  // DateTime.monday is 1, DateTime.sunday is 7
+  int daysToSubtract = now.weekday;
+  DateTime startOfCurrentWeek = DateTime(
+    now.year,
+    now.month,
+    now.day,
+  ).subtract(Duration(days: daysToSubtract));
+
+  // Iterate to get the start days of the previous 4 weeks
+  for (int i = 0; i < weeks; i++) {
+    Map<String, dynamic> report = {};
+    DateTime weekStartDate = startOfCurrentWeek.subtract(
+      Duration(days: 7 * (i + 1)),
+    );
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int? accountId = prefs.getInt("budget_lite_current_account_id");
+
+    final db = await DatabaseHelper().database;
+    db.transaction((txn) async {
+      final List<Map<String, Object?>> categoryMaps = await txn.rawQuery(
+        "SELECT * FROM categories WHERE account_id = ?",
+        ['$accountId'],
       );
 
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      int? accountId = prefs.getInt("budget_lite_current_account_id");
-
-      final db = await DatabaseHelper().database;
-      db.transaction((txn) async {
-        final List<Map<String, Object?>> categoryMaps = await txn.rawQuery(
-          "SELECT * FROM categories WHERE account_id = ?",
-          ['$accountId'],
-        );
-
-        final List<Map<String, Object?>> transactionMaps = await txn.rawQuery(
-          'SELECT * FROM transactions WHERE DATE(date) BETWEEN ? AND ? AND account_id = ?',
-          [
-            weekStartDate.toString().split(' ')[0],
-            weekStartDate.add(Duration(days: 7)).toString().split(' ')[0],
-            '$accountId',
-          ],
-        );
-        for (final category in categoryMaps) {
-          for (final tx in transactionMaps) {
-            if (tx["category"] == category['category_name']) {
-              double? current = report[category['category_name'] as String];
-              // debugPrint('tx for weekly insights:${tx.toString()}');
-              // debugPrint('current category:${category.toString()}');
-              if (current != null) {
-                report[category['category_name'] as String] =
-                    current + (tx["amount"] as double);
-              } else {
-                report[category['category_name'] as String] = tx["amount"];
-              }
+      final List<Map<String, Object?>> transactionMaps = await txn.rawQuery(
+        'SELECT * FROM transactions WHERE DATE(date) BETWEEN ? AND ? AND account_id = ?',
+        [
+          weekStartDate.toString().split(' ')[0],
+          weekStartDate.add(Duration(days: 7)).toString().split(' ')[0],
+          '$accountId',
+        ],
+      );
+      for (final category in categoryMaps) {
+        for (final tx in transactionMaps) {
+          if (tx["category"] == category['category_name']) {
+            double? current = report[category['category_name'] as String];
+            // debugPrint('tx for weekly insights:${tx.toString()}');
+            // debugPrint('current category:${category.toString()}');
+            if (current != null) {
+              report[category['category_name'] as String] =
+                  current + (tx["amount"] as double);
+            } else {
+              report[category['category_name'] as String] = tx["amount"];
             }
           }
         }
-        await insertWeeklyReport(
-          WeeklyReport(
-            key:
-                '${weekStartDate.day} ${DateFormat('MMM').format(weekStartDate)} - ${weekStartDate.add(Duration(days: 7)).day} ${DateFormat('MMM').format(weekStartDate.add(Duration(days: 7)))}',
-            fromDate: weekStartDate.toString(),
-            toDate: weekStartDate.add(Duration(days: 7)).toString(),
-            reportData: jsonEncode(report),
-          ),
-          txn,
-        );
+      }
+      await insertWeeklyReport(
+        WeeklyReport(
+          key:
+              '${weekStartDate.day} ${DateFormat('MMM').format(weekStartDate)} - ${weekStartDate.add(Duration(days: 7)).day} ${DateFormat('MMM').format(weekStartDate.add(Duration(days: 7)))}',
+          fromDate: weekStartDate.toString(),
+          toDate: weekStartDate.add(Duration(days: 7)).toString(),
+          reportData: jsonEncode(report),
+        ),
+        txn,
+      );
 
-        log('New report:${report.toString()}');
-      });
-    }
+      log('New report:${report.toString()}');
+    });
   }
 }
 
