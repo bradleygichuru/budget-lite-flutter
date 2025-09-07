@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:another_telephony/telephony.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/constants/globals.dart';
@@ -17,22 +18,26 @@ import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:flutter_application_1/screens/select_region_screen.dart';
 import 'package:flutter_application_1/screens/setup_budget.dart';
 import 'package:flutter_application_1/screens/sms_perms_request.dart';
+import 'package:flutter_application_1/services/main_service.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 
 class AuthModel extends ChangeNotifier {
   AuthModel() {
     initAuth();
   }
+  bool canLoginAnon = false;
   bool? isMshwariDepost;
-
+  bool isAnon = false;
   bool? autoImport;
   String email = '';
   int? accountId;
+  bool shouldShowCase = false;
   DateTime date = DateTime.now();
   late Future<bool> handleAuth;
   late bool isLoggedIn;
@@ -54,7 +59,9 @@ class AuthModel extends ChangeNotifier {
         ['$acId'],
       );
       date = DateTime.parse(accounts[0]['created_at'] as String);
-      email = accounts[0]['email'] as String;
+      email = (accounts[0]['email'] as String).isNotEmpty
+          ? (accounts[0]['email'] as String)
+          : '';
       tier = accounts[0]['account_tier'] as String;
       pendingBudgetReset = accounts[0]['resetPending'] as int == 0
           ? false
@@ -84,8 +91,8 @@ class AuthModel extends ChangeNotifier {
 
   Future<void> setLastOnboardingStep(String step) async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      int? id = prefs.getInt("budget_lite_current_account_id");
+      SharedPreferencesAsync prefs = SharedPreferencesAsync();
+      int? id = await prefs.getInt("budget_lite_current_account_id");
       if (id != null) {
         prefs.setString('last_onboarding_step', step);
       }
@@ -95,14 +102,14 @@ class AuthModel extends ChangeNotifier {
   }
 
   Future<void> setIsMshwariSavings(bool val) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
     prefs.setBool('is_mshwari_savings', val);
     isMshwariDepost = val;
     notifyListeners();
   }
 
   Future<void> setAutoImport(bool val) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
 
     prefs.setBool('auto_import', val);
     if (val) {
@@ -127,9 +134,13 @@ class AuthModel extends ChangeNotifier {
       await setAccountProfileInfo(acid);
     }
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    isMshwariDepost = prefs.getBool('is_mshwari_savings');
-    autoImport = prefs.getBool('auto_import');
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    isMshwariDepost = await prefs.getBool('is_mshwari_savings');
+    autoImport = await prefs.getBool('auto_import');
+
+    shouldShowCase = await prefs.getBool('complete_showcase') ?? true;
+
+    canLoginAnon = await prefs.getBool('canLoginAnon') ?? false;
     getAuthToken();
     getSessionToken();
 
@@ -138,10 +149,13 @@ class AuthModel extends ChangeNotifier {
   }
 
   Future<void> initAuth() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    isMshwariDepost = prefs.getBool('is_mshwari_savings');
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    isMshwariDepost = await prefs.getBool('is_mshwari_savings');
 
-    autoImport = prefs.getBool('auto_import');
+    shouldShowCase = await prefs.getBool('complete_showcase') ?? true;
+
+    canLoginAnon = await prefs.getBool('canLoginAnon') ?? false;
+    autoImport = await prefs.getBool('auto_import');
     handleAuth = isSetLoggedIn();
     getAuthToken();
     getCookie();
@@ -156,9 +170,9 @@ class AuthModel extends ChangeNotifier {
   }
 
   void completeOnboarding() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setBool("isNewUser", false);
-    prefs.remove('last_onboarding_step');
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    await prefs.setBool("isNewUser", false);
+    await prefs.remove('last_onboarding_step');
     if (!kDebugMode) {
       AppGlobal.analytics.logEvent(name: 'onboarding_complete');
     }
@@ -189,6 +203,209 @@ class AuthModel extends ChangeNotifier {
       rethrow;
     } finally {
       // await db.close();
+    }
+  }
+
+  Future<Result<int>> anonCreateAccount() async {
+    var uuid = Uuid();
+
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    Result accountCreation = await createAccount(
+      Account(
+        email: '',
+        authId: uuid.v1(),
+        tier: 'Free',
+        createdAt: DateTime.now().toString(),
+        anonymous: 1,
+      ),
+    );
+    switch (accountCreation) {
+      case Ok():
+        {
+          if (!kDebugMode) {
+            AppGlobal.analytics.logSignUp(signUpMethod: "anon");
+          }
+          isAnon = true;
+
+          prefs.setBool('canLoginAnon', true);
+
+          canLoginAnon = true;
+
+          refreshAuth();
+          notifyListeners();
+          return Result.ok(accountCreation.value);
+        }
+      case Error():
+        {
+          return Result.error(accountCreation.error);
+        }
+    }
+  }
+
+  Future<Result<int>> anonymousSignIn({required String operation}) async {
+    try {
+      SharedPreferencesAsync prefs = SharedPreferencesAsync();
+      if (operation == 'signup') {
+        prefs.setString('begin_date', DateTime.now().toString().split(' ')[0]);
+
+        WidgetsBinding.instance.platformDispatcher.locale.countryCode == 'KE'
+            ? setAutoImport(true)
+            : setAutoImport(false);
+        prefs.setBool('auto_import', false);
+      }
+      bool result = await InternetConnection().hasInternetAccess;
+      if (result) {
+        final userCredential = await FirebaseAuth.instance.signInAnonymously();
+        if (userCredential.user != null) {
+          // final db = await DatabaseHelper().database;
+          Result getacid = await setAccountId(anonId: userCredential.user!.uid);
+
+          // Result getacid = await compute(setAccountId, email.trim());
+          switch (getacid) {
+            case Ok():
+              {
+                if (!kDebugMode) {
+                  AppGlobal.analytics.logLogin(
+                    loginMethod: 'anonymous-authentication',
+                  );
+                }
+                log('Login: setAccount id:${getacid.value}');
+                SharedPreferencesAsync prefs = SharedPreferencesAsync();
+                isAnon = true;
+                prefs.setBool('isLoggedIn', true);
+
+                prefs.setBool('canLoginAnon', true);
+                canLoginAnon = true;
+                // log(decodedResponse["token"]);
+                refreshAuth();
+                notifyListeners();
+                return Result.ok(getacid.value);
+              }
+            case Error():
+              {
+                switch (getacid.error) {
+                  case NoAccountFound():
+                    {
+                      // Result accountCreation = await compute(
+                      //   createAccount,
+                      //   Account(
+                      //     // id: decodedResponse['user']['id'],
+                      //     authId: decodedResponse['user']['id'] as String,
+                      //     email: decodedResponse['user']['email'] as String,
+                      //     createdAt:
+                      //         decodedResponse['user']['createdAt'] as String,
+                      //     tier: 'Free',
+                      //   ),
+                      // );
+                      Result accountCreation = await createAccount(
+                        Account(
+                          email: '',
+                          authId: userCredential.user!.uid,
+                          tier: 'Free',
+                          createdAt: DateTime.now().toString(),
+                          anonymous: 1,
+                        ),
+                      );
+                      switch (accountCreation) {
+                        case Ok():
+                          {
+                            if (!kDebugMode) {
+                              AppGlobal.analytics.logSignUp(
+                                signUpMethod: "password-authenctication",
+                              );
+                            }
+                            isAnon = true;
+
+                            prefs.setBool('canLoginAnon', true);
+
+                            canLoginAnon = true;
+
+                            refreshAuth();
+                            notifyListeners();
+                            return Result.ok(accountCreation.value);
+                          }
+                        case Error():
+                          {
+                            return Result.error(accountCreation.error);
+                          }
+                      }
+                    }
+                  case AccountIdNullException():
+                    {
+                      // Result accountCreation = await compute(
+                      //   createAccount,
+                      //   Account(
+                      //     // id: decodedResponse['user']['id'],
+                      //     authId: decodedResponse['user']['id'] as String,
+                      //     email: decodedResponse['user']['email'] as String,
+                      //     createdAt:
+                      //         decodedResponse['user']['createdAt'] as String,
+                      //     tier: 'Free',
+                      //   ),
+                      // );
+                      Result accountCreation = await createAccount(
+                        Account(
+                          email: '',
+                          authId: userCredential.user!.uid,
+                          tier: 'Free',
+                          createdAt: DateTime.now().toString(),
+                          anonymous: 1,
+                        ),
+                      );
+                      switch (accountCreation) {
+                        case Ok():
+                          {
+                            if (!kDebugMode) {
+                              AppGlobal.analytics.logSignUp(
+                                signUpMethod: "password-authenctication",
+                              );
+                            }
+
+                            isAnon = true;
+
+                            prefs.setBool('canLoginAnon', true);
+
+                            canLoginAnon = true;
+
+                            refreshAuth();
+                            notifyListeners();
+                            return Result.ok(accountCreation.value);
+                          }
+                        case Error():
+                          {
+                            return Result.error(accountCreation.error);
+                          }
+                      }
+                    }
+
+                  default:
+                    {
+                      return Result.error(getacid.error);
+                    }
+                }
+                // return Result.error(getacid.error);
+              }
+          }
+
+          // if (userCredential.user!.isAnonymous == true) {}
+        } else {
+          return Result.error(UnknownError());
+        }
+      } else {
+        return Result.error(NoInternetConnection());
+      }
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case "operation-not-allowed":
+          log("Anonymous auth hasn't been enabled for this project.");
+          return Result.error(AuthDisabled());
+        default:
+          log("Unknown error.");
+          return Result.error(UnknownError());
+      }
+    } on Exception catch (e) {
+      log('Error occured:', error: e);
+      return Result.error(UnknownError());
     }
   }
 
@@ -247,7 +464,7 @@ class AuthModel extends ChangeNotifier {
 
             log("setting auth token");
 
-            Result getacid = await setAccountId(email.trim());
+            Result getacid = await setAccountId(email: email.trim());
 
             // Result getacid = await compute(setAccountId, email.trim());
             switch (getacid) {
@@ -259,8 +476,7 @@ class AuthModel extends ChangeNotifier {
                     );
                   }
                   log('Login: setAccount id:${getacid.value}');
-                  SharedPreferences prefs =
-                      await SharedPreferences.getInstance();
+                  SharedPreferencesAsync prefs = SharedPreferencesAsync();
                   prefs.setBool('isLoggedIn', true);
                   log(decodedResponse["token"]);
                   return Result.ok(getacid.value);
@@ -382,7 +598,7 @@ class AuthModel extends ChangeNotifier {
 
             log("setting auth token");
 
-            Result getacid = await setAccountId(email.trim());
+            Result getacid = await setAccountId(email: email.trim());
             // Result getacid = await compute(setAccountId, email.trim());
             switch (getacid) {
               case Ok():
@@ -393,8 +609,7 @@ class AuthModel extends ChangeNotifier {
                     );
                   }
                   log('Login: setAccount id:${getacid.value}');
-                  SharedPreferences prefs =
-                      await SharedPreferences.getInstance();
+                  SharedPreferencesAsync prefs = SharedPreferencesAsync();
                   prefs.setBool('isLoggedIn', true);
                   log(decodedResponse["response"]["Bearer"]);
                   return Result.ok(getacid.value);
@@ -524,14 +739,15 @@ class AuthModel extends ChangeNotifier {
     String name,
     String password,
     String email,
-    String phone,
-    String passwordConfirmation,
   ) async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
+      SharedPreferencesAsync prefs = SharedPreferencesAsync();
       prefs.setString('begin_date', DateTime.now().toString().split(' ')[0]);
 
-      prefs.setBool('auto_import', false);
+      WidgetsBinding.instance.platformDispatcher.locale.countryCode == 'KE'
+          ? setAutoImport(true)
+          : setAutoImport(false);
+      // prefs.setBool('auto_import', false);
       bool result = await InternetConnection().hasInternetAccess;
       if (result) {
         bool better_auth = true;
@@ -611,72 +827,72 @@ class AuthModel extends ChangeNotifier {
             return Result.error(ErrorRegistering());
           }
         } else {
-          Uri url = Uri(
-            scheme: "http",
-            host: dotenv.env['BACKEND_ENDPOINT'],
-            path: "api/v1/register",
-            port: 8000,
-          );
-          final payload = <String, dynamic>{};
-          payload["name"] = name;
-          payload["email"] = email;
-          payload["password"] = password;
-          payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
-          payload["phone"] = phone;
-          payload["password_confirmation"] = passwordConfirmation;
-
-          http.Response response = await http.post(url, body: payload);
-          log("resp:${response.body}");
-          var decodedResponse = jsonDecode(response.body) as Map;
-          if (decodedResponse["success"]) {
-            log("request successful");
-            Uri getUser = Uri(
-              scheme: 'http',
-              host: dotenv.env['BACKEND_ENDPOINT'],
-              path: 'api/user',
-              port: 8000,
-            );
-            http.Response resp = await http.get(
-              getUser,
-              headers: {
-                'Authorization':
-                    'Bearer ${decodedResponse["response"]["Bearer"]}',
-              },
-            );
-            var decodedResp = jsonDecode(resp.body) as Map;
-
-            Result accountCreation = await createAccount(
-              Account(
-                id: decodedResp['id'],
-                email: decodedResp['email'],
-                createdAt: decodedResp['created_at'],
-                tier: 'Free',
-              ),
-            );
-            // Result accountCreation = await compute(
-            //   createAccount,
-            //   Account(
-            //     id: decodedResp['id'],
-            //     email: decodedResp['email'],
-            //     createdAt: decodedResp['created_at'],
-            //     tier: 'Free',
-            //   ),
-            // );
-
-            switch (accountCreation) {
-              case Ok():
-                {
-                  return Result.ok(accountCreation.value);
-                }
-              case Error():
-                {
-                  return Result.error(accountCreation.error);
-                }
-            }
-          } else {
-            log("request failed");
-            return Result.error(ErrorRegistering());
-          }
+          // Uri url = Uri(
+          //   scheme: "http",
+          //   host: dotenv.env['BACKEND_ENDPOINT'],
+          //   path: "api/v1/register",
+          //   port: 8000,
+          // );
+          // final payload = <String, dynamic>{};
+          // payload["name"] = name;
+          // payload["email"] = email;
+          // payload["password"] = password;
+          // payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
+          // payload["phone"] = phone;
+          // payload["password_confirmation"] = passwordConfirmation;
+          //
+          // http.Response response = await http.post(url, body: payload);
+          // log("resp:${response.body}");
+          // var decodedResponse = jsonDecode(response.body) as Map;
+          // if (decodedResponse["success"]) {
+          //   log("request successful");
+          //   Uri getUser = Uri(
+          //     scheme: 'http',
+          //     host: dotenv.env['BACKEND_ENDPOINT'],
+          //     path: 'api/user',
+          //     port: 8000,
+          //   );
+          //   http.Response resp = await http.get(
+          //     getUser,
+          //     headers: {
+          //       'Authorization':
+          //           'Bearer ${decodedResponse["response"]["Bearer"]}',
+          //     },
+          //   );
+          //   var decodedResp = jsonDecode(resp.body) as Map;
+          //
+          //   Result accountCreation = await createAccount(
+          //     Account(
+          //       id: decodedResp['id'],
+          //       email: decodedResp['email'],
+          //       createdAt: decodedResp['created_at'],
+          //       tier: 'Free',
+          //     ),
+          //   );
+          //   // Result accountCreation = await compute(
+          //   //   createAccount,
+          //   //   Account(
+          //   //     id: decodedResp['id'],
+          //   //     email: decodedResp['email'],
+          //   //     createdAt: decodedResp['created_at'],
+          //   //     tier: 'Free',
+          //   //   ),
+          //   // );
+          //
+          //   switch (accountCreation) {
+          //     case Ok():
+          //       {
+          //         return Result.ok(accountCreation.value);
+          //       }
+          //     case Error():
+          //       {
+          //         return Result.error(accountCreation.error);
+          //       }
+          //   }
+          // } else {
+          //   log("request failed");
+          //   return Result.error(ErrorRegistering());
+          // }
         }
       } else {
         return Result.error(NoInternetConnection());
@@ -688,114 +904,131 @@ class AuthModel extends ChangeNotifier {
   }
 
   Future<bool> isSetLoggedIn() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    isLoggedIn = await prefs.getBool('isLoggedIn') ?? false;
 
-    isNewUser = prefs.getBool("isNewUser") ?? true;
+    isNewUser = await prefs.getBool("isNewUser") ?? true;
 
     log("isNewUser:$isNewUser,isLoggedIn:$isLoggedIn");
     if (isNewUser) {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
+      SharedPreferencesAsync prefs = SharedPreferencesAsync();
       prefs.setBool('is_mshwari_savinigs', true);
-      String? lastStep = prefs.getString('last_onboarding_step');
+      String? lastStep = await prefs.getString('last_onboarding_step');
       if (lastStep != null && lastStep.isNotEmpty) {
         switch (lastStep) {
           case 'select_region':
             {
               authWidget = SelectRegion();
+
+              notifyListeners();
               break;
             }
           case 'auto_import_info':
             {
               authWidget = AutoImportInfoScreen();
+
+              notifyListeners();
+              break;
             }
           case 'sms_perms_request':
             {
               authWidget = SmsPermsRequest();
+              notifyListeners();
               break;
             }
           case 'setup_budget':
             {
               authWidget = SetupBudget();
+              notifyListeners();
               break;
             }
           case 'intial_balance':
             {
               authWidget = InitialBalance();
+              notifyListeners();
               break;
             }
           case 'auto_import_availability':
             {
               authWidget = AutoImportAvailabilityScreen();
+              notifyListeners();
               break;
             }
           default:
             {
               authWidget = Landing();
+              notifyListeners();
               break;
             }
         }
       } else {
         authWidget = Landing();
+        notifyListeners();
       }
 
       log("onboarding");
       return true;
     } else {
-      if (!isLoggedIn) {
-        authWidget = LoginForm();
-        log("not logged in");
-        return true;
-      } else {
-        log("Is logged in");
-        return false;
-      }
+      notifyListeners();
+      return false;
+      // if (!isLoggedIn) {
+      //   authWidget = LoginForm();
+      //   log("not logged in");
+      //
+      //   notifyListeners();
+      //   return true;
+      // } else {
+      //   log("Is logged in");
+      //
+      //   notifyListeners();
+      //   return false;
+      // }
     }
   }
 
   void setCookie(String cookie) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
     await prefs.setString("budgetlite_cookie", cookie);
     curCookie = cookie;
     notifyListeners();
   }
 
   void getCookie() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    curCookie = prefs.getString("budgetlite_cookie");
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    curCookie = await prefs.getString("budgetlite_cookie");
     notifyListeners();
   }
 
   void setSessionToken(String token) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
     await prefs.setString("budgetlite_session_token", token);
     sessionToken = token;
     notifyListeners();
   }
 
   void getSessionToken() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    sessionToken = prefs.getString("budgetlite_session_token");
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    sessionToken = await prefs.getString("budgetlite_session_token");
     notifyListeners();
   }
 
   void setAuthToken(String token) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
     await prefs.setString("auth_token", token);
     authToken = token;
     notifyListeners();
   }
 
   Future<void> removeAuthToken() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
     prefs.remove("auth_token");
     authToken = null;
     notifyListeners();
   }
 
   Future<void> getAuthToken() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    authToken = prefs.getString("auth_token");
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    authToken = await prefs.getString("auth_token");
     notifyListeners();
   }
 
@@ -818,50 +1051,63 @@ class AuthModel extends ChangeNotifier {
         '$rowId',
         '$walletId',
       ]);
-      SharedPreferences prefs = await SharedPreferences.getInstance();
+      SharedPreferencesAsync prefs = SharedPreferencesAsync();
       prefs.setInt("budget_lite_current_account_id", rowId);
       notifyListeners();
       return Result.ok(rowId);
     } on Exception catch (e) {
       log('Error creating account : $e');
       return Result.error(e);
-    } finally {
-      // await db.close();
     }
   }
 
   void logout() async {
     try {
+      SharedPreferencesAsync prefs = SharedPreferencesAsync();
       bool result = await InternetConnection().hasInternetAccess;
+      final currUser = FirebaseAuth.instance.currentUser;
+      if (currUser != null) {
+        if (currUser.isAnonymous) {
+          FirebaseAuth.instance.signOut();
 
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
+          prefs.setBool("isLoggedIn", false);
 
-      if (result) {
-        Uri url = Uri.parse(
-          '${dotenv.env['BACKEND_ENDPOINT']}/api/auth/sign-out',
-        );
+          prefs.remove("budget_lite_current_account_id");
+          removeAuthToken();
+          handleAuth = isSetLoggedIn();
+          // stopBackgroundService();
 
-        // payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
+          notifyListeners();
+        }
+      } else {
+        if (result) {
+          Uri url = Uri.parse(
+            '${dotenv.env['BACKEND_ENDPOINT']}/api/auth/sign-out',
+          );
 
-        Map<String, String> headers = curCookie != null && authToken != null
-            ? {
-                'Authorization': 'Bearer $authToken',
-                // 'set-auth-token': authToken!,
-                'set-cookie': curCookie!,
-              }
-            : {
-                // 'Authorization': 'Bearer $authToken',
-              };
-        log('logut:$headers');
-        http.post(url, headers: headers);
+          // payload["device_name"] = Platform.isAndroid ? "Android" : 'IOS';
+
+          Map<String, String> headers = curCookie != null && authToken != null
+              ? {
+                  'Authorization': 'Bearer $authToken',
+                  // 'set-auth-token': authToken!,
+                  'set-cookie': curCookie!,
+                }
+              : {
+                  // 'Authorization': 'Bearer $authToken',
+                };
+          log('logout:$headers');
+          http.post(url, headers: headers);
+        }
+        prefs.setBool("isLoggedIn", false);
+
+        prefs.remove("budget_lite_current_account_id");
+        removeAuthToken();
+        handleAuth = isSetLoggedIn();
+        // stopBackgroundService();
+
+        notifyListeners();
       }
-      prefs.setBool("isLoggedIn", false);
-
-      prefs.remove("budget_lite_current_account_id");
-      removeAuthToken();
-      handleAuth = isSetLoggedIn();
-
-      notifyListeners();
     } catch (e) {
       log("error loging out:", error: e);
     }
@@ -885,31 +1131,62 @@ class AuthModel extends ChangeNotifier {
   //   }
   // }
 
-  Future<Result<int>> setAccountId(String email) async {
+  Future<Result<int>> setAccountId({String? email, String? anonId}) async {
     final db = await DatabaseHelper().database;
     try {
-      final List<Map<String, Object?>> accounts = await db.rawQuery(
-        "SELECT * FROM accounts WHERE email = ?",
-        [email.trim()],
-      );
-      log('Found ${accounts.length} Accounts (auth.dart:310)');
-      for (final ac in accounts) {
-        log("Account:${ac.toString()}");
-      }
-      if (accounts.isNotEmpty) {
-        if (accounts.first['id'] != null) {
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          prefs.setInt(
-            "budget_lite_current_account_id",
-            accounts.first['id'] as int,
-          );
-          int accountIdInner = accounts.first['id'] as int;
-          accountId = accountIdInner;
+      if (email != null) {
+        final List<Map<String, Object?>> accounts = await db.rawQuery(
+          "SELECT * FROM accounts WHERE email = ?",
+          [email.trim()],
+        );
+        log('Found ${accounts.length} Accounts (auth.dart:310)');
+        for (final ac in accounts) {
+          log("Account:${ac.toString()}");
+        }
+        if (accounts.isNotEmpty) {
+          if (accounts.first['id'] != null) {
+            SharedPreferencesAsync prefs = SharedPreferencesAsync();
+            prefs.setInt(
+              "budget_lite_current_account_id",
+              accounts.first['id'] as int,
+            );
+            int accountIdInner = accounts.first['id'] as int;
+            accountId = accountIdInner;
 
-          notifyListeners();
-          return Result.ok(accountIdInner);
+            notifyListeners();
+            return Result.ok(accountIdInner);
+          } else {
+            return Result.error(AccountIdNullException());
+          }
         } else {
-          return Result.error(AccountIdNullException());
+          return Result.error(NoAccountFound());
+        }
+      } else if (anonId != null) {
+        final List<Map<String, Object?>> accounts = await db.rawQuery(
+          "SELECT * FROM accounts WHERE auth_id = ?",
+          [anonId.trim()],
+        );
+        log('Found ${accounts.length} Accounts (auth.dart:310)');
+        for (final ac in accounts) {
+          log("Account:${ac.toString()}");
+        }
+        if (accounts.isNotEmpty) {
+          if (accounts.first['id'] != null) {
+            SharedPreferencesAsync prefs = SharedPreferencesAsync();
+            prefs.setInt(
+              "budget_lite_current_account_id",
+              accounts.first['id'] as int,
+            );
+            int accountIdInner = accounts.first['id'] as int;
+            accountId = accountIdInner;
+
+            notifyListeners();
+            return Result.ok(accountIdInner);
+          } else {
+            return Result.error(AccountIdNullException());
+          }
+        } else {
+          return Result.error(NoAccountFound());
         }
       } else {
         return Result.error(NoAccountFound());
@@ -923,12 +1200,16 @@ class AuthModel extends ChangeNotifier {
   }
 
   Future<int?> getAccountId() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
     log(
-      'Account id:${prefs.getInt("budget_lite_current_account_id").toString()}',
+      'Account id:${await prefs.getInt("budget_lite_current_account_id").toString()}',
     );
     return prefs.getInt("budget_lite_current_account_id");
   }
 }
 
 class NoInternetConnection implements Exception {}
+
+class UnknownError implements Exception {}
+
+class AuthDisabled implements Exception {}

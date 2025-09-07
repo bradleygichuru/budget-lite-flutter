@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/goal_data_model.dart';
 import 'package:flutter_application_1/screens/handle_savings.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/goals.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'dart:developer';
 
 import 'package:watch_it/watch_it.dart';
@@ -54,6 +56,17 @@ class GoalsPageState extends State<GoalsPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => ShowCaseWidget.of(
+        context,
+      ).startShowCase([AppGlobal.addFinancialGoals]),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnnotatedRegion(
       value: SystemUiOverlayStyle(statusBarColor: Colors.transparent),
@@ -78,217 +91,249 @@ class GoalsPageState extends State<GoalsPage> {
                           ),
                         ),
                       ),
-                      IconButton(
-                        iconSize: 25,
-                        color: Colors.blue.shade600,
-                        onPressed: () => showDialog<String>(
-                          context: context,
-                          builder: (context) => SafeArea(
-                            child: SingleChildScrollView(
-                              child: AlertDialog(
-                                title: Text(
-                                  "Add New Goal",
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
+                      Showcase(
+                        key: AppGlobal.addFinancialGoals,
+                        description: "Add financial Goals",
 
-                                content: SafeArea(
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 10),
-                                    child: Form(
-                                      key: _formKey,
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 0,
-                                              vertical: 5,
-                                            ),
-                                            child: TextFormField(
-                                              controller: newGoalNameController,
-                                              validator: (value) {
-                                                if (value == null ||
-                                                    value.isEmpty) {
-                                                  return 'Please enter valid goal name';
-                                                }
-                                                return null;
-                                              },
-                                              decoration: const InputDecoration(
-                                                border: OutlineInputBorder(),
-                                                hintText: 'e.g Vacation Fund',
-                                                labelText: "Goal Name",
-                                              ),
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 0,
-                                              vertical: 5,
-                                            ),
-                                            child: TextFormField(
-                                              validator: (value) {
-                                                if (value == null ||
-                                                    value.isEmpty) {
-                                                  return 'Please enter valid amount';
-                                                }
-                                                return null;
-                                              },
-                                              keyboardType:
-                                                  TextInputType.number,
-                                              controller:
-                                                  newGoalAmountController,
-                                              decoration: InputDecoration(
-                                                border: OutlineInputBorder(),
-                                                hintText: "e.g 5000",
-                                                labelText: 'Target Amount',
-                                              ),
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 0,
-                                              vertical: 5,
-                                            ),
-                                            child: TextFormField(
-                                              keyboardType:
-                                                  TextInputType.number,
-                                              controller:
-                                                  newCurrentAmountController,
-                                              decoration: InputDecoration(
-                                                border: OutlineInputBorder(),
-                                                hintText: "e.g 5000",
-                                                labelText:
-                                                    'Current Amount (Optional)',
-                                              ),
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.all(3),
-                                            child: Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: OutlinedButton(
-                                                onPressed: () {
-                                                  _selectDate();
-                                                },
-                                                child: Text(
-                                                  selectedDate != null
-                                                      ? selectedDate.toString()
-                                                      : "Selected date",
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          // padding: EdgeInsets.all(10),
-                                        ],
-                                      ),
+                        onBarrierClick: () {
+                          ShowCaseWidget.of(
+                            context,
+                          ).hideFloatingActionWidgetForKeys([
+                            AppGlobal.addFinancialGoals,
+                          ]);
+                        },
+
+                        tooltipActionConfig: const TooltipActionConfig(
+                          alignment: MainAxisAlignment.end,
+                          position: TooltipActionPosition.outside,
+                          gapBetweenContentAndAction: 10,
+                        ),
+                        child: IconButton(
+                          iconSize: 25,
+                          color: Colors.blue.shade600,
+                          onPressed: () => showDialog<String>(
+                            context: context,
+                            builder: (context) => SafeArea(
+                              child: SingleChildScrollView(
+                                child: AlertDialog(
+                                  title: Text(
+                                    "Add New Goal",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                ),
-                                actions: [
-                                  SafeArea(
-                                    child: FilledButton(
-                                      style: ButtonStyle(
-                                        backgroundColor:
-                                            WidgetStatePropertyAll<Color>(
-                                              Colors.grey.shade600,
-                                            ),
-                                      ),
-                                      onPressed: () {
-                                        newGoalNameController.text = '';
 
-                                        newGoalNameController.text =
-                                            newCurrentAmountController.text =
-                                                "";
-                                        newCurrentAmountController.text = '';
-
-                                        selectedDate = null;
-                                        Navigator.pop(context);
-                                      },
-                                      child: Text(
-                                        "Cancel",
-                                        style: TextStyle(color: Colors.white),
+                                  content: SafeArea(
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 10,
                                       ),
-                                    ),
-                                  ),
-                                  SafeArea(
-                                    child: FilledButton(
-                                      style: ButtonStyle(
-                                        backgroundColor:
-                                            WidgetStatePropertyAll<Color>(
-                                              Colors.blue.shade600,
-                                            ),
-                                      ),
-                                      onPressed: () async {
-                                        if (_formKey.currentState!.validate()) {
-                                          int? accountId = await di
-                                              .get<AuthModel>()
-                                              .getAccountId();
-                                          if (selectedDate != null &&
-                                              accountId != null) {
-                                            gM
-                                                .insertGoal(
-                                                  Goal(
-                                                    targetDate: selectedDate
-                                                        .toString(),
-                                                    currentAmount:
-                                                        newCurrentAmountController
-                                                            .text
-                                                            .isNotEmpty
-                                                        ? double.parse(
-                                                            newCurrentAmountController
-                                                                .text,
-                                                          )
-                                                        : 0,
-                                                    name: newGoalNameController
-                                                        .text,
-                                                    targetAmount: double.parse(
-                                                      newGoalAmountController
-                                                          .text,
-                                                    ),
+                                      child: Form(
+                                        key: _formKey,
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 0,
+                                                    vertical: 5,
                                                   ),
-                                                )
-                                                .then((_) {
-                                                  if (mounted) {
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      SnackBar(
-                                                        content: const Text(
-                                                          "Goal created",
-                                                        ),
-                                                      ),
-                                                    );
-
-                                                    Navigator.pop(context);
+                                              child: TextFormField(
+                                                controller:
+                                                    newGoalNameController,
+                                                validator: (value) {
+                                                  if (value == null ||
+                                                      value.isEmpty) {
+                                                    return 'Please enter valid goal name';
                                                   }
-                                                });
-                                          } else {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: const Text(
-                                                  "No date selected or account id missing",
+                                                  return null;
+                                                },
+                                                decoration:
+                                                    const InputDecoration(
+                                                      border:
+                                                          OutlineInputBorder(),
+                                                      hintText:
+                                                          'e.g Vacation Fund',
+                                                      labelText: "Goal Name",
+                                                    ),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 0,
+                                                    vertical: 5,
+                                                  ),
+                                              child: TextFormField(
+                                                validator: (value) {
+                                                  if (value == null ||
+                                                      value.isEmpty) {
+                                                    return 'Please enter valid amount';
+                                                  }
+                                                  return null;
+                                                },
+                                                keyboardType:
+                                                    TextInputType.number,
+                                                controller:
+                                                    newGoalAmountController,
+                                                decoration: InputDecoration(
+                                                  border: OutlineInputBorder(),
+                                                  hintText: "e.g 5000",
+                                                  labelText: 'Target Amount',
                                                 ),
                                               ),
-                                            );
-                                          }
-                                        }
-                                      },
-                                      child: Text(
-                                        "Add Goal",
-                                        style: TextStyle(color: Colors.white),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 0,
+                                                    vertical: 5,
+                                                  ),
+                                              child: TextFormField(
+                                                keyboardType:
+                                                    TextInputType.number,
+                                                controller:
+                                                    newCurrentAmountController,
+                                                decoration: InputDecoration(
+                                                  border: OutlineInputBorder(),
+                                                  hintText: "e.g 5000",
+                                                  labelText:
+                                                      'Current Amount (Optional)',
+                                                ),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.all(3),
+                                              child: Align(
+                                                alignment: Alignment.centerLeft,
+                                                child: OutlinedButton(
+                                                  onPressed: () {
+                                                    _selectDate();
+                                                  },
+                                                  child: Text(
+                                                    selectedDate != null
+                                                        ? selectedDate
+                                                              .toString()
+                                                        : "Selected date",
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            // padding: EdgeInsets.all(10),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ],
+                                  actions: [
+                                    SafeArea(
+                                      child: FilledButton(
+                                        style: ButtonStyle(
+                                          backgroundColor:
+                                              WidgetStatePropertyAll<Color>(
+                                                Colors.grey.shade600,
+                                              ),
+                                        ),
+                                        onPressed: () {
+                                          newGoalNameController.text = '';
+
+                                          newGoalNameController.text =
+                                              newCurrentAmountController.text =
+                                                  "";
+                                          newCurrentAmountController.text = '';
+
+                                          selectedDate = null;
+                                          Navigator.pop(context);
+                                        },
+                                        child: Text(
+                                          "Cancel",
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                    SafeArea(
+                                      child: FilledButton(
+                                        style: ButtonStyle(
+                                          backgroundColor:
+                                              WidgetStatePropertyAll<Color>(
+                                                Colors.blue.shade600,
+                                              ),
+                                        ),
+                                        onPressed: () async {
+                                          if (_formKey.currentState!
+                                              .validate()) {
+                                            int? accountId = await di
+                                                .get<AuthModel>()
+                                                .getAccountId();
+                                            if (selectedDate != null &&
+                                                accountId != null) {
+                                              gM
+                                                  .insertGoal(
+                                                    Goal(
+                                                      targetDate: selectedDate
+                                                          .toString(),
+                                                      currentAmount:
+                                                          newCurrentAmountController
+                                                              .text
+                                                              .isNotEmpty
+                                                          ? double.parse(
+                                                              newCurrentAmountController
+                                                                  .text,
+                                                            )
+                                                          : 0,
+                                                      name:
+                                                          newGoalNameController
+                                                              .text,
+                                                      targetAmount: double.parse(
+                                                        newGoalAmountController
+                                                            .text,
+                                                      ),
+                                                    ),
+                                                  )
+                                                  .then((_) {
+                                                    if (mounted) {
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        SnackBar(
+                                                          content: const Text(
+                                                            "Goal created",
+                                                          ),
+                                                        ),
+                                                      );
+
+                                                      Navigator.pop(context);
+                                                    }
+                                                  });
+                                            } else {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: const Text(
+                                                    "No date selected or account id missing",
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        },
+                                        child: Text(
+                                          "Add Goal",
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
+                          icon: Icon(Icons.add_box),
                         ),
-                        icon: Icon(Icons.add_box),
                       ),
                     ],
                   ),

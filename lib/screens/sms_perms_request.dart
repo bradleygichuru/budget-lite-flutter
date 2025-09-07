@@ -33,14 +33,15 @@ class SmsPermsRequestState extends State<SmsPermsRequest> {
         log("sms permissions: false");
         var status = await permission.request();
         if (status.isGranted) {
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-
-          prefs.setBool('auto_import', true);
+          // SharedPreferences prefs = await SharedPreferences.getInstance();
+          // di<AuthModel>().setAutoImport(false);
+          // prefs.setBool('auto_import', true);
           if (context.mounted) {
             // prefs.setBool("isNewUser", false);
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => const SetupBudget()),
+              (Route<dynamic> route) => false,
             );
           }
         } else if (status.isDenied) {
@@ -56,11 +57,12 @@ class SmsPermsRequestState extends State<SmsPermsRequest> {
                   actions: [
                     FilledButton(
                       onPressed: () {
-                        Navigator.pushReplacement(
+                        Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const SetupBudget(),
                           ),
+                          (Route<dynamic> route) => false,
                         );
                       },
                       child: Text('Continue ?'),
@@ -76,9 +78,10 @@ class SmsPermsRequestState extends State<SmsPermsRequest> {
         log("sms permissions: true");
         if (context.mounted) {
           // prefs.setBool("isNewUser", false);
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => const SetupBudget()),
+            (Route<dynamic> route) => false,
           );
         }
       }

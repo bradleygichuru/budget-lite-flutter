@@ -1,18 +1,19 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:ffi';
+import 'dart:io';
 import 'package:another_telephony/telephony.dart';
+import 'package:excel/excel.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_application_1/data_models/wallet_data_model.dart';
 import 'package:flutter_application_1/data_models/weekly_reports_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
-import 'package:flutter_application_1/view_models/txs.dart';
-import 'package:flutter_application_1/view_models/wallet.dart';
+import 'package:flutter_application_1/util/result_wraper.dart';
+import 'package:open_file_manager/open_file_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'package:sqflite/sqlite_api.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 
 const String mpesaReceived = "received";
 const String mpesaBought = "bought";
@@ -75,6 +76,92 @@ class TransactionObj {
   @override
   String toString() {
     return 'Transaction{id:$id,type:$type,source:$source,amount:$amount,date:$date,category:$category,account_id:$accountId,desc:$desc,messageHashCode:$messageHashCode}';
+  }
+}
+
+Future<Result<int>> exportDataToExcel() async {
+  // 1. Retrieve Data from SQLite
+  try {
+    final database = await DatabaseHelper().database;
+
+    final List<Map<String, dynamic>> data = await database.query(
+      'transactions',
+    );
+
+    // 2. Create an Excel File
+    var excel = Excel.createExcel();
+    Sheet sheetObject = excel['Sheet1'];
+    List<String> headers = data.isNotEmpty ? data.first.keys.toList() : [];
+    for (int i = 0; i < headers.length; i++) {
+      sheetObject
+          .cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0))
+          .value = TextCellValue(
+        headers[i],
+      );
+    }
+    for (int rowIndex = 0; rowIndex < data.length; rowIndex++) {
+      for (int colIndex = 0; colIndex < headers.length; colIndex++) {
+        var value = data[rowIndex][headers[colIndex]];
+        if (value is String) {
+          sheetObject
+              .cell(
+                CellIndex.indexByColumnRow(
+                  columnIndex: colIndex,
+                  rowIndex: rowIndex + 1,
+                ),
+              )
+              .value = TextCellValue(
+            value,
+          );
+        } else if (value is int) {
+          sheetObject
+              .cell(
+                CellIndex.indexByColumnRow(
+                  columnIndex: colIndex,
+                  rowIndex: rowIndex + 1,
+                ),
+              )
+              .value = IntCellValue(
+            value,
+          );
+        } else if (value is double) {
+          sheetObject
+              .cell(
+                CellIndex.indexByColumnRow(
+                  columnIndex: colIndex,
+                  rowIndex: rowIndex + 1,
+                ),
+              )
+              .value = DoubleCellValue(
+            value,
+          );
+        }
+        // Handle other data types as needed
+      }
+    }
+
+    // 4. Save the Excel File
+    var fileBytes = excel.encode();
+    final directory = await getDownloadsDirectory();
+    log('Directory:$directory');
+    String filePath;
+
+    if (directory != null) {
+      filePath = '${directory.path}/${DateTime.now().toString()}.xlsx';
+    } else {
+      filePath =
+          '/storage/emulated/0/Download/budgetlite_${DateTime.now().toString()}.xlsx';
+    }
+    File(filePath)
+      ..createSync(recursive: true)
+      ..writeAsBytesSync(fileBytes!);
+    return Result.ok(1);
+
+    // 5. Provide Export Functionality (e.g., sharing)
+    // You can then use a package like `share_plus` to share the file.
+  } on Exception catch (e) {
+    log('error exporting transactions', error: e);
+    return Result.error(e);
   }
 }
 
@@ -184,6 +271,181 @@ Map<String, dynamic>? parseMpesa(SmsMessage messageObj) {
   return null;
 }
 
+Map<String, dynamic>? userParseEquityText(String message) {
+  if (message != null) {
+    log("message:${message}");
+    Map<String, dynamic> transaction = {
+      "type": "",
+      "source": "Equity_BANK",
+      "amount": 0,
+      'date': "",
+      'desc': '',
+    };
+    if (message.contains(equitySent)) {
+      List<String> sentArray = message.split(equitySent);
+      String amount = sentArray[1].split('to')[0].split('KShs.')[1].trim();
+      transaction['amount'] = double.parse(amount);
+      transaction["type"] = TxType.spend.val;
+      transaction['date'] = DateTime.now().toString();
+      transaction['desc'] = message;
+      return transaction;
+    }
+    if (message.contains(equityPaid)) {
+      List<String> paidArray = message.split(equityPaid);
+      String amount = paidArray[1]
+          .split('for')[0]
+          .split('of')[1]
+          .trim()
+          .replaceAll('KES.', '')
+          .trim();
+
+      transaction['amount'] = double.parse(amount);
+
+      transaction["type"] = TxType.spend.val;
+      transaction['desc'] = message;
+      transaction['date'] = DateTime.now().toString();
+
+      return transaction;
+    }
+    if (message.contains(equityCardPayment)) {
+      List<String> paidArray = message.split(equityCardPayment);
+      String amount = paidArray[0]
+          .split('KES')[1]
+          .replaceAll(',', '')
+          .trim()
+          .replaceAll(' ', '');
+
+      transaction['amount'] = double.parse(amount);
+      transaction["type"] = TxType.spend.val;
+      transaction['desc'] = message;
+      transaction['date'] = DateTime.now().toString();
+
+      return transaction;
+    }
+  }
+}
+
+Future<Result<bool>> userParseEquity({required String message}) async {
+  try {
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    final db = await DatabaseHelper().database;
+    int? accountId = await prefs.getInt("budget_lite_current_account_id");
+    log('parsing Equity tx message');
+    var transaction = userParseEquityText(message);
+
+    log('equity_transaction:$transaction');
+    if (message != null) {
+      var bytes = utf8.encode(message!); // data being hashed
+
+      var digest = sha1.convert(bytes);
+      debugPrint('equity_transaction:$transaction');
+      // log('from:${message.address} message:${message.body}');
+      if (transaction != null) {
+        if (transaction['type'] == TxType.spend.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          // txM.insertTransaction(tx);
+
+          db.transaction((txn) async {
+            var txs = await txn.query(
+              'transactions',
+              where: 'message_hash_code = ? AND account_id = ?',
+              whereArgs: ['${digest.toString()}', accountId],
+            );
+
+            bool exists = txs.isNotEmpty;
+            if (!exists) {
+              Wallet? accountWallet;
+
+              final List<Map<String, Object?>> walletMap = await txn.rawQuery(
+                "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                [accountId, 'default'],
+              );
+              var foundWalletMap = walletMap.firstWhere(
+                (wallet) => wallet['account_id'] as int == accountId,
+                orElse: () {
+                  return {
+                    "id": 0,
+                    "name": 'default',
+                    "balance": 0,
+                    'account_id': accountId,
+                    'savings': 0,
+                  };
+                },
+              );
+
+              accountWallet = Wallet(
+                id: foundWalletMap['id'] as int,
+                accountId: foundWalletMap['account_id'] as int,
+                name: foundWalletMap['name'] as String,
+                balance: foundWalletMap['balance'] as double,
+                savings: foundWalletMap['savings'] as double,
+              );
+
+              int txId = await txn.insert('transactions', tx.toMap());
+              await txn.rawUpdate(
+                'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                ['$accountId', '$txId'],
+              );
+
+              double balance = accountWallet.balance - tx.amount;
+              await txn.rawUpdate(
+                "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
+                ['$balance', '$accountId', 'default'],
+              );
+            }
+          });
+          return Result.ok(true);
+        } else {
+          return Result.ok(false);
+        }
+      } else {
+        return Result.ok(false);
+      }
+    } else {
+      return Result.error(MessageNull());
+    }
+  } on Exception catch (e) {
+    return Result.error(e);
+  }
+}
+
+Map<String, dynamic>? userParseNCBAText(String message) {
+  if (message != null) {
+    Map<String, dynamic> transaction = {
+      "type": "",
+      "source": "NCBA_BANK",
+      "amount": 0,
+      'date': "",
+      'desc': '',
+    };
+    if (message!.contains(ncbaPaid)) {
+      List<String> paidArray = message.split(ncbaPaid);
+      String amount = paidArray[1].split('KES')[1].split('to')[0].trim();
+      transaction['amount'] = double.parse(amount);
+      transaction['desc'] = message;
+      transaction["type"] = TxType.spend.val;
+      transaction['date'] = DateTime.now().toString();
+      return transaction;
+    }
+    if (message.contains(ncbaCredited)) {
+      List<String> creditArray = message.split(ncbaCredited);
+      String amount = creditArray[1];
+      transaction['amount'] = double.parse(amount);
+      transaction["type"] = TxType.credit.val;
+      transaction['desc'] = message;
+      transaction['date'] = DateTime.now().toString();
+      return transaction;
+    }
+  }
+}
+
 Map<String, dynamic>? parseNCBA(SmsMessage messageObj) {
   if (messageObj.body != null) {
     String? message = messageObj.body;
@@ -277,9 +539,9 @@ Map<String, dynamic>? parseEquity(SmsMessage messageObj) {
 Future<void> queryEquity() async {
   try {
     final telephony = Telephony.instance ?? Telephony.backgroundInstance;
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
     final db = await DatabaseHelper().database;
-    int? accountId = prefs.getInt("budget_lite_current_account_id");
+    int? accountId = await prefs.getInt("budget_lite_current_account_id");
     List<SmsMessage> messages = await telephony.getInboxSms(
       columns: [SmsColumn.ADDRESS, SmsColumn.BODY],
       filter: SmsFilter.where(SmsColumn.ADDRESS).equals("Equity Bank"),
@@ -314,8 +576,8 @@ Future<void> queryEquity() async {
             db.transaction((txn) async {
               var txs = await txn.query(
                 'transactions',
-                where: 'message_hash_code = ?',
-                whereArgs: ['${digest.toString()}'],
+                where: 'message_hash_code = ? AND account_id = ?',
+                whereArgs: ['${digest.toString()}', accountId],
               );
 
               bool exists = txs.isNotEmpty;
@@ -374,8 +636,8 @@ Future<void> queryNcba() async {
   try {
     final telephony = Telephony.instance ?? Telephony.backgroundInstance;
     final db = await DatabaseHelper().database;
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int? accountId = prefs.getInt("budget_lite_current_account_id");
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    int? accountId = await prefs.getInt("budget_lite_current_account_id");
     List<SmsMessage> messages = await telephony.getInboxSms(
       columns: [SmsColumn.ADDRESS, SmsColumn.BODY],
       filter: SmsFilter.where(SmsColumn.ADDRESS).equals("NCBA_BANK"),
@@ -407,8 +669,8 @@ Future<void> queryNcba() async {
             await db.transaction((Transaction txn) async {
               var txs = await txn.query(
                 'transactions',
-                where: 'message_hash_code = ?',
-                whereArgs: ['${digest.toString()}'],
+                where: 'message_hash_code = ? AND account_id = ?',
+                whereArgs: ['${digest.toString()}', accountId],
               );
               bool exists = txs.isNotEmpty;
               if (!exists) {
@@ -468,8 +730,8 @@ Future<void> queryNcba() async {
             db.transaction((txn) async {
               var txs = await txn.query(
                 'transactions',
-                where: 'message_hash_code = ?',
-                whereArgs: ['${digest.toString()}'],
+                where: 'message_hash_code = ? AND account_id = ?',
+                whereArgs: ['${digest.toString()}', accountId],
               );
 
               bool exists = txs.isNotEmpty;
@@ -524,12 +786,559 @@ Future<void> queryNcba() async {
   }
 }
 
+Map<String, dynamic>? userParseMpesaText(String message) {
+  if (message != null) {
+    RegExp dateRegex = RegExp(r'\b\d{1,2}/\d{1,2}/\d{2}\b');
+    final regex = RegExp(r'Transaction cost,?\s*Ksh\s?\d+\.\d{2}');
+    final DateFormat formatter = DateFormat('dd/MM/yy');
+    // log("message:${messageObj.body}");
+    Map<String, dynamic> transaction = {
+      "type": "",
+      "source": "Mpesa",
+      "amount": 0,
+      'date': "",
+      'desc': '',
+    };
+    double txCost = 0;
+    if (message != null) {
+      final match = regex.firstMatch(message);
+      if (match != null) {
+        txCost = double.parse(match.group(0)!.split('Ksh')[1]);
+      }
+    }
+    if (message!.contains(mpesaBought)) {
+      List<String> boughtArray = message.split(mpesaBought);
+      String amount = boughtArray[1]
+          .split('of')[0]
+          .replaceAll(',', '')
+          .split('Ksh')[1]
+          .trim();
+
+      transaction["type"] = TxType.spend.val;
+      transaction['date'] = formatter
+          .tryParse(dateRegex.allMatches(message).first.group(0) ?? '')
+          .toString();
+      dateRegex.firstMatch(message);
+      transaction["amount"] = double.parse(amount) + txCost;
+      transaction['desc'] = message;
+    }
+    if (message.contains(mpesaReceived)) {
+      List<String> receivedArray = message.split(mpesaReceived);
+      String amount = receivedArray[1]
+          .split("from")[0]
+          .trim()
+          .split("Ksh")[1]
+          .replaceAll(',', '');
+
+      transaction['date'] = formatter
+          .tryParse(dateRegex.allMatches(message).first.group(0) ?? '')
+          .toString();
+      transaction["amount"] = double.parse(amount) + txCost;
+      transaction["type"] = TxType.credit.val;
+      transaction['desc'] = message;
+
+      return transaction;
+    }
+    if (message.contains(mpesaPaid)) {
+      List<String> paidArray = message.split(mpesaPaid);
+
+      String amount = paidArray[0].split("Ksh")[1].trim().replaceAll(",", "");
+
+      transaction['date'] = formatter
+          .tryParse(dateRegex.allMatches(message).first.group(0) ?? '')
+          .toString();
+      transaction["amount"] = double.parse(amount) + txCost;
+      transaction["type"] = TxType.spend.val;
+      transaction['desc'] = message;
+
+      return transaction;
+    }
+    if (message.contains(mpesaSent)) {
+      List<String> sentArray = message.split(mpesaSent);
+      String amount = sentArray[0].split("Ksh")[1].replaceAll(",", "");
+
+      transaction["amount"] = double.parse(amount) + txCost;
+      transaction['date'] = formatter
+          .tryParse(dateRegex.allMatches(message).first.group(0) ?? '')
+          .toString();
+      transaction["type"] = TxType.spend.val;
+      transaction['desc'] = message;
+
+      return transaction;
+    }
+
+    if (message.contains(mpesaTransferred)) {
+      List<String> transferredArray = message.split(mpesaTransferred);
+      if (transferredArray[1].trim().split(' ')[0] == 'from') {
+        transaction["type"] = TxType.fromSaving.val;
+      } else if (transferredArray[1].trim().split(' ')[0] == 'to') {
+        transaction["type"] = TxType.toSaving.val;
+      }
+      String amount = transferredArray[0]
+          .split("Ksh")[1]
+          .trim()
+          .replaceAll(",", "");
+
+      transaction["amount"] = double.parse(amount) + txCost;
+      transaction['date'] = formatter
+          .tryParse(dateRegex.allMatches(message).first.group(0) ?? '')
+          .toString();
+      transaction['desc'] = message;
+
+      return transaction;
+    }
+  }
+  return null;
+}
+
+Future<Result<bool>> userParseNcba({required String message}) async {
+  try {
+    final db = await DatabaseHelper().database;
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    int? accountId = await prefs.getInt("budget_lite_current_account_id");
+    if (message != null) {
+      var bytes = utf8.encode(message); // data being hashed
+
+      var digest = sha1.convert(bytes);
+      var transaction = userParseNCBAText(message);
+
+      log('ncba_transaction:$transaction');
+      debugPrint('ncba_transaction:$transaction');
+      if (transaction != null && accountId != null) {
+        if (transaction['type'] == TxType.credit.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+            category: 'credit',
+          );
+          await db.transaction((Transaction txn) async {
+            var txs = await txn.query(
+              'transactions',
+              where: 'message_hash_code = ? AND account_id = ?',
+              whereArgs: ['${digest.toString()}', accountId],
+            );
+            bool exists = txs.isNotEmpty;
+            if (!exists) {
+              Wallet? accountWallet;
+
+              final List<Map<String, Object?>> walletMap = await txn.rawQuery(
+                "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                [accountId, 'default'],
+              );
+              var foundWalletMap = walletMap.firstWhere(
+                (wallet) => wallet['account_id'] as int == accountId,
+                orElse: () {
+                  return {
+                    "id": 0,
+                    "name": 'default',
+                    "balance": 0,
+                    'account_id': accountId,
+                    'savings': 0,
+                  };
+                },
+              );
+
+              accountWallet = Wallet(
+                id: foundWalletMap['id'] as int,
+                accountId: foundWalletMap['account_id'] as int,
+                name: foundWalletMap['name'] as String,
+                balance: foundWalletMap['balance'] as double,
+                savings: foundWalletMap['savings'] as double,
+              );
+
+              int txId = await txn.insert('transactions', tx.toMap());
+              await txn.rawUpdate(
+                'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                ['$accountId', '$txId'],
+              );
+
+              double newBalance = accountWallet.balance + tx.amount;
+              await txn.rawUpdate(
+                "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
+                ['$newBalance', '$accountId', 'default'],
+              );
+            }
+          });
+
+          return Result.ok(true);
+
+          // wM.creditDefaultWallet(tx);
+        } else if (transaction['type'] == TxType.spend.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          // txM.insertTransaction(tx);
+
+          db.transaction((txn) async {
+            var txs = await txn.query(
+              'transactions',
+              where: 'message_hash_code = ? AND account_id = ?',
+              whereArgs: ['${digest.toString()}', accountId],
+            );
+
+            bool exists = txs.isNotEmpty;
+            if (!exists) {
+              Wallet? accountWallet;
+
+              final List<Map<String, Object?>> walletMap = await txn.rawQuery(
+                "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                [accountId, 'default'],
+              );
+              var foundWalletMap = walletMap.firstWhere(
+                (wallet) => wallet['account_id'] as int == accountId,
+                orElse: () {
+                  return {
+                    "id": 0,
+                    "name": 'default',
+                    "balance": 0,
+                    'account_id': accountId,
+                    'savings': 0,
+                  };
+                },
+              );
+
+              accountWallet = Wallet(
+                id: foundWalletMap['id'] as int,
+                accountId: foundWalletMap['account_id'] as int,
+                name: foundWalletMap['name'] as String,
+                balance: foundWalletMap['balance'] as double,
+                savings: foundWalletMap['savings'] as double,
+              );
+
+              int txId = await txn.insert('transactions', tx.toMap());
+              await txn.rawUpdate(
+                'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                ['$accountId', '$txId'],
+              );
+
+              double balance = accountWallet.balance - tx.amount;
+              await txn.rawUpdate(
+                "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
+                ['$balance', '$accountId', 'default'],
+              );
+            }
+          });
+
+          return Result.ok(true);
+        } else {
+          return Result.ok(false);
+        }
+      } else {
+        return Result.ok(false);
+      }
+    } else {
+      return Result.error(MessageNull());
+    }
+  } on Exception catch (e) {
+    return Result.error(e);
+  }
+}
+
+Future<Result<bool>> userParseMpesa({required String message}) async {
+  try {
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    final db = await DatabaseHelper().database;
+    int? accountId = await prefs.getInt("budget_lite_current_account_id");
+    if (message != null) {
+      var bytes = utf8.encode(message); // data being hashed
+
+      var digest = sha1.convert(bytes);
+      var transaction = userParseMpesaText(message);
+
+      // log('mpesa_transaction:$transaction');
+
+      // debugPrint('mpesa_transaction:$transaction');
+      if (transaction != null && accountId != null) {
+        if (transaction['type'] == TxType.credit.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+            category: 'credit',
+          );
+          await db.transaction((Transaction txn) async {
+            var txs = await txn.query(
+              'transactions',
+              where: 'message_hash_code = ?',
+              whereArgs: [digest.toString()],
+            );
+            bool exists = txs.isNotEmpty;
+            if (!exists) {
+              Wallet? accountWallet;
+
+              final List<Map<String, Object?>> walletMap = await txn.rawQuery(
+                "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                [accountId, 'default'],
+              );
+              var foundWalletMap = walletMap.firstWhere(
+                (wallet) => wallet['account_id'] as int == accountId,
+                orElse: () {
+                  return {
+                    "id": 0,
+                    "name": 'default',
+                    "balance": 0,
+                    'account_id': accountId,
+                    'savings': 0,
+                  };
+                },
+              );
+
+              accountWallet = Wallet(
+                id: foundWalletMap['id'] as int,
+                accountId: foundWalletMap['account_id'] as int,
+                name: foundWalletMap['name'] as String,
+                balance: foundWalletMap['balance'] as double,
+                savings: foundWalletMap['savings'] as double,
+              );
+
+              int txId = await txn.insert('transactions', tx.toMap());
+              await txn.rawUpdate(
+                'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                ['$accountId', '$txId'],
+              );
+
+              double newBalance = accountWallet.balance + tx.amount;
+              await txn.rawUpdate(
+                "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
+                ['$newBalance', '$accountId', 'default'],
+              );
+            }
+          });
+
+          return Result.ok(true);
+
+          // wM.creditDefaultWallet(tx);
+        } else if (transaction['type'] == TxType.fromSaving.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            category: 'credit',
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          // wM.removeFromSavings(tx);
+          await db.transaction((txn) async {
+            var txs = await txn.query(
+              'transactions',
+              where: 'message_hash_code = ?',
+              whereArgs: [digest.toString()],
+            );
+            bool exists = txs.isNotEmpty;
+            if (!exists) {
+              Wallet? accountWallet;
+
+              final List<Map<String, Object?>> walletMap = await txn.rawQuery(
+                "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                [accountId, 'default'],
+              );
+              var foundWalletMap = walletMap.firstWhere(
+                (wallet) => wallet['account_id'] as int == accountId,
+                orElse: () {
+                  return {
+                    "id": 0,
+                    "name": 'default',
+                    "balance": 0,
+                    'account_id': accountId,
+                    'savings': 0,
+                  };
+                },
+              );
+
+              accountWallet = Wallet(
+                id: foundWalletMap['id'] as int,
+                accountId: foundWalletMap['account_id'] as int,
+                name: foundWalletMap['name'] as String,
+                balance: foundWalletMap['balance'] as double,
+                savings: foundWalletMap['savings'] as double,
+              );
+
+              int txId = await txn.insert('transactions', tx.toMap());
+              await txn.rawUpdate(
+                'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                ['$accountId', '$txId'],
+              );
+
+              bool? isMshwariDepost =
+                  await prefs.getBool('is_mshwari_savings') ?? true;
+              if (!isMshwariDepost) {
+                double newSavings = accountWallet.savings - tx.amount;
+                double balance = accountWallet.balance + tx.amount;
+                await txn.rawUpdate(
+                  "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ? AND name = ?",
+                  ['$balance', '$newSavings', '$accountId', 'default'],
+                );
+              }
+            }
+          });
+
+          return Result.ok(true);
+        } else if (transaction['type'] == TxType.toSaving.val) {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            category: 'savings',
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          // wM.addToSavings(tx);
+          db.transaction((txn) async {
+            var txs = await txn.query(
+              'transactions',
+              where: 'message_hash_code = ?',
+              whereArgs: [digest.toString()],
+            );
+
+            bool exists = txs.isNotEmpty;
+            if (!exists) {
+              Wallet? accountWallet;
+
+              final List<Map<String, Object?>> walletMap = await txn.rawQuery(
+                "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                [accountId, 'default'],
+              );
+              var foundWalletMap = walletMap.firstWhere(
+                (wallet) => wallet['account_id'] as int == accountId,
+                orElse: () {
+                  return {
+                    "id": 0,
+                    "name": 'default',
+                    "balance": 0,
+                    'account_id': accountId,
+                    'savings': 0,
+                  };
+                },
+              );
+
+              accountWallet = Wallet(
+                id: foundWalletMap['id'] as int,
+                accountId: foundWalletMap['account_id'] as int,
+                name: foundWalletMap['name'] as String,
+                balance: foundWalletMap['balance'] as double,
+                savings: foundWalletMap['savings'] as double,
+              );
+
+              int txId = await txn.insert('transactions', tx.toMap());
+              await txn.rawUpdate(
+                'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                ['$accountId', '$txId'],
+              );
+
+              bool? isMshwariDepost =
+                  await prefs.getBool('is_mshwari_savings') ?? true;
+              if (!isMshwariDepost) {
+                double newSavings = accountWallet.savings + tx.amount;
+                double balance =
+                    accountWallet.balance == 0.0 ||
+                        tx.amount > accountWallet.balance
+                    ? 0
+                    : accountWallet.balance - tx.amount;
+                await txn.rawUpdate(
+                  "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ?",
+                  ['$balance', '$newSavings', '$accountId'],
+                );
+              }
+            }
+          });
+
+          return Result.ok(true);
+        } else {
+          TransactionObj tx = TransactionObj(
+            messageHashCode: digest.toString(),
+            desc: transaction['desc'],
+            type: transaction['type'],
+            source: transaction['source'],
+            amount: transaction['amount'],
+            date: transaction['date'],
+          );
+          // txM.insertTransaction(tx);
+
+          db.transaction((txn) async {
+            var txs = await txn.query(
+              'transactions',
+              where: 'message_hash_code = ?',
+              whereArgs: [digest.toString()],
+            );
+
+            bool exists = txs.isNotEmpty;
+            if (!exists) {
+              Wallet? accountWallet;
+
+              final List<Map<String, Object?>> walletMap = await txn.rawQuery(
+                "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                [accountId, 'default'],
+              );
+              var foundWalletMap = walletMap.firstWhere(
+                (wallet) => wallet['account_id'] as int == accountId,
+                orElse: () {
+                  return {
+                    "id": 0,
+                    "name": 'default',
+                    "balance": 0,
+                    'account_id': accountId,
+                    'savings': 0,
+                  };
+                },
+              );
+
+              accountWallet = Wallet(
+                id: foundWalletMap['id'] as int,
+                accountId: foundWalletMap['account_id'] as int,
+                name: foundWalletMap['name'] as String,
+                balance: foundWalletMap['balance'] as double,
+                savings: foundWalletMap['savings'] as double,
+              );
+
+              int txId = await txn.insert('transactions', tx.toMap());
+              await txn.rawUpdate(
+                'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                ['$accountId', '$txId'],
+              );
+
+              double balance = accountWallet.balance - tx.amount;
+              await txn.rawUpdate(
+                "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
+                ['$balance', '$accountId', 'default'],
+              );
+            }
+          });
+
+          return Result.ok(true);
+        }
+      } else {
+        return Result.ok(false);
+      }
+    } else {
+      return Result.error(MessageNull());
+    }
+  } on Exception catch (e) {
+    return Result.error(e);
+  }
+}
+
+class MessageNull implements Exception {}
+
 Future<void> queryMpesa() async {
   try {
     final telephony = Telephony.instance ?? Telephony.backgroundInstance;
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
     final db = await DatabaseHelper().database;
-    int? accountId = prefs.getInt("budget_lite_current_account_id");
+    int? accountId = await prefs.getInt("budget_lite_current_account_id");
     List<SmsMessage> messages = await telephony.getInboxSms(
       columns: [SmsColumn.ADDRESS, SmsColumn.BODY],
       filter: SmsFilter.where(SmsColumn.ADDRESS).equals("MPESA"),
@@ -555,266 +1364,534 @@ Future<void> queryMpesa() async {
             //     DateTime.parse(
             //       transaction['date'],
             //     ).isAfter(DateTime.parse(prefs.getString('begin_date') ?? ''))) {
-            if (DateTime.parse(
-              transaction['date'],
-            ).isAfter(DateTime.parse('2025-06-01'))) {
-              if (transaction['type'] == TxType.credit.val) {
-                TransactionObj tx = TransactionObj(
-                  messageHashCode: digest.toString(),
-                  desc: transaction['desc'],
-                  type: transaction['type'],
-                  source: transaction['source'],
-                  amount: transaction['amount'],
-                  date: transaction['date'],
-                  category: 'credit',
-                );
-                await db.transaction((Transaction txn) async {
-                  var txs = await txn.query(
-                    'transactions',
-                    where: 'message_hash_code = ?',
-                    whereArgs: [digest.toString()],
+            if (kDebugMode) {
+              if (DateTime.parse(
+                transaction['date'],
+              ).isAfter(DateTime.parse('2025-06-01'))) {
+                if (transaction['type'] == TxType.credit.val) {
+                  TransactionObj tx = TransactionObj(
+                    messageHashCode: digest.toString(),
+                    desc: transaction['desc'],
+                    type: transaction['type'],
+                    source: transaction['source'],
+                    amount: transaction['amount'],
+                    date: transaction['date'],
+                    category: 'credit',
                   );
-                  bool exists = txs.isNotEmpty;
-                  if (!exists) {
-                    Wallet? accountWallet;
-
-                    final List<Map<String, Object?>>
-                    walletMap = await txn.rawQuery(
-                      "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
-                      [accountId, 'default'],
+                  await db.transaction((Transaction txn) async {
+                    var txs = await txn.query(
+                      'transactions',
+                      where: 'message_hash_code = ? AND account_id = ?',
+                      whereArgs: [digest.toString(), accountId],
                     );
-                    var foundWalletMap = walletMap.firstWhere(
-                      (wallet) => wallet['account_id'] as int == accountId,
-                      orElse: () {
-                        return {
-                          "id": 0,
-                          "name": 'default',
-                          "balance": 0,
-                          'account_id': accountId,
-                          'savings': 0,
-                        };
-                      },
-                    );
+                    bool exists = txs.isNotEmpty;
+                    if (!exists) {
+                      Wallet? accountWallet;
 
-                    accountWallet = Wallet(
-                      id: foundWalletMap['id'] as int,
-                      accountId: foundWalletMap['account_id'] as int,
-                      name: foundWalletMap['name'] as String,
-                      balance: foundWalletMap['balance'] as double,
-                      savings: foundWalletMap['savings'] as double,
-                    );
+                      final List<Map<String, Object?>>
+                      walletMap = await txn.rawQuery(
+                        "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                        [accountId, 'default'],
+                      );
+                      var foundWalletMap = walletMap.firstWhere(
+                        (wallet) => wallet['account_id'] as int == accountId,
+                        orElse: () {
+                          return {
+                            "id": 0,
+                            "name": 'default',
+                            "balance": 0,
+                            'account_id': accountId,
+                            'savings': 0,
+                          };
+                        },
+                      );
 
-                    int txId = await txn.insert('transactions', tx.toMap());
-                    await txn.rawUpdate(
-                      'UPDATE transactions SET account_id = ? WHERE id = ? ',
-                      ['$accountId', '$txId'],
-                    );
+                      accountWallet = Wallet(
+                        id: foundWalletMap['id'] as int,
+                        accountId: foundWalletMap['account_id'] as int,
+                        name: foundWalletMap['name'] as String,
+                        balance: foundWalletMap['balance'] as double,
+                        savings: foundWalletMap['savings'] as double,
+                      );
 
-                    double newBalance = accountWallet.balance + tx.amount;
-                    await txn.rawUpdate(
-                      "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
-                      ['$newBalance', '$accountId', 'default'],
-                    );
-                  }
-                });
-
-                // wM.creditDefaultWallet(tx);
-              } else if (transaction['type'] == TxType.fromSaving.val) {
-                TransactionObj tx = TransactionObj(
-                  messageHashCode: digest.toString(),
-                  desc: transaction['desc'],
-                  type: transaction['type'],
-                  category: 'credit',
-                  source: transaction['source'],
-                  amount: transaction['amount'],
-                  date: transaction['date'],
-                );
-                // wM.removeFromSavings(tx);
-                await db.transaction((txn) async {
-                  var txs = await txn.query(
-                    'transactions',
-                    where: 'message_hash_code = ?',
-                    whereArgs: [digest.toString()],
-                  );
-                  bool exists = txs.isNotEmpty;
-                  if (!exists) {
-                    Wallet? accountWallet;
-
-                    final List<Map<String, Object?>>
-                    walletMap = await txn.rawQuery(
-                      "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
-                      [accountId, 'default'],
-                    );
-                    var foundWalletMap = walletMap.firstWhere(
-                      (wallet) => wallet['account_id'] as int == accountId,
-                      orElse: () {
-                        return {
-                          "id": 0,
-                          "name": 'default',
-                          "balance": 0,
-                          'account_id': accountId,
-                          'savings': 0,
-                        };
-                      },
-                    );
-
-                    accountWallet = Wallet(
-                      id: foundWalletMap['id'] as int,
-                      accountId: foundWalletMap['account_id'] as int,
-                      name: foundWalletMap['name'] as String,
-                      balance: foundWalletMap['balance'] as double,
-                      savings: foundWalletMap['savings'] as double,
-                    );
-
-                    int txId = await txn.insert('transactions', tx.toMap());
-                    await txn.rawUpdate(
-                      'UPDATE transactions SET account_id = ? WHERE id = ? ',
-                      ['$accountId', '$txId'],
-                    );
-
-                    bool? isMshwariDepost =
-                        prefs.getBool('is_mshwari_savings') ?? true;
-                    if (!isMshwariDepost) {
-                      double newSavings = accountWallet.savings - tx.amount;
-                      double balance = accountWallet.balance + tx.amount;
+                      int txId = await txn.insert('transactions', tx.toMap());
                       await txn.rawUpdate(
-                        "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ? AND name = ?",
-                        ['$balance', '$newSavings', '$accountId', 'default'],
+                        'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                        ['$accountId', '$txId'],
+                      );
+
+                      double newBalance = accountWallet.balance + tx.amount;
+                      await txn.rawUpdate(
+                        "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
+                        ['$newBalance', '$accountId', 'default'],
                       );
                     }
-                  }
-                });
-              } else if (transaction['type'] == TxType.toSaving.val) {
-                TransactionObj tx = TransactionObj(
-                  messageHashCode: digest.toString(),
-                  desc: transaction['desc'],
-                  type: transaction['type'],
-                  source: transaction['source'],
-                  category: 'savings',
-                  amount: transaction['amount'],
-                  date: transaction['date'],
-                );
-                // wM.addToSavings(tx);
-                db.transaction((txn) async {
-                  var txs = await txn.query(
-                    'transactions',
-                    where: 'message_hash_code = ?',
-                    whereArgs: [digest.toString()],
+                  });
+
+                  // wM.creditDefaultWallet(tx);
+                } else if (transaction['type'] == TxType.fromSaving.val) {
+                  TransactionObj tx = TransactionObj(
+                    messageHashCode: digest.toString(),
+                    desc: transaction['desc'],
+                    type: transaction['type'],
+                    category: 'credit',
+                    source: transaction['source'],
+                    amount: transaction['amount'],
+                    date: transaction['date'],
                   );
-
-                  bool exists = txs.isNotEmpty;
-                  if (!exists) {
-                    Wallet? accountWallet;
-
-                    final List<Map<String, Object?>>
-                    walletMap = await txn.rawQuery(
-                      "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
-                      [accountId, 'default'],
+                  // wM.removeFromSavings(tx);
+                  await db.transaction((txn) async {
+                    var txs = await txn.query(
+                      'transactions',
+                      where: 'message_hash_code = ?',
+                      whereArgs: [digest.toString()],
                     );
-                    var foundWalletMap = walletMap.firstWhere(
-                      (wallet) => wallet['account_id'] as int == accountId,
-                      orElse: () {
-                        return {
-                          "id": 0,
-                          "name": 'default',
-                          "balance": 0,
-                          'account_id': accountId,
-                          'savings': 0,
-                        };
-                      },
-                    );
+                    bool exists = txs.isNotEmpty;
+                    if (!exists) {
+                      Wallet? accountWallet;
 
-                    accountWallet = Wallet(
-                      id: foundWalletMap['id'] as int,
-                      accountId: foundWalletMap['account_id'] as int,
-                      name: foundWalletMap['name'] as String,
-                      balance: foundWalletMap['balance'] as double,
-                      savings: foundWalletMap['savings'] as double,
-                    );
+                      final List<Map<String, Object?>>
+                      walletMap = await txn.rawQuery(
+                        "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                        [accountId, 'default'],
+                      );
+                      var foundWalletMap = walletMap.firstWhere(
+                        (wallet) => wallet['account_id'] as int == accountId,
+                        orElse: () {
+                          return {
+                            "id": 0,
+                            "name": 'default',
+                            "balance": 0,
+                            'account_id': accountId,
+                            'savings': 0,
+                          };
+                        },
+                      );
 
-                    int txId = await txn.insert('transactions', tx.toMap());
-                    await txn.rawUpdate(
-                      'UPDATE transactions SET account_id = ? WHERE id = ? ',
-                      ['$accountId', '$txId'],
-                    );
+                      accountWallet = Wallet(
+                        id: foundWalletMap['id'] as int,
+                        accountId: foundWalletMap['account_id'] as int,
+                        name: foundWalletMap['name'] as String,
+                        balance: foundWalletMap['balance'] as double,
+                        savings: foundWalletMap['savings'] as double,
+                      );
 
-                    bool? isMshwariDepost =
-                        prefs.getBool('is_mshwari_savings') ?? true;
-                    if (!isMshwariDepost) {
-                      double newSavings = accountWallet.savings + tx.amount;
-                      double balance =
-                          accountWallet.balance == 0.0 ||
-                              tx.amount > accountWallet.balance
-                          ? 0
-                          : accountWallet.balance - tx.amount;
+                      int txId = await txn.insert('transactions', tx.toMap());
                       await txn.rawUpdate(
-                        "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ?",
-                        ['$balance', '$newSavings', '$accountId'],
+                        'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                        ['$accountId', '$txId'],
+                      );
+
+                      bool? isMshwariDepost =
+                          await prefs.getBool('is_mshwari_savings') ?? true;
+                      if (!isMshwariDepost) {
+                        double newSavings = accountWallet.savings - tx.amount;
+                        double balance = accountWallet.balance + tx.amount;
+                        await txn.rawUpdate(
+                          "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ? AND name = ?",
+                          ['$balance', '$newSavings', '$accountId', 'default'],
+                        );
+                      }
+                    }
+                  });
+                } else if (transaction['type'] == TxType.toSaving.val) {
+                  TransactionObj tx = TransactionObj(
+                    messageHashCode: digest.toString(),
+                    desc: transaction['desc'],
+                    type: transaction['type'],
+                    source: transaction['source'],
+                    category: 'savings',
+                    amount: transaction['amount'],
+                    date: transaction['date'],
+                  );
+                  // wM.addToSavings(tx);
+                  db.transaction((txn) async {
+                    var txs = await txn.query(
+                      'transactions',
+                      where: 'message_hash_code = ?',
+                      whereArgs: [digest.toString()],
+                    );
+
+                    bool exists = txs.isNotEmpty;
+                    if (!exists) {
+                      Wallet? accountWallet;
+
+                      final List<Map<String, Object?>>
+                      walletMap = await txn.rawQuery(
+                        "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                        [accountId, 'default'],
+                      );
+                      var foundWalletMap = walletMap.firstWhere(
+                        (wallet) => wallet['account_id'] as int == accountId,
+                        orElse: () {
+                          return {
+                            "id": 0,
+                            "name": 'default',
+                            "balance": 0,
+                            'account_id': accountId,
+                            'savings': 0,
+                          };
+                        },
+                      );
+
+                      accountWallet = Wallet(
+                        id: foundWalletMap['id'] as int,
+                        accountId: foundWalletMap['account_id'] as int,
+                        name: foundWalletMap['name'] as String,
+                        balance: foundWalletMap['balance'] as double,
+                        savings: foundWalletMap['savings'] as double,
+                      );
+
+                      int txId = await txn.insert('transactions', tx.toMap());
+                      await txn.rawUpdate(
+                        'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                        ['$accountId', '$txId'],
+                      );
+
+                      bool? isMshwariDepost =
+                          await prefs.getBool('is_mshwari_savings') ?? true;
+                      if (!isMshwariDepost) {
+                        double newSavings = accountWallet.savings + tx.amount;
+                        double balance =
+                            accountWallet.balance == 0.0 ||
+                                tx.amount > accountWallet.balance
+                            ? 0
+                            : accountWallet.balance - tx.amount;
+                        await txn.rawUpdate(
+                          "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ?",
+                          ['$balance', '$newSavings', '$accountId'],
+                        );
+                      }
+                    }
+                  });
+                } else {
+                  TransactionObj tx = TransactionObj(
+                    messageHashCode: digest.toString(),
+                    desc: transaction['desc'],
+                    type: transaction['type'],
+                    source: transaction['source'],
+                    amount: transaction['amount'],
+                    date: transaction['date'],
+                  );
+                  // txM.insertTransaction(tx);
+
+                  db.transaction((txn) async {
+                    var txs = await txn.query(
+                      'transactions',
+                      where: 'message_hash_code = ?',
+                      whereArgs: [digest.toString()],
+                    );
+
+                    bool exists = txs.isNotEmpty;
+                    if (!exists) {
+                      Wallet? accountWallet;
+
+                      final List<Map<String, Object?>>
+                      walletMap = await txn.rawQuery(
+                        "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                        [accountId, 'default'],
+                      );
+                      var foundWalletMap = walletMap.firstWhere(
+                        (wallet) => wallet['account_id'] as int == accountId,
+                        orElse: () {
+                          return {
+                            "id": 0,
+                            "name": 'default',
+                            "balance": 0,
+                            'account_id': accountId,
+                            'savings': 0,
+                          };
+                        },
+                      );
+
+                      accountWallet = Wallet(
+                        id: foundWalletMap['id'] as int,
+                        accountId: foundWalletMap['account_id'] as int,
+                        name: foundWalletMap['name'] as String,
+                        balance: foundWalletMap['balance'] as double,
+                        savings: foundWalletMap['savings'] as double,
+                      );
+
+                      int txId = await txn.insert('transactions', tx.toMap());
+                      await txn.rawUpdate(
+                        'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                        ['$accountId', '$txId'],
+                      );
+
+                      double balance = accountWallet.balance - tx.amount;
+                      await txn.rawUpdate(
+                        "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
+                        ['$balance', '$accountId', 'default'],
                       );
                     }
-                  }
-                });
-              } else {
-                TransactionObj tx = TransactionObj(
-                  messageHashCode: digest.toString(),
-                  desc: transaction['desc'],
-                  type: transaction['type'],
-                  source: transaction['source'],
-                  amount: transaction['amount'],
-                  date: transaction['date'],
-                );
-                // txM.insertTransaction(tx);
-
-                db.transaction((txn) async {
-                  var txs = await txn.query(
-                    'transactions',
-                    where: 'message_hash_code = ?',
-                    whereArgs: [digest.toString()],
+                  });
+                }
+              }
+            } else {
+              if (DateTime.parse(transaction['date']).isAtSameMomentAs(
+                    DateTime.parse(await prefs.getString('begin_date') ?? ''),
+                  ) ||
+                  DateTime.parse(transaction['date']).isAfter(
+                    DateTime.parse(await prefs.getString('begin_date') ?? ''),
+                  )) {
+                if (transaction['type'] == TxType.credit.val) {
+                  TransactionObj tx = TransactionObj(
+                    messageHashCode: digest.toString(),
+                    desc: transaction['desc'],
+                    type: transaction['type'],
+                    source: transaction['source'],
+                    amount: transaction['amount'],
+                    date: transaction['date'],
+                    category: 'credit',
                   );
-
-                  bool exists = txs.isNotEmpty;
-                  if (!exists) {
-                    Wallet? accountWallet;
-
-                    final List<Map<String, Object?>>
-                    walletMap = await txn.rawQuery(
-                      "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
-                      [accountId, 'default'],
+                  await db.transaction((Transaction txn) async {
+                    var txs = await txn.query(
+                      'transactions',
+                      where: 'message_hash_code = ?',
+                      whereArgs: [digest.toString()],
                     );
-                    var foundWalletMap = walletMap.firstWhere(
-                      (wallet) => wallet['account_id'] as int == accountId,
-                      orElse: () {
-                        return {
-                          "id": 0,
-                          "name": 'default',
-                          "balance": 0,
-                          'account_id': accountId,
-                          'savings': 0,
-                        };
-                      },
+                    bool exists = txs.isNotEmpty;
+                    if (!exists) {
+                      Wallet? accountWallet;
+
+                      final List<Map<String, Object?>>
+                      walletMap = await txn.rawQuery(
+                        "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                        [accountId, 'default'],
+                      );
+                      var foundWalletMap = walletMap.firstWhere(
+                        (wallet) => wallet['account_id'] as int == accountId,
+                        orElse: () {
+                          return {
+                            "id": 0,
+                            "name": 'default',
+                            "balance": 0,
+                            'account_id': accountId,
+                            'savings': 0,
+                          };
+                        },
+                      );
+
+                      accountWallet = Wallet(
+                        id: foundWalletMap['id'] as int,
+                        accountId: foundWalletMap['account_id'] as int,
+                        name: foundWalletMap['name'] as String,
+                        balance: foundWalletMap['balance'] as double,
+                        savings: foundWalletMap['savings'] as double,
+                      );
+
+                      int txId = await txn.insert('transactions', tx.toMap());
+                      await txn.rawUpdate(
+                        'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                        ['$accountId', '$txId'],
+                      );
+
+                      double newBalance = accountWallet.balance + tx.amount;
+                      await txn.rawUpdate(
+                        "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
+                        ['$newBalance', '$accountId', 'default'],
+                      );
+                    }
+                  });
+
+                  // wM.creditDefaultWallet(tx);
+                } else if (transaction['type'] == TxType.fromSaving.val) {
+                  TransactionObj tx = TransactionObj(
+                    messageHashCode: digest.toString(),
+                    desc: transaction['desc'],
+                    type: transaction['type'],
+                    category: 'credit',
+                    source: transaction['source'],
+                    amount: transaction['amount'],
+                    date: transaction['date'],
+                  );
+                  // wM.removeFromSavings(tx);
+                  await db.transaction((txn) async {
+                    var txs = await txn.query(
+                      'transactions',
+                      where: 'message_hash_code = ?',
+                      whereArgs: [digest.toString()],
+                    );
+                    bool exists = txs.isNotEmpty;
+                    if (!exists) {
+                      Wallet? accountWallet;
+
+                      final List<Map<String, Object?>>
+                      walletMap = await txn.rawQuery(
+                        "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                        [accountId, 'default'],
+                      );
+                      var foundWalletMap = walletMap.firstWhere(
+                        (wallet) => wallet['account_id'] as int == accountId,
+                        orElse: () {
+                          return {
+                            "id": 0,
+                            "name": 'default',
+                            "balance": 0,
+                            'account_id': accountId,
+                            'savings': 0,
+                          };
+                        },
+                      );
+
+                      accountWallet = Wallet(
+                        id: foundWalletMap['id'] as int,
+                        accountId: foundWalletMap['account_id'] as int,
+                        name: foundWalletMap['name'] as String,
+                        balance: foundWalletMap['balance'] as double,
+                        savings: foundWalletMap['savings'] as double,
+                      );
+
+                      int txId = await txn.insert('transactions', tx.toMap());
+                      await txn.rawUpdate(
+                        'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                        ['$accountId', '$txId'],
+                      );
+
+                      bool? isMshwariDepost =
+                          await prefs.getBool('is_mshwari_savings') ?? true;
+                      if (!isMshwariDepost) {
+                        double newSavings = accountWallet.savings - tx.amount;
+                        double balance = accountWallet.balance + tx.amount;
+                        await txn.rawUpdate(
+                          "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ? AND name = ?",
+                          ['$balance', '$newSavings', '$accountId', 'default'],
+                        );
+                      }
+                    }
+                  });
+                } else if (transaction['type'] == TxType.toSaving.val) {
+                  TransactionObj tx = TransactionObj(
+                    messageHashCode: digest.toString(),
+                    desc: transaction['desc'],
+                    type: transaction['type'],
+                    source: transaction['source'],
+                    category: 'savings',
+                    amount: transaction['amount'],
+                    date: transaction['date'],
+                  );
+                  // wM.addToSavings(tx);
+                  db.transaction((txn) async {
+                    var txs = await txn.query(
+                      'transactions',
+                      where: 'message_hash_code = ?',
+                      whereArgs: [digest.toString()],
                     );
 
-                    accountWallet = Wallet(
-                      id: foundWalletMap['id'] as int,
-                      accountId: foundWalletMap['account_id'] as int,
-                      name: foundWalletMap['name'] as String,
-                      balance: foundWalletMap['balance'] as double,
-                      savings: foundWalletMap['savings'] as double,
+                    bool exists = txs.isNotEmpty;
+                    if (!exists) {
+                      Wallet? accountWallet;
+
+                      final List<Map<String, Object?>>
+                      walletMap = await txn.rawQuery(
+                        "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                        [accountId, 'default'],
+                      );
+                      var foundWalletMap = walletMap.firstWhere(
+                        (wallet) => wallet['account_id'] as int == accountId,
+                        orElse: () {
+                          return {
+                            "id": 0,
+                            "name": 'default',
+                            "balance": 0,
+                            'account_id': accountId,
+                            'savings': 0,
+                          };
+                        },
+                      );
+
+                      accountWallet = Wallet(
+                        id: foundWalletMap['id'] as int,
+                        accountId: foundWalletMap['account_id'] as int,
+                        name: foundWalletMap['name'] as String,
+                        balance: foundWalletMap['balance'] as double,
+                        savings: foundWalletMap['savings'] as double,
+                      );
+
+                      int txId = await txn.insert('transactions', tx.toMap());
+                      await txn.rawUpdate(
+                        'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                        ['$accountId', '$txId'],
+                      );
+
+                      bool? isMshwariDepost =
+                          await prefs.getBool('is_mshwari_savings') ?? true;
+                      if (!isMshwariDepost) {
+                        double newSavings = accountWallet.savings + tx.amount;
+                        double balance =
+                            accountWallet.balance == 0.0 ||
+                                tx.amount > accountWallet.balance
+                            ? 0
+                            : accountWallet.balance - tx.amount;
+                        await txn.rawUpdate(
+                          "UPDATE wallets SET balance = ?,savings = ? WHERE account_id = ?",
+                          ['$balance', '$newSavings', '$accountId'],
+                        );
+                      }
+                    }
+                  });
+                } else {
+                  TransactionObj tx = TransactionObj(
+                    messageHashCode: digest.toString(),
+                    desc: transaction['desc'],
+                    type: transaction['type'],
+                    source: transaction['source'],
+                    amount: transaction['amount'],
+                    date: transaction['date'],
+                  );
+                  // txM.insertTransaction(tx);
+
+                  db.transaction((txn) async {
+                    var txs = await txn.query(
+                      'transactions',
+                      where: 'message_hash_code = ?',
+                      whereArgs: [digest.toString()],
                     );
 
-                    int txId = await txn.insert('transactions', tx.toMap());
-                    await txn.rawUpdate(
-                      'UPDATE transactions SET account_id = ? WHERE id = ? ',
-                      ['$accountId', '$txId'],
-                    );
+                    bool exists = txs.isNotEmpty;
+                    if (!exists) {
+                      Wallet? accountWallet;
 
-                    double balance = accountWallet.balance - tx.amount;
-                    await txn.rawUpdate(
-                      "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
-                      ['$balance', '$accountId', 'default'],
-                    );
-                  }
-                });
+                      final List<Map<String, Object?>>
+                      walletMap = await txn.rawQuery(
+                        "SELECT * FROM wallets WHERE account_id = ? AND name = ?",
+                        [accountId, 'default'],
+                      );
+                      var foundWalletMap = walletMap.firstWhere(
+                        (wallet) => wallet['account_id'] as int == accountId,
+                        orElse: () {
+                          return {
+                            "id": 0,
+                            "name": 'default',
+                            "balance": 0,
+                            'account_id': accountId,
+                            'savings': 0,
+                          };
+                        },
+                      );
+
+                      accountWallet = Wallet(
+                        id: foundWalletMap['id'] as int,
+                        accountId: foundWalletMap['account_id'] as int,
+                        name: foundWalletMap['name'] as String,
+                        balance: foundWalletMap['balance'] as double,
+                        savings: foundWalletMap['savings'] as double,
+                      );
+
+                      int txId = await txn.insert('transactions', tx.toMap());
+                      await txn.rawUpdate(
+                        'UPDATE transactions SET account_id = ? WHERE id = ? ',
+                        ['$accountId', '$txId'],
+                      );
+
+                      double balance = accountWallet.balance - tx.amount;
+                      await txn.rawUpdate(
+                        "UPDATE wallets SET balance = ? WHERE account_id = ? AND name = ?",
+                        ['$balance', '$accountId', 'default'],
+                      );
+                    }
+                  });
+                }
               }
             }
           }
@@ -855,8 +1932,8 @@ Future<void> calculateWeekInsights() async {
       Duration(days: 7 * (i + 1)),
     );
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int? accountId = prefs.getInt("budget_lite_current_account_id");
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    int? accountId = await prefs.getInt("budget_lite_current_account_id");
 
     final db = await DatabaseHelper().database;
     db.transaction((txn) async {

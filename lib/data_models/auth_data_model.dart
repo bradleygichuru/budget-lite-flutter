@@ -15,6 +15,7 @@ class Account {
   final String createdAt;
   final String tier;
   final int? resetPending;
+  final int? anonymous;
   Account({
     required this.email,
     required this.createdAt,
@@ -23,10 +24,12 @@ class Account {
     this.resetPending,
     this.country,
     this.budgetResetDate,
+    this.anonymous,
     required this.tier,
   });
   Map<String, Object> toMap() {
     return {
+      'anonymous': ?anonymous,
       'auth_id': ?authId,
       'id': ?id,
       'email': email,
@@ -40,7 +43,7 @@ class Account {
 
   @override
   String toString() {
-    return 'Account{id:$id,email:$email,auth_id:$authId,country:$country,budget_reset_date:$budgetResetDate,createdAt:$createdAt,tier:$tier,resetPending:$resetPending}';
+    return 'Account{id:$id,email:$email,auth_id:$authId,country:$country,budget_reset_date:$budgetResetDate,createdAt:$createdAt,tier:$tier,resetPending:$resetPending,anonymous:$anonymous}';
   }
 }
 

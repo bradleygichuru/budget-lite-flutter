@@ -64,6 +64,7 @@ Future<void> initializeService() async {
   // await requestNotificationPermissions();
   // await requestListeningPermissions();
   final service = FlutterBackgroundService();
+
   await service.configure(
     androidConfiguration: AndroidConfiguration(
       // this will be executed when app is in foreground or background in separated isolate
@@ -76,7 +77,7 @@ Future<void> initializeService() async {
       notificationChannelId: 'service_channel',
       foregroundServiceNotificationId: 888,
       initialNotificationTitle: 'Budgetlite tx discovery service',
-      initialNotificationContent: 'Initializing',
+      // initialNotificationContent: 'Initializing',
       foregroundServiceTypes: [AndroidForegroundType.dataSync],
     ),
     iosConfiguration: IosConfiguration(
@@ -109,6 +110,13 @@ Future<bool> onIosBackground(ServiceInstance service) async {
   await preferences.setStringList('log', log);
 
   return true;
+}
+
+void stopBackgroundService() {
+  final service = FlutterBackgroundService();
+  service.invoke("stop");
+
+  AwesomeNotifications().dismiss(888);
 }
 
 @pragma('vm:entry-point')
@@ -179,13 +187,14 @@ void onStart(ServiceInstance service) async {
   Timer.periodic(kDebugMode ? Duration(minutes: 2) : Duration(hours: 1), (
     timer,
   ) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool isNewUser = prefs.getBool("isNewUser") ?? true;
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    bool isNewUser = await prefs.getBool("isNewUser") ?? true;
+    bool autoImport = await prefs.getBool('auto_import') ?? false;
     debugPrint('Is new user:$isNewUser');
-    int? acid = prefs.getInt("budget_lite_current_account_id");
+    int? acid = await prefs.getInt("budget_lite_current_account_id");
     debugPrint('acid:$acid');
     final smsPerms = Permission.sms;
-    if (acid != null && !isNewUser && await smsPerms.isGranted) {
+    if (acid != null && !isNewUser && await smsPerms.isGranted && autoImport) {
       AwesomeNotifications().createNotification(
         content: NotificationContent(
           criticalAlert: false,
@@ -198,16 +207,18 @@ void onStart(ServiceInstance service) async {
           locked: true,
         ),
       );
-      debugPrint('Running tx discovery');
-      queryMpesa();
+      // debugPrint('Running tx discovery');
+      // queryMpesa();
 
       // queryNcba();
       // queryEquity();
       AwesomeNotifications().dismiss(999);
     } else {
-      debugPrint(
-        'Discovery run skipped ,sms_perm:${await smsPerms.isGranted} ,account_id:$acid ,is_new_user:$isNewUser',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'Discovery run skipped ,sms_perm:${await smsPerms.isGranted} ,account_id:$acid ,is_new_user:$isNewUser',
+        );
+      }
       log(
         'Discovery run skipped ,sms_perm:${await smsPerms.isGranted} ,account_id:$acid ,is_new_user:$isNewUser',
       );
@@ -216,9 +227,9 @@ void onStart(ServiceInstance service) async {
 }
 
 Future<void> notifyShouldCategorize() async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
+  SharedPreferencesAsync prefs = SharedPreferencesAsync();
 
-  int? acid = prefs.getInt("budget_lite_current_account_id");
+  int? acid = await prefs.getInt("budget_lite_current_account_id");
   final db = await DatabaseHelper().database;
   // final List<Map<String, Object?>> transactionMaps = await db.rawQuery(
   //   "SELECT * from transactions WHERE category is null AND account_id = ?",
@@ -232,12 +243,12 @@ Future<void> notifyShouldCategorize() async {
     orderBy: 'DATE(date) DESC',
   );
   if (transactionMaps.isNotEmpty) {
-    int notiId = prefs.getInt('notification_id')!;
+    int? notiId = await prefs.getInt('notification_id')!;
     AwesomeNotifications().createNotification(
       content: NotificationContent(
         notificationLayout: NotificationLayout.BigText,
         autoDismissible: false,
-        id: notiId,
+        id: notiId!,
         channelKey: 'basic_channel',
         actionType: ActionType.Default,
         title: 'Uncategorized transactions',
@@ -245,7 +256,7 @@ Future<void> notifyShouldCategorize() async {
       ),
     );
 
-    prefs.setInt('notification_id', notiId + 1);
+    await prefs.setInt('notification_id', notiId + 1);
   }
 }
 
@@ -266,13 +277,13 @@ Future<void> dailyBudgetAlert() async {
     }
   }
   if (body.isNotEmpty) {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int notiId = prefs.getInt('notification_id')!;
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    int? notiId = await prefs.getInt('notification_id')!;
     AwesomeNotifications().createNotification(
       content: NotificationContent(
         notificationLayout: NotificationLayout.BigText,
         autoDismissible: false,
-        id: notiId,
+        id: notiId!,
         channelKey: 'basic_channel',
         actionType: ActionType.Default,
         title: 'Daily budget report',
@@ -310,13 +321,13 @@ Future<void> monthlyGoalAlerts() async {
     }
   }
   if (body.isNotEmpty) {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int notiId = prefs.getInt('notification_id')!;
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    int? notiId = await prefs.getInt('notification_id')!;
     AwesomeNotifications().createNotification(
       content: NotificationContent(
         notificationLayout: NotificationLayout.BigText,
         autoDismissible: false,
-        id: notiId,
+        id: notiId!,
         channelKey: 'basic_channel',
         actionType: ActionType.Default,
         title: 'Monthly Goal report',
@@ -330,9 +341,9 @@ Future<void> monthlyGoalAlerts() async {
 
 Future<void> resetBudgets() async {
   try {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
 
-    int? acid = prefs.getInt("budget_lite_current_account_id");
+    int? acid = await prefs.getInt("budget_lite_current_account_id");
     if (acid != null) {
       final db = await DatabaseHelper().database;
       final List<Map<String, Object?>> categoryMaps = await db.rawQuery(
@@ -356,9 +367,9 @@ Future<void> resetBudgets() async {
 }
 
 Future<List<Ct.Category>> getCategories() async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
+  SharedPreferencesAsync prefs = SharedPreferencesAsync();
 
-  int? acid = prefs.getInt("budget_lite_current_account_id");
+  int? acid = await prefs.getInt("budget_lite_current_account_id");
   final db = await DatabaseHelper().database;
   final List<Map<String, Object?>> categoryMaps = await db.rawQuery(
     "SELECT * FROM categories WHERE account_id = ?",

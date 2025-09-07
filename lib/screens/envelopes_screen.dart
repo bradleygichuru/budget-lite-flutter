@@ -7,7 +7,9 @@ import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/categories.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:watch_it/watch_it.dart';
+import 'package:flutter_application_1/constants/globals.dart';
 
 class EnvelopesView extends StatefulWidget with WatchItStatefulWidgetMixin {
   const EnvelopesView({super.key});
@@ -23,6 +25,17 @@ class EnvelopeViewState extends State<EnvelopesView> {
   TextEditingController newBudgetAmountController = TextEditingController();
   bool _isLoading = false;
   final _formKey = GlobalKey<FormState>();
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => ShowCaseWidget.of(context).startShowCase([
+        AppGlobal.resetBudgetEnvelope,
+        AppGlobal.addBudgetEnvelope,
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final GlobalKey<ScaffoldMessengerState> scaffoldKey =
@@ -126,244 +139,286 @@ class EnvelopeViewState extends State<EnvelopesView> {
                         ),
                         Row(
                           children: [
-                            IconButton(
-                              iconSize: 25,
-                              color: Colors.blue.shade600,
-                              onPressed: () => showDialog<String>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: Text('Reset Budget'),
-                                  actions: [
-                                    FilledButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                      },
-                                      child: Text('Cancel'),
-                                    ),
-                                    FilledButton(
-                                      onPressed: () async {
-                                        Result res = await di<CategoriesModel>()
-                                            .resetBudgets();
-                                        switch (res) {
-                                          case Ok():
-                                            {
-                                              scaffoldKey.currentState!
-                                                  .showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                        'Categories have be reset',
-                                                      ),
-                                                    ),
-                                                  );
-                                              di<AuthModel>()
-                                                  .removePendingBudgetReset();
-                                              Navigator.pop(context);
-                                              break;
-                                            }
-                                          case Error():
-                                            {
-                                              scaffoldKey.currentState!
-                                                  .showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                        'Error Reseting budget',
-                                                      ),
-                                                    ),
-                                                  );
-
-                                              break;
-                                            }
-                                          default:
-                                            {
-                                              scaffoldKey.currentState!
-                                                  .showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                        'Error Reseting budget',
-                                                      ),
-                                                    ),
-                                                  );
-                                              break;
-                                            }
-                                        }
-                                      },
-                                      child: Text('Continue with Reset'),
-                                    ),
-                                  ],
-                                  content: Padding(
-                                    padding: EdgeInsets.all(5),
-                                    child: Text(
-                                      'Your budget will be reset, Are you sure ?',
-                                    ),
-                                  ),
-                                ),
+                            Showcase(
+                              key: AppGlobal.resetBudgetEnvelope,
+                              onBarrierClick: () {
+                                ShowCaseWidget.of(
+                                  context,
+                                ).hideFloatingActionWidgetForKeys([
+                                  AppGlobal.resetBudgetEnvelope,
+                                ]);
+                              },
+                              tooltipActionConfig: const TooltipActionConfig(
+                                alignment: MainAxisAlignment.end,
+                                position: TooltipActionPosition.outside,
+                                gapBetweenContentAndAction: 10,
                               ),
-                              icon: Icon(Icons.refresh),
-                            ),
-
-                            IconButton(
-                              iconSize: 25,
-                              color: Colors.blue.shade600,
-                              onPressed: () => showDialog<String>(
-                                context: context,
-                                builder: (context) => SingleChildScrollView(
-                                  child: AlertDialog(
+                              description: "Tap to Reset your budgets",
+                              child: IconButton(
+                                iconSize: 25,
+                                color: Colors.blue.shade600,
+                                onPressed: () => showDialog<String>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text('Reset Budget'),
                                     actions: [
                                       FilledButton(
-                                        style: ButtonStyle(
-                                          backgroundColor:
-                                              WidgetStatePropertyAll<Color>(
-                                                Colors.grey.shade600,
-                                              ),
-                                        ),
-                                        onPressed: _isLoading
-                                            ? null
-                                            : () {
-                                                newBudgetAmountController.text =
-                                                    '';
-
-                                                newCategoryNameController.text =
-                                                    '';
-                                                Navigator.pop(context);
-                                              },
-                                        child: Text(
-                                          "Cancel",
-                                          style: TextStyle(color: Colors.white),
-                                        ),
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                        },
+                                        child: Text('Cancel'),
                                       ),
                                       FilledButton(
-                                        style: ButtonStyle(
-                                          backgroundColor:
-                                              WidgetStatePropertyAll<Color>(
-                                                Colors.blue.shade600,
-                                              ),
-                                        ),
-                                        onPressed: _isLoading
-                                            ? null
-                                            : () {
-                                                if (_formKey.currentState!
-                                                    .validate()) {
-                                                  setState(() {
-                                                    _isLoading = true;
-                                                  });
-                                                  ctM
-                                                      .handleCategoryAdd(
-                                                        Category(
-                                                          accountId: null,
-                                                          spent: 0,
-                                                          categoryName:
-                                                              newCategoryNameController
-                                                                  .text,
-                                                          budget: double.parse(
-                                                            newBudgetAmountController
-                                                                .text,
-                                                          ),
+                                        onPressed: () async {
+                                          Result res =
+                                              await di<CategoriesModel>()
+                                                  .resetBudgets();
+                                          switch (res) {
+                                            case Ok():
+                                              {
+                                                scaffoldKey.currentState!
+                                                    .showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          'Categories have be reset',
                                                         ),
-                                                      )
-                                                      .then((_) {
-                                                        if (mounted) {
-                                                          ScaffoldMessenger.of(
-                                                            context,
-                                                          ).showSnackBar(
-                                                            SnackBar(
-                                                              content: const Text(
-                                                                "Category created",
-                                                              ),
-                                                            ),
-                                                          );
-                                                          setState(() {
-                                                            _isLoading = false;
-                                                          });
+                                                      ),
+                                                    );
+                                                di<AuthModel>()
+                                                    .removePendingBudgetReset();
+                                                Navigator.pop(context);
+                                                break;
+                                              }
+                                            case Error():
+                                              {
+                                                scaffoldKey.currentState!
+                                                    .showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          'Error Reseting budget',
+                                                        ),
+                                                      ),
+                                                    );
 
-                                                          Navigator.pop(
-                                                            context,
-                                                          );
-                                                        }
-                                                      });
-                                                }
-                                              },
-                                        child: Text(
-                                          "Add envelope",
-                                          style: TextStyle(color: Colors.white),
-                                        ),
+                                                break;
+                                              }
+                                            default:
+                                              {
+                                                scaffoldKey.currentState!
+                                                    .showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          'Error Reseting budget',
+                                                        ),
+                                                      ),
+                                                    );
+                                                break;
+                                              }
+                                          }
+                                        },
+                                        child: Text('Continue with Reset'),
                                       ),
                                     ],
-                                    title: Text(
-                                      "Add New Envelope",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                    content: Padding(
+                                      padding: EdgeInsets.all(5),
+                                      child: Text(
+                                        'Your budget will be reset, Are you sure ?',
                                       ),
                                     ),
+                                  ),
+                                ),
+                                icon: Icon(Icons.refresh),
+                              ),
+                            ),
+                            Showcase(
+                              key: AppGlobal.addBudgetEnvelope,
+                              description: "Tap to add a budget envelope",
 
-                                    content: Padding(
-                                      padding: EdgeInsets.all(0),
-                                      child: Form(
-                                        key: _formKey,
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 0,
-                                                    vertical: 5,
-                                                  ),
-                                              child: TextFormField(
-                                                controller:
-                                                    newCategoryNameController,
-                                                validator: (value) {
-                                                  if (value == null ||
-                                                      value.isEmpty) {
-                                                    return 'Please enter valid category name';
-                                                  }
-                                                  return null;
+                              onBarrierClick: () {
+                                ShowCaseWidget.of(
+                                  context,
+                                ).hideFloatingActionWidgetForKeys([
+                                  AppGlobal.addBudgetEnvelope,
+                                ]);
+                              },
+
+                              tooltipActionConfig: const TooltipActionConfig(
+                                alignment: MainAxisAlignment.end,
+                                position: TooltipActionPosition.outside,
+                                gapBetweenContentAndAction: 10,
+                              ),
+                              child: IconButton(
+                                iconSize: 25,
+                                color: Colors.blue.shade600,
+                                onPressed: () => showDialog<String>(
+                                  context: context,
+                                  builder: (context) => SingleChildScrollView(
+                                    child: AlertDialog(
+                                      actions: [
+                                        FilledButton(
+                                          style: ButtonStyle(
+                                            backgroundColor:
+                                                WidgetStatePropertyAll<Color>(
+                                                  Colors.grey.shade600,
+                                                ),
+                                          ),
+                                          onPressed: _isLoading
+                                              ? null
+                                              : () {
+                                                  newBudgetAmountController
+                                                          .text =
+                                                      '';
+
+                                                  newCategoryNameController
+                                                          .text =
+                                                      '';
+                                                  Navigator.pop(context);
                                                 },
-                                                decoration:
-                                                    const InputDecoration(
-                                                      border:
-                                                          OutlineInputBorder(),
-                                                      hintText:
-                                                          'e.g Entertainment',
-                                                      labelText:
-                                                          "Category Name",
-                                                    ),
-                                              ),
+                                          child: Text(
+                                            "Cancel",
+                                            style: TextStyle(
+                                              color: Colors.white,
                                             ),
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 0,
-                                                    vertical: 5,
-                                                  ),
-                                              child: TextFormField(
-                                                validator: (value) {
-                                                  if (value == null ||
-                                                      value.isEmpty) {
-                                                    return 'Please enter valid amount';
+                                          ),
+                                        ),
+                                        FilledButton(
+                                          style: ButtonStyle(
+                                            backgroundColor:
+                                                WidgetStatePropertyAll<Color>(
+                                                  Colors.blue.shade600,
+                                                ),
+                                          ),
+                                          onPressed: _isLoading
+                                              ? null
+                                              : () {
+                                                  if (_formKey.currentState!
+                                                      .validate()) {
+                                                    setState(() {
+                                                      _isLoading = true;
+                                                    });
+                                                    ctM
+                                                        .handleCategoryAdd(
+                                                          Category(
+                                                            accountId: null,
+                                                            spent: 0,
+                                                            categoryName:
+                                                                newCategoryNameController
+                                                                    .text,
+                                                            budget: double.parse(
+                                                              newBudgetAmountController
+                                                                  .text,
+                                                            ),
+                                                          ),
+                                                        )
+                                                        .then((_) {
+                                                          if (mounted) {
+                                                            ScaffoldMessenger.of(
+                                                              context,
+                                                            ).showSnackBar(
+                                                              SnackBar(
+                                                                content: const Text(
+                                                                  "Category created",
+                                                                ),
+                                                              ),
+                                                            );
+                                                            setState(() {
+                                                              _isLoading =
+                                                                  false;
+                                                            });
+
+                                                            Navigator.pop(
+                                                              context,
+                                                            );
+                                                          }
+                                                        });
                                                   }
-                                                  return null;
                                                 },
-                                                keyboardType:
-                                                    TextInputType.number,
-                                                controller:
-                                                    newBudgetAmountController,
-                                                obscureText: false,
-                                                decoration: InputDecoration(
-                                                  border: OutlineInputBorder(),
-                                                  labelText: 'Budget Amount',
+                                          child: Text(
+                                            "Add envelope",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      title: Text(
+                                        "Add New Envelope",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+
+                                      content: Padding(
+                                        padding: EdgeInsets.all(0),
+                                        child: Form(
+                                          key: _formKey,
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 0,
+                                                      vertical: 5,
+                                                    ),
+                                                child: TextFormField(
+                                                  controller:
+                                                      newCategoryNameController,
+                                                  validator: (value) {
+                                                    if (value == null ||
+                                                        value.isEmpty) {
+                                                      return 'Please enter valid category name';
+                                                    }
+                                                    return null;
+                                                  },
+                                                  decoration:
+                                                      const InputDecoration(
+                                                        border:
+                                                            OutlineInputBorder(),
+                                                        hintText:
+                                                            'e.g Entertainment',
+                                                        labelText:
+                                                            "Category Name",
+                                                      ),
                                                 ),
                                               ),
-                                            ),
-                                          ],
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 0,
+                                                      vertical: 5,
+                                                    ),
+                                                child: TextFormField(
+                                                  validator: (value) {
+                                                    if (value == null ||
+                                                        value.isEmpty) {
+                                                      return 'Please enter valid amount';
+                                                    }
+                                                    return null;
+                                                  },
+                                                  keyboardType:
+                                                      TextInputType.number,
+                                                  controller:
+                                                      newBudgetAmountController,
+                                                  obscureText: false,
+                                                  decoration: InputDecoration(
+                                                    border:
+                                                        OutlineInputBorder(),
+                                                    labelText: 'Budget Amount',
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
+                                icon: Icon(Icons.add_box),
                               ),
-                              icon: Icon(Icons.add_box),
                             ),
                           ],
                         ),

@@ -1,12 +1,17 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/data_models/txs_data_model.dart';
 import 'package:flutter_application_1/db/db.dart';
+import 'package:flutter_application_1/services/main_service.dart';
+import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
 import 'package:flutter_application_1/view_models/weekly_reports.dart';
+import 'package:open_file_manager/open_file_manager.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:watch_it/watch_it.dart';
@@ -34,6 +39,7 @@ class SettingsPage extends StatefulWidget with WatchItStatefulWidgetMixin {
 
 class SettingsPageState extends State<SettingsPage> {
   AuthModel authM = di.get<AuthModel>();
+  bool exportLoading = false;
   String version = '';
   String buildNumber = '';
   bool? mshwariDepos = di<AuthModel>().isMshwariDepost ?? false;
@@ -109,14 +115,25 @@ class SettingsPageState extends State<SettingsPage> {
                           padding: EdgeInsets.all(10),
                           child: Column(
                             children: [
-                              Text(
-                                watchPropertyValue((AuthModel m) => m.email),
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.grey.shade900,
-                                ),
-                              ),
+                              watchPropertyValue((AuthModel m) => m.isAnon)
+                                  ? Text(
+                                      'Anonymous user',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.grey.shade900,
+                                      ),
+                                    )
+                                  : Text(
+                                      watchPropertyValue(
+                                        (AuthModel m) => m.email,
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.grey.shade900,
+                                      ),
+                                    ),
                               Text(
                                 '',
                                 style: TextStyle(color: Colors.grey.shade600),
@@ -244,25 +261,25 @@ class SettingsPageState extends State<SettingsPage> {
                           ),
                         ),
 
-                        Padding(
-                          padding: EdgeInsets.all(5),
-                          child: ListTile(
-                            leading: Checkbox(
-                              tristate: false,
-                              value: autoImport,
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  autoImport = value!;
-                                });
-                                di<AuthModel>().setAutoImport(value!);
-                              },
-                            ),
-                            title: Text('Automatic Transaction Imports'),
-                            subtitle: Text(
-                              'When enabled, Transactions will be automatically imported using available parsers',
-                            ),
-                          ),
-                        ),
+                        // Padding(
+                        //   padding: EdgeInsets.all(5),
+                        //   child: ListTile(
+                        //     leading: Checkbox(
+                        //       tristate: false,
+                        //       value: autoImport,
+                        //       onChanged: (bool? value) {
+                        //         setState(() {
+                        //           autoImport = value!;
+                        //         });
+                        //         di<AuthModel>().setAutoImport(value!);
+                        //       },
+                        //     ),
+                        //     title: Text('Automatic Transaction Imports'),
+                        //     subtitle: Text(
+                        //       'When enabled, Transactions will be automatically imported using available parsers',
+                        //     ),
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),
@@ -314,7 +331,6 @@ class SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
-
               Padding(
                 padding: EdgeInsets.all(7),
                 child: SizedBox(
@@ -326,21 +342,90 @@ class SettingsPageState extends State<SettingsPage> {
                       children: [
                         ListTile(
                           title: Text(
-                            'Account',
+                            'User Data',
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          subtitle: Text('Account actions'),
+                          subtitle: Text('Export transactions'),
                         ),
                         Padding(
                           padding: EdgeInsets.all(5),
                           child: FilledButton(
-                            onPressed: () {
-                              authM.logout();
-                              Navigator.pop(context);
-                            },
+                            onPressed: exportLoading
+                                ? null
+                                : () async {
+                                    setState(() {
+                                      exportLoading = true;
+                                    });
+                                    Result e = await exportDataToExcel();
+
+                                    switch (e) {
+                                      case Ok():
+                                        {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Transactions Exported to your Downloads folder',
+                                                style: TextStyle(
+                                                  color: Colors.green,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+
+                                          setState(() {
+                                            exportLoading = false;
+                                          });
+
+                                          final directory =
+                                              await getDownloadsDirectory();
+                                          if (directory != null) {
+                                            openFileManager(
+                                              androidConfig: AndroidConfig(
+                                                folderType:
+                                                    AndroidFolderType.other,
+                                                folderPath: directory.path,
+                                              ),
+                                            );
+                                          } else {
+                                            openFileManager(
+                                              androidConfig: AndroidConfig(
+                                                folderType:
+                                                    AndroidFolderType.other,
+                                                folderPath:
+                                                    "Android/data/com.budgetlite/files/downloads",
+                                              ),
+                                            );
+                                          }
+                                          break;
+                                        }
+                                      case Error():
+                                        {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Error exporting transactions',
+                                                style: TextStyle(
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+
+                                          setState(() {
+                                            exportLoading = false;
+                                          });
+                                          break;
+                                        }
+                                    }
+                                    // Navigator.pop(context);
+                                  },
                             // style: ButtonStyle(
                             //   backgroundColor: WidgetStatePropertyAll(Colors.red),
                             // ),
@@ -353,7 +438,20 @@ class SettingsPageState extends State<SettingsPage> {
                                     padding: EdgeInsets.all(4),
                                     child: Icon(Icons.logout_sharp),
                                   ),
-                                  Text('Logout'),
+                                  exportLoading
+                                      ? Center(
+                                          child: SizedBox(
+                                            width: 24.0,
+                                            height: 24.0,
+                                            child: CircularProgressIndicator(
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    Colors.white,
+                                                  ),
+                                            ),
+                                          ),
+                                        )
+                                      : Text('Export as Excel'),
                                 ],
                               ),
                             ),
@@ -364,13 +462,63 @@ class SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
+
+              // Padding(
+              //   padding: EdgeInsets.all(7),
+              //   child: SizedBox(
+              //     width: double.infinity,
+              //     child: Card.outlined(
+              //       color: Colors.white,
+              //       child: Column(
+              //         mainAxisAlignment: MainAxisAlignment.center,
+              //         children: [
+              //           // ListTile(
+              //           //   title: Text(
+              //           //     'Account',
+              //           //     style: TextStyle(
+              //           //       fontSize: 22,
+              //           //       fontWeight: FontWeight.w500,
+              //           //     ),
+              //           //   ),
+              //           //   subtitle: Text('Account actions'),
+              //           // ),
+              //           // Padding(
+              //           //   padding: EdgeInsets.all(5),
+              //           //   child: FilledButton(
+              //           //     onPressed: () {
+              //           //       authM.logout();
+              //           //       Navigator.pop(context);
+              //           //     },
+              //           //     // style: ButtonStyle(
+              //           //     //   backgroundColor: WidgetStatePropertyAll(Colors.red),
+              //           //     // ),
+              //           //     child: Padding(
+              //           //       padding: EdgeInsets.all(10),
+              //           //       child: Row(
+              //           //         mainAxisAlignment: MainAxisAlignment.center,
+              //           //         children: [
+              //           //           Padding(
+              //           //             padding: EdgeInsets.all(4),
+              //           //             child: Icon(Icons.logout_sharp),
+              //           //           ),
+              //           //           Text('Logout'),
+              //           //         ],
+              //           //       ),
+              //           //     ),
+              //           //   ),
+              //           // ),
+              //         ],
+              //       ),
+              //     ),
+              //   ),
+              // ),
               kDebugMode
                   ? Column(
                       children: [
                         FilledButton(
                           onPressed: () async {
-                            SharedPreferences prefs =
-                                await SharedPreferences.getInstance();
+                            SharedPreferencesAsync prefs =
+                                SharedPreferencesAsync();
                             prefs.setBool("isLoggedIn", false);
                             prefs.remove("budget_lite_current_account_id");
                             prefs.setBool("isNewUser", true);

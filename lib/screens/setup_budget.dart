@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/data_models/categories_data_model.dart';
+import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/screens/initial_balance.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/categories.dart';
+import 'package:flutter_application_1/view_models/wallet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:watch_it/watch_it.dart';
 
@@ -193,10 +195,10 @@ class SetupBudgetState extends State<SetupBudget> {
   }
 
   void setAccountId() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    int? val = await prefs.getInt('budget_lite_current_account_id');
     setState(() {
-      currAccountId = prefs.getInt('budget_lite_current_account_id')!;
+      currAccountId = val!;
     });
   }
 
@@ -673,12 +675,16 @@ class SetupBudgetState extends State<SetupBudget> {
                                   if (ids.length == categories.length) {
                                     if (context.mounted) {
                                       di.get<AuthModel>().completeOnboarding();
-                                      Navigator.pushReplacement(
+                                      di.get<WalletModel>().onBoaringWalletInit(
+                                        0,
+                                        0,
+                                      );
+                                      Navigator.pushAndRemoveUntil(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) =>
-                                              const LoginForm(),
+                                          builder: (context) => const MyApp(),
                                         ),
+                                        (Route<dynamic> route) => false,
                                       );
                                     }
                                   }

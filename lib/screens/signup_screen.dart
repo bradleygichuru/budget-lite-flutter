@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_application_1/data_models/auth_data_model.dart';
 import 'package:flutter_application_1/screens/auto_import_availability.dart';
 import 'package:flutter_application_1/screens/login_screen.dart';
-import 'package:flutter_application_1/screens/select_region_screen.dart';
+import 'package:flutter_application_1/screens/setup_budget.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,7 +28,7 @@ class SignUpFormState extends State<SignupForm> {
 
   TextEditingController confirmPasswordController = TextEditingController();
 
-  TextEditingController phoneNumberController = TextEditingController();
+  // TextEditingController phoneNumberController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -93,6 +93,173 @@ class SignUpFormState extends State<SignupForm> {
                             style: TextStyle(color: Colors.grey.shade600),
                           ),
                         ),
+                        // Padding(
+                        //   padding: EdgeInsets.all(8),
+                        //   child: Column(
+                        //     crossAxisAlignment: CrossAxisAlignment.center,
+                        //     mainAxisAlignment: MainAxisAlignment.center,
+                        //     children: [
+                        //       OutlinedButton(
+                        //         style: ButtonStyle(
+                        //           side: WidgetStatePropertyAll(
+                        //             BorderSide(color: Colors.blue.shade600),
+                        //           ),
+                        //           backgroundColor: WidgetStatePropertyAll(
+                        //             Colors.white,
+                        //           ),
+                        //           foregroundColor: WidgetStatePropertyAll(
+                        //             Colors.blue.shade600,
+                        //           ),
+                        //         ),
+                        //         onPressed: _isLoading
+                        //             ? null
+                        //             : () async {
+                        //                 Result anonSignin =
+                        //                     await di<AuthModel>()
+                        //                         .anonymousSignIn(
+                        //                           operation: 'signup',
+                        //                         );
+                        //                 switch (anonSignin) {
+                        //                   case Ok():
+                        //                     {
+                        //                       SharedPreferencesAsync prefs =
+                        //                           SharedPreferencesAsync();
+                        //                       await prefs.setBool(
+                        //                         "isNewUser",
+                        //                         true,
+                        //                       );
+                        //                       if (context.mounted) {
+                        //                         signUpScaffoldKey.currentState!
+                        //                             .showSnackBar(
+                        //                               SnackBar(
+                        //                                 behavior:
+                        //                                     SnackBarBehavior
+                        //                                         .floating,
+                        //                                 content: const Text(
+                        //                                   "Registration successful",
+                        //                                 ),
+                        //                               ),
+                        //                             );
+                        //                         setState(() {
+                        //                           _isLoading = false;
+                        //                         });
+                        //                         Navigator.pushAndRemoveUntil(
+                        //                           context,
+                        //                           MaterialPageRoute(
+                        //                             builder: (context) =>
+                        //                                 const AutoImportAvailabilityScreen(),
+                        //                           ),
+                        //                           (Route<dynamic> route) =>
+                        //                               false,
+                        //                         );
+                        //                       }
+                        //                       break;
+                        //                     }
+                        //                   case Error():
+                        //                     {
+                        //                       setState(() {
+                        //                         _isLoading = false;
+                        //                       });
+                        //                       switch (anonSignin.error) {
+                        //                         case UnknownError():
+                        //                           {
+                        //                             signUpScaffoldKey
+                        //                                 .currentState!
+                        //                                 .showSnackBar(
+                        //                                   SnackBar(
+                        //                                     behavior:
+                        //                                         SnackBarBehavior
+                        //                                             .floating,
+                        //                                     content: const Text(
+                        //                                       "Error occured signing up anonymously",
+                        //                                     ),
+                        //                                   ),
+                        //                                 );
+                        //
+                        //                             break;
+                        //                           }
+                        //                         case AuthDisabled():
+                        //                           {
+                        //                             signUpScaffoldKey
+                        //                                 .currentState!
+                        //                                 .showSnackBar(
+                        //                                   SnackBar(
+                        //                                     behavior:
+                        //                                         SnackBarBehavior
+                        //                                             .floating,
+                        //                                     content: const Text(
+                        //                                       "Authentication Disabled",
+                        //                                     ),
+                        //                                   ),
+                        //                                 );
+                        //                             break;
+                        //                           }
+                        //                         case NoInternetConnection():
+                        //                           {
+                        //                             setState(() {
+                        //                               _isLoading = false;
+                        //                             });
+                        //                             signUpScaffoldKey
+                        //                                 .currentState!
+                        //                                 .showSnackBar(
+                        //                                   SnackBar(
+                        //                                     behavior:
+                        //                                         SnackBarBehavior
+                        //                                             .floating,
+                        //                                     content: const Text(
+                        //                                       "No internet connection",
+                        //                                     ),
+                        //                                   ),
+                        //                                 );
+                        //                             break;
+                        //                           }
+                        //                       }
+                        //                     }
+                        //                 }
+                        //               },
+                        //         child: _isLoading
+                        //             ? Center(
+                        //                 child: SizedBox(
+                        //                   width: 24.0,
+                        //                   height: 24.0,
+                        //                   child: CircularProgressIndicator(
+                        //                     valueColor:
+                        //                         AlwaysStoppedAnimation<Color>(
+                        //                           Colors.white,
+                        //                         ),
+                        //                   ),
+                        //                 ),
+                        //               )
+                        //             : Row(
+                        //                 crossAxisAlignment:
+                        //                     CrossAxisAlignment.center,
+                        //                 mainAxisAlignment:
+                        //                     MainAxisAlignment.spaceEvenly,
+                        //                 children: [
+                        //                   Icon(
+                        //                     Icons.account_circle_outlined,
+                        //                     color: Colors.blue.shade600,
+                        //                   ),
+                        //                   Text(
+                        //                     'Sign up Anonymously',
+                        //                     style: TextStyle(
+                        //                       color: Colors.blue.shade600,
+                        //                     ),
+                        //                   ),
+                        //                 ],
+                        //               ),
+                        //       ),
+                        //       Divider(),
+                        //       Text(
+                        //         'Try BudgetLite without creating an account',
+                        //         style: TextStyle(
+                        //           fontSize: 12,
+                        //           color: Colors.grey.shade500,
+                        //         ),
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
                         Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: 8,
@@ -135,27 +302,27 @@ class SignUpFormState extends State<SignupForm> {
                             ),
                           ),
                         ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 16,
-                          ),
-                          child: TextFormField(
-                            keyboardType: TextInputType.phone,
-                            controller: phoneNumberController,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter phoneNumber';
-                              }
-                              return null;
-                            },
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(),
-                              hintText: '+25471234567',
-                              labelText: "Phone Number",
-                            ),
-                          ),
-                        ),
+                        // Padding(
+                        //   padding: EdgeInsets.symmetric(
+                        //     horizontal: 8,
+                        //     vertical: 16,
+                        //   ),
+                        //   child: TextFormField(
+                        //     keyboardType: TextInputType.phone,
+                        //     controller: phoneNumberController,
+                        //     validator: (value) {
+                        //       if (value == null || value.isEmpty) {
+                        //         return 'Please enter phoneNumber';
+                        //       }
+                        //       return null;
+                        //     },
+                        //     decoration: InputDecoration(
+                        //       border: OutlineInputBorder(),
+                        //       hintText: '+25471234567',
+                        //       labelText: "Phone Number",
+                        //     ),
+                        //   ),
+                        // ),
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -233,19 +400,13 @@ class SignUpFormState extends State<SignupForm> {
                                                 fullNameController.value.text,
                                                 passwordController.value.text,
                                                 emailController.value.text,
-                                                phoneNumberController
-                                                    .value
-                                                    .text,
-                                                confirmPasswordController
-                                                    .value
-                                                    .text,
                                               );
                                           switch (userRegRes) {
                                             case Ok():
                                               {
-                                                SharedPreferences prefs =
-                                                    await SharedPreferences.getInstance();
-                                                prefs.setBool(
+                                                SharedPreferencesAsync prefs =
+                                                    SharedPreferencesAsync();
+                                                await prefs.setBool(
                                                   "isNewUser",
                                                   true,
                                                 );
@@ -265,12 +426,14 @@ class SignUpFormState extends State<SignupForm> {
                                                   setState(() {
                                                     _isLoading = false;
                                                   });
-                                                  Navigator.push(
+                                                  Navigator.pushAndRemoveUntil(
                                                     context,
                                                     MaterialPageRoute(
                                                       builder: (context) =>
-                                                          AutoImportAvailabilityScreen(),
+                                                          const SetupBudget(),
                                                     ),
+                                                    (Route<dynamic> route) =>
+                                                        false,
                                                   );
                                                 }
                                               }
@@ -438,12 +601,13 @@ class SignUpFormState extends State<SignupForm> {
                               onPressed: _isLoading
                                   ? null
                                   : () {
-                                      Navigator.push(
+                                      Navigator.pushAndRemoveUntil(
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) =>
                                               const LoginForm(),
                                         ),
+                                        (Route<dynamic> route) => false,
                                       );
                                     },
                               child: Row(

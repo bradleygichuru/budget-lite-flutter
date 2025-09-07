@@ -40,8 +40,8 @@ class WeeklyReport {
 
 insertWeeklyReport(WeeklyReport wk, Transaction txn) async {
   try {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int? accountId = prefs.getInt("budget_lite_current_account_id");
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    int? accountId = await prefs.getInt("budget_lite_current_account_id");
     log('inserting weeklyreport for account_id:$accountId');
     List<Map<String, Object?>> res = await txn.query(
       'weekly_reports',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_application_1/screens/signup_screen.dart';
 
 class TermsAndConditions extends StatefulWidget {
   const TermsAndConditions({super.key});
@@ -8,6 +9,7 @@ class TermsAndConditions extends StatefulWidget {
 }
 
 class TermsAndConditionsState extends State<TermsAndConditions> {
+  bool tcAccepted = false;
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   @override
   Widget build(BuildContext context) {
@@ -961,6 +963,52 @@ class TermsAndConditionsState extends State<TermsAndConditions> {
                         ),
                       ),
                     ),
+                    Padding(
+                      padding: EdgeInsetsGeometry.all(3),
+                      child: ListTile(
+                        leading: Checkbox(
+                          tristate: false,
+                          value: tcAccepted,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              tcAccepted = value!;
+                            });
+                          },
+                        ),
+                        title: Text(
+                          'I have read and agree to the Terms and Conditions',
+                        ),
+                      ),
+                    ),
+
+                    tcAccepted
+                        ? Padding(
+                            padding: EdgeInsetsGeometry.all(3),
+                            child: FilledButton(
+                              onPressed: () {
+                                Navigator.pushReplacement(
+                                  context,
+
+                                  MaterialPageRoute(
+                                    builder: (context) => const SignupForm(),
+                                  ),
+                                );
+                              },
+                              style: ButtonStyle(
+                                backgroundColor: WidgetStatePropertyAll(
+                                  Colors.black,
+                                ),
+                              ),
+                              child: Text(
+                                'Accept & continue',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          )
+                        : Padding(
+                            padding: EdgeInsetsGeometry.all(3),
+                            child: Text(''),
+                          ),
                   ],
                 ),
               ),

@@ -1,10 +1,13 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/categories_data_model.dart';
 import 'package:flutter_application_1/data_models/txs_data_model.dart';
+import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/categories.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:watch_it/watch_it.dart';
 
 int getDaysRemaining(String date) {
@@ -48,6 +51,16 @@ class Dashboard extends StatefulWidget with WatchItStatefulWidgetMixin {
 
 class DashboardState extends State<Dashboard> {
   int page = 1;
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => ShowCaseWidget.of(
+        context,
+      ).startShowCase([AppGlobal.budgetOverview, AppGlobal.recentTransactions]),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,11 +160,27 @@ class DashboardState extends State<Dashboard> {
           SliverPadding(
             padding: EdgeInsets.all(10),
             sliver: SliverToBoxAdapter(
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: Text(
-                  "Budget Overview",
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+              child: Showcase(
+                key: AppGlobal.budgetOverview,
+                description: "Below is your rough budget overview",
+
+                onBarrierClick: () {
+                  ShowCaseWidget.of(
+                    context,
+                  ).hideFloatingActionWidgetForKeys([AppGlobal.budgetOverview]);
+                },
+
+                tooltipActionConfig: const TooltipActionConfig(
+                  alignment: MainAxisAlignment.end,
+                  position: TooltipActionPosition.outside,
+                  gapBetweenContentAndAction: 10,
+                ),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Text(
+                    "Budget Overview",
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+                  ),
                 ),
               ),
             ),
@@ -280,11 +309,28 @@ class DashboardState extends State<Dashboard> {
           SliverPadding(
             padding: EdgeInsets.all(10),
             sliver: SliverToBoxAdapter(
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: Text(
-                  "Recent Transactions",
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+              child: Showcase(
+                enableAutoScroll: true,
+                key: AppGlobal.recentTransactions,
+                description: "Recent transactions will show up below",
+
+                onBarrierClick: () {
+                  ShowCaseWidget.of(context).hideFloatingActionWidgetForKeys([
+                    AppGlobal.recentTransactions,
+                  ]);
+                },
+
+                tooltipActionConfig: const TooltipActionConfig(
+                  alignment: MainAxisAlignment.end,
+                  position: TooltipActionPosition.outside,
+                  gapBetweenContentAndAction: 10,
+                ),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Text(
+                    "Recent Transactions",
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+                  ),
                 ),
               ),
             ),

@@ -151,12 +151,12 @@ class WalletModel extends ChangeNotifier {
                     if (newWalletState != null) {
                       totalBalance = Future.value(newWalletState.balance);
                       savings = Future.value(newWalletState.savings);
-                      SharedPreferences prefs =
-                          await SharedPreferences.getInstance();
+                      SharedPreferencesAsync prefs = SharedPreferencesAsync();
 
+                      int? notiid = await prefs.getInt('notification_id');
                       AwesomeNotifications().createNotification(
                         content: NotificationContent(
-                          id: prefs.getInt('notification_id')!,
+                          id: notiid!,
                           channelKey: 'budgetlite_silent',
                           actionType: ActionType.Default,
                           title: 'Wallet credited',
@@ -164,10 +164,7 @@ class WalletModel extends ChangeNotifier {
                         ),
                       );
 
-                      prefs.setInt(
-                        'notification_id',
-                        prefs.getInt('notification_id')! + 1,
-                      );
+                      prefs.setInt('notification_id', notiid! + 1);
                     }
                   });
               refresh();
@@ -270,11 +267,12 @@ class WalletModel extends ChangeNotifier {
         refresh();
         notifyListeners();
         if (count > 0) {
-          SharedPreferences prefs = await SharedPreferences.getInstance();
+          SharedPreferencesAsync prefs = SharedPreferencesAsync();
 
+          int? notiid = await prefs.getInt('notification_id');
           AwesomeNotifications().createNotification(
             content: NotificationContent(
-              id: prefs.getInt('notification_id')!,
+              id: notiid!,
               channelKey: 'budgetlite_silent',
               actionType: ActionType.Default,
               title: 'Wallet debited',
@@ -282,7 +280,7 @@ class WalletModel extends ChangeNotifier {
             ),
           );
 
-          prefs.setInt('notification_id', prefs.getInt('notification_id')! + 1);
+          prefs.setInt('notification_id', notiid! + 1);
         }
 
         notifyListeners();
@@ -338,11 +336,11 @@ class WalletModel extends ChangeNotifier {
                 refresh();
                 notifyListeners();
                 if (count > 0) {
-                  SharedPreferences prefs =
-                      await SharedPreferences.getInstance();
+                  SharedPreferencesAsync prefs = SharedPreferencesAsync();
+                  int? notiid = await prefs.getInt('notification_id');
                   AwesomeNotifications().createNotification(
                     content: NotificationContent(
-                      id: prefs.getInt('notification_id')!,
+                      id: notiid!,
                       channelKey: 'budgetlite_silent',
                       actionType: ActionType.Default,
                       title: 'Savings',
@@ -350,10 +348,7 @@ class WalletModel extends ChangeNotifier {
                     ),
                   );
 
-                  prefs.setInt(
-                    'notification_id',
-                    prefs.getInt('notification_id')! + 1,
-                  );
+                  prefs.setInt('notification_id', notiid! + 1);
                 }
                 return Result.ok(count);
               } else {

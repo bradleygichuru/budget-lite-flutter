@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_application_1/screens/setup_budget.dart';
 import 'package:flutter_application_1/screens/signup_screen.dart';
+import 'package:flutter_application_1/util/result_wraper.dart';
+import 'package:flutter_application_1/view_models/auth.dart';
+import 'package:watch_it/watch_it.dart';
 
-class Landing extends StatelessWidget {
-  const Landing({super.key});
+class LandingState extends State<Landing> {
+  final GlobalKey<ScaffoldMessengerState> landingScaffoldKey =
+      GlobalKey<ScaffoldMessengerState>();
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -164,46 +170,46 @@ class Landing extends StatelessWidget {
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: 180,
-                          height: 160,
-                          child: Card(
-                            color: Colors.white,
-                            child: Column(
-                              children: [
-                                Padding(
-                                  padding: EdgeInsets.all(5),
-                                  child: Icon(
-                                    Icons.ad_units,
-                                    color: Colors.orange[600],
-                                  ),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 2),
-                                  child: Text(
-                                    "SMS Integration",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 5,
-                                        horizontal: 20,
-                                      ),
-                                      child: Text(
-                                        "Automatic transaction tracking from your bank SMS notifications",
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                        // SizedBox(
+                        //   width: 180,
+                        //   height: 160,
+                        //   child: Card(
+                        //     color: Colors.white,
+                        //     child: Column(
+                        //       children: [
+                        //         Padding(
+                        //           padding: EdgeInsets.all(5),
+                        //           child: Icon(
+                        //             Icons.ad_units,
+                        //             color: Colors.orange[600],
+                        //           ),
+                        //         ),
+                        //         Padding(
+                        //           padding: EdgeInsets.symmetric(vertical: 2),
+                        //           child: Text(
+                        //             "SMS Integration",
+                        //             style: TextStyle(
+                        //               fontWeight: FontWeight.w600,
+                        //             ),
+                        //           ),
+                        //         ),
+                        //         Expanded(
+                        //           child: Center(
+                        //             child: Padding(
+                        //               padding: EdgeInsets.symmetric(
+                        //                 vertical: 5,
+                        //                 horizontal: 20,
+                        //               ),
+                        //               child: Text(
+                        //                 "Automatic transaction tracking from your bank SMS notifications",
+                        //               ),
+                        //             ),
+                        //           ),
+                        //         ),
+                        //       ],
+                        //     ),
+                        //   ),
+                        // ),
                         SizedBox(
                           width: 180,
                           height: 160,
@@ -275,7 +281,7 @@ class Landing extends StatelessWidget {
                                         horizontal: 20,
                                       ),
                                       child: Text(
-                                        "Your financial data stays safe with bank-level security",
+                                        "Your data is not shared with any third party",
                                       ),
                                     ),
                                   ),
@@ -294,13 +300,34 @@ class Landing extends StatelessWidget {
                           shadowColor: Colors.transparent,
                           fixedSize: Size.fromWidth(double.infinity),
                         ),
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SignupForm(),
-                            ),
-                          );
+                        onPressed: () async {
+                          Result res = await di<AuthModel>()
+                              .anonCreateAccount();
+                          switch (res) {
+                            case Ok():
+                              {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const SetupBudget(),
+                                  ),
+                                  (Route<dynamic> route) => false,
+                                );
+                                break;
+                              }
+                            default:
+                              {
+                                landingScaffoldKey.currentState!.showSnackBar(
+                                  SnackBar(
+                                    behavior: SnackBarBehavior.floating,
+                                    content: const Text(
+                                      "Error initializing preferences",
+                                    ),
+                                  ),
+                                );
+                                break;
+                              }
+                          }
                         },
                         child: SizedBox(
                           width: double.infinity,
@@ -414,4 +441,10 @@ class Landing extends StatelessWidget {
       ),
     );
   }
+}
+
+class Landing extends StatefulWidget {
+  const Landing({super.key});
+  @override
+  State<Landing> createState() => LandingState();
 }

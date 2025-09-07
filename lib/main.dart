@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:another_telephony/telephony.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/data_models/categories_data_model.dart';
@@ -37,6 +38,7 @@ import 'package:flutter_application_1/view_models/wallet.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:watch_it/watch_it.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -53,8 +55,8 @@ void setup() {
 }
 
 setUpNotificationIds() async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  if (!prefs.containsKey('notification_id')) {
+  SharedPreferencesAsync prefs = SharedPreferencesAsync();
+  if (!await prefs.containsKey('notification_id')) {
     prefs.setInt('notification_id', 0);
   }
 }
@@ -85,7 +87,7 @@ Future<void> main() async {
   // );
   await dotenv.load(fileName: ".env");
   // final db = await DatabaseHelper().database;
-  // db.execute('ALTER TABLE weekly_reports ADD COLUMN key TEXT');
+  // db.execute('ALTER TABLE accounts ADD COLUMN anonymous INTEGER DEFAULT 0');
   // await db.execute('DELETE FROM weekly_reports');
   // await deleteDatabase(
   //   join(await getDatabasesPath(), 'budget_lite_database.db'),
@@ -147,10 +149,12 @@ Future<void> main() async {
   //   // visit: https://docs.sentry.io/platforms/dart/data-management/data-collected/ for more info
   //   options.sendDefaultPii = true;
   // }, appRunner: () => runApp(SentryWidget(child: MyApp())));
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // final auth = FirebaseAuth.instanceFor(app: Firebase.app());
+  // To change it after initialization, use `setPersistence()`:
+  // await auth.setPersistence(Persistence.LOCAL);
   if (!kDebugMode) {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
     bool weWantFatalErrorRecording = true;
     FlutterError.onError = (errorDetails) {
       if (weWantFatalErrorRecording) {
@@ -233,6 +237,7 @@ class MyAppState extends State<MyApp> {
   @override
   void initState() {
     // handleAuth = isSetLoggedIn();
+
     _listener = AppLifecycleListener(onStateChange: _onStateChanged);
     AwesomeNotifications().setListeners(
       onActionReceivedMethod: NotificationController.onActionReceivedMethod,
@@ -438,31 +443,35 @@ class MyAppState extends State<MyApp> {
   void _onDetached() => log('detached');
 
   void _onResumed() async {
-    log('resumed');
-    int? acId = await di.get<AuthModel>().getAccountId();
-    if (acId != null) {
-      di.get<TransactionsModel>().getUncategorizedTx().then((txs) {
-        if (txs.isNotEmpty) {
-          di<TransactionsModel>().toogleCategorizationOn();
-          setState(() {
-            handleUncategorized = true;
-            unCategorizedTxs = Future.value(txs);
-          });
-        }
-      });
-    }
-    if (mounted) {
-      di.get<TransactionsModel>().refreshTx();
-      di.get<WalletModel>().refresh();
-      di.get<CategoriesModel>().refreshCats();
-      di.get<GoalModel>().refreshGoals();
-      di.get<AuthModel>().refreshAuth();
-      di.get<WeeklyReportsModel>().refresh();
-      setState(() {
-        shouldReset = di<AuthModel>().pendingBudgetReset;
-      });
-      log('Refresh Models');
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      log('resumed');
+      int? acId = await di.get<AuthModel>().getAccountId();
+      if (acId != null) {
+        di.get<TransactionsModel>().getUncategorizedTx().then((txs) {
+          if (txs.isNotEmpty) {
+            di<TransactionsModel>().toogleCategorizationOn();
+            setState(() {
+              handleUncategorized = true;
+              // unCategorizedTxs = Future.value(txs);
+
+              di.get<TransactionsModel>().refreshTx();
+            });
+          }
+        });
+      }
+      if (mounted) {
+        di.get<TransactionsModel>().refreshTx();
+        di.get<WalletModel>().refresh();
+        di.get<CategoriesModel>().refreshCats();
+        di.get<GoalModel>().refreshGoals();
+        di.get<AuthModel>().refreshAuth();
+        di.get<WeeklyReportsModel>().refresh();
+        setState(() {
+          shouldReset = di<AuthModel>().pendingBudgetReset;
+        });
+        log('Refresh Models');
+      }
+    });
   }
 
   void _onInactive() => log('inactive');
@@ -565,7 +574,9 @@ class MyAppState extends State<MyApp> {
                         Padding(
                           padding: EdgeInsets.all(7),
                           child: FutureBuilder<List<TransactionObj>>(
-                            future: unCategorizedTxs,
+                            future: watchPropertyValue(
+                              (TransactionsModel m) => m.unCategorizedTxs,
+                            ),
                             builder: (context, snapshot) {
                               Widget x = CircularProgressIndicator();
                               if (snapshot.connectionState ==
@@ -601,7 +612,9 @@ class MyAppState extends State<MyApp> {
                     ),
                   ),
                   body: FutureBuilder<List<TransactionObj>>(
-                    future: unCategorizedTxs,
+                    future: watchPropertyValue(
+                      (TransactionsModel m) => m.unCategorizedTxs,
+                    ),
                     builder: (context, snapshot) {
                       final List<DropdownMenuEntry<String>> menuEntries =
                           UnmodifiableListView<DropdownMenuEntry<String>>(
@@ -905,72 +918,83 @@ class MyAppState extends State<MyApp> {
                                 ),
                             children: [
                               FloatingActionButton.extended(
-                                heroTag: 'savings',
+                                heroTag: 'transactions',
                                 onPressed: () async {
-                                  if (WidgetsBinding
-                                          .instance
-                                          .platformDispatcher
-                                          .locale
-                                          .countryCode ==
-                                      'KE') {
-                                    return showDialog<void>(
-                                      context: context,
-                                      barrierDismissible: false,
-                                      builder: (context) {
-                                        return AlertDialog(
-                                          title: Text('Auto import on'),
-                                          content: Text(
-                                            'Transaction auto import is automatically enabled in your region.Be careful of transaction duplication on auto imported transactions',
-                                          ),
-                                          actions: [
-                                            FilledButton(
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                              },
-                                              child: Text('Cancel'),
-                                            ),
-                                            FilledButton(
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        const HandleBalance(),
-                                                  ),
-                                                );
-                                              },
-                                              child: Text('Continue'),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  } else {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const HandleBalance(),
-                                      ),
-                                    );
-                                  }
+                                  showDialog<void>(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (context) {
+                                      return Dialog.fullscreen(
+                                        child: HandleBalance(),
+                                      );
+                                    },
+                                  );
+                                  // if (WidgetsBinding
+                                  //         .instance
+                                  //         .platformDispatcher
+                                  //         .locale
+                                  //         .countryCode ==
+                                  //     'KE') {
+                                  //   return showDialog<void>(
+                                  //     context: context,
+                                  //     barrierDismissible: false,
+                                  //     builder: (context) {
+                                  //       return AlertDialog(
+                                  //         title: Text('Auto import on'),
+                                  //         content: Text(
+                                  //           'Transaction auto import is automatically enabled in your region.Be careful of transaction duplication on auto imported transactions',
+                                  //         ),
+                                  //         actions: [
+                                  //           FilledButton(
+                                  //             onPressed: () {
+                                  //               Navigator.of(context).pop();
+                                  //             },
+                                  //             child: Text('Cancel'),
+                                  //           ),
+                                  //           FilledButton(
+                                  //             onPressed: () {
+                                  //               Navigator.of(context).pop();
+                                  //               Navigator.push(
+                                  //                 context,
+                                  //                 MaterialPageRoute(
+                                  //                   builder: (context) =>
+                                  //                       const HandleBalance(),
+                                  //                 ),
+                                  //               );
+                                  //             },
+                                  //             child: Text('Continue'),
+                                  //           ),
+                                  //         ],
+                                  //       );
+                                  //     },
+                                  //   );
+                                  // } else {
+                                  //   Navigator.push(
+                                  //     context,
+                                  //     MaterialPageRoute(
+                                  //       builder: (context) =>
+                                  //           const HandleBalance(),
+                                  //     ),
+                                  //   );
+                                  // }
                                 },
-                                label: Text('Transact'),
+                                label: Text('Add transaction'),
                                 icon: Icon(Icons.add),
                               ),
                               FloatingActionButton.extended(
-                                heroTag: 'spend',
+                                heroTag: 'savings',
                                 onPressed: () async {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const HandleSavings(),
-                                    ),
+                                  showDialog<void>(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (context) {
+                                      return Dialog.fullscreen(
+                                        child: HandleSavings(),
+                                      );
+                                    },
                                   );
                                 },
-                                label: Text('Savings'),
+                                label: Text('Record Savings'),
                                 icon: Icon(Icons.add),
                               ),
                             ],
@@ -1018,6 +1042,7 @@ class MyAppState extends State<MyApp> {
                                 icon: Icon(Icons.mail_outlined),
                                 label: 'Budget',
                               ),
+
                               NavigationDestination(
                                 selectedIcon: Icon(Icons.crisis_alert),
                                 icon: Icon(Icons.crisis_alert_outlined),
@@ -1028,77 +1053,113 @@ class MyAppState extends State<MyApp> {
                                 icon: Icon(Icons.analytics_outlined),
                                 label: 'Reports',
                               ),
-                              NavigationDestination(
-                                selectedIcon: Icon(Icons.analytics),
-                                icon: Icon(Icons.analytics_outlined),
-                                label: 'Terms and Conditions',
-                              ),
+                              // NavigationDestination(
+                              //   selectedIcon: Icon(Icons.analytics),
+                              //   icon: Icon(Icons.analytics_outlined),
+                              //   label: 'Terms and Conditions',
+                              // ),
                             ],
                           ),
-                          body: UpgradeAlert(
-                            showIgnore: false,
-                            onUpdate: bestItem != null
-                                ? () {
-                                    try {
-                                      if (bestItem!.fileURL != null) {
-                                        setState(() {
-                                          isUpdating = true;
-                                        });
-                                        log('isUpdating:$isUpdating');
-                                        OtaUpdate()
-                                            .execute(bestItem!.fileURL!)
-                                            .listen(
-                                              cancelOnError: true,
-                                              (OtaEvent event) {
-                                                setState(() {
-                                                  updateEvent = event;
-                                                });
-                                              },
-                                              onDone: () => setState(() {
-                                                isUpdating = false;
-                                              }),
-                                            );
-                                      } else {
+                          body: ShowCaseWidget(
+                            enableShowcase: di<AuthModel>().shouldShowCase,
+                            onFinish: () async {
+                              SharedPreferencesAsync prefs =
+                                  SharedPreferencesAsync();
+                              prefs.setBool('complete_showcase', true);
+                            },
+                            globalTooltipActionConfig:
+                                const TooltipActionConfig(
+                                  position: TooltipActionPosition.inside,
+                                  alignment: MainAxisAlignment.spaceBetween,
+                                  actionGap: 20,
+                                ),
+                            globalTooltipActions: [
+                              // Here we don't need previous action for the first showcase widget
+                              // so we hide this action for the first showcase widget
+                              TooltipActionButton(
+                                type: TooltipDefaultActionType.previous,
+                                textStyle: const TextStyle(color: Colors.white),
+                                hideActionWidgetForShowcase: [
+                                  AppGlobal.resetBudgetEnvelope,
+                                ],
+                              ),
+                              // Here we don't need next action for the last showcase widget so we
+                              // hide this action for the last showcase widget
+                              TooltipActionButton(
+                                type: TooltipDefaultActionType.next,
+                                textStyle: const TextStyle(color: Colors.white),
+                                hideActionWidgetForShowcase: [
+                                  AppGlobal.addFinancialGoals,
+                                ],
+                              ),
+                            ],
+                            builder: (context) => UpgradeAlert(
+                              showIgnore: false,
+                              onUpdate: bestItem != null
+                                  ? () {
+                                      try {
+                                        if (bestItem!.fileURL != null) {
+                                          setState(() {
+                                            isUpdating = true;
+                                          });
+                                          log('isUpdating:$isUpdating');
+                                          OtaUpdate()
+                                              .execute(bestItem!.fileURL!)
+                                              .listen(
+                                                cancelOnError: true,
+                                                (OtaEvent event) {
+                                                  setState(() {
+                                                    updateEvent = event;
+                                                  });
+                                                },
+                                                onDone: () => setState(() {
+                                                  isUpdating = false;
+                                                }),
+                                              );
+                                        } else {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Error obtaining apk url',
+                                                style: TextStyle(
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              'Error obtaining apk url',
+                                              'Error occured updating app',
                                               style: TextStyle(
                                                 color: Colors.red,
                                               ),
                                             ),
                                           ),
                                         );
-                                      }
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Error occured updating app',
-                                            style: TextStyle(color: Colors.red),
-                                          ),
-                                        ),
-                                      );
 
-                                      log('OtaUpdate error', error: e);
+                                        log('OtaUpdate error', error: e);
+                                      }
+                                      return true;
                                     }
-                                    return true;
-                                  }
-                                : null,
-                            upgrader: upgrader,
-                            child: <Widget>[
-                              Dashboard(),
-                              EnvelopesView(),
-                              GoalsPage(),
-                              ReportsScreen(),
-                              TermsAndConditions(),
-                              //WalletScreen(),
-                              // SettingsPage(),
-                            ][currentPageIndex],
+                                  : null,
+                              upgrader: upgrader,
+                              child: <Widget>[
+                                Dashboard(),
+                                EnvelopesView(),
+                                GoalsPage(),
+                                ReportsScreen(),
+                                // TermsAndConditions(),
+                                //WalletScreen(),
+                                // SettingsPage(),
+                              ][currentPageIndex],
+                            ),
                           ),
                         ),
                       );

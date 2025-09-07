@@ -70,10 +70,10 @@ class CategoriesModel extends ChangeNotifier {
 
   Future<Result<String>> addBudgetResetDate(String date) async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setString('budget_reset_date', date);
+      SharedPreferencesAsync prefs = SharedPreferencesAsync();
+      await prefs.setString('budget_reset_date', date);
 
-      String? x = prefs.getString('budget_reset_date');
+      String? x = await prefs.getString('budget_reset_date');
       if (x != null) {
         return Result.ok(x);
       } else {
@@ -121,7 +121,7 @@ class CategoriesModel extends ChangeNotifier {
     } else {
       aM = di<AuthModel>();
     }
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
     var rowId;
     final db = await DatabaseHelper().database;
     int? acid = await aM.getAccountId();
@@ -183,10 +183,11 @@ class CategoriesModel extends ChangeNotifier {
           Category candidate = newCats.firstWhere(
             (category) => category.categoryName == cat,
           );
-          SharedPreferences prefs = await SharedPreferences.getInstance();
+          SharedPreferencesAsync prefs = SharedPreferencesAsync();
+          int? notiid = await prefs.getInt('notification_id');
           AwesomeNotifications().createNotification(
             content: NotificationContent(
-              id: prefs.getInt('notification_id')!,
+              id: notiid!,
               displayOnForeground: true,
               channelKey: 'basic_channel',
               actionType: ActionType.Default,
@@ -196,7 +197,7 @@ class CategoriesModel extends ChangeNotifier {
             ),
           );
 
-          prefs.setInt('notification_id', prefs.getInt('notification_id')! + 1);
+          await prefs.setInt('notification_id', notiid + 1);
 
           refreshCats();
           notifyListeners();

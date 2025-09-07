@@ -242,11 +242,12 @@ class AutoImportInfoScreenState extends State<AutoImportInfoScreen> {
                             ),
                           ),
                           onPressed: () {
-                            Navigator.push(
+                            Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const SmsPermsRequest(),
                               ),
+                              (Route<dynamic> route) => false,
                             );
                           },
                           child: Row(

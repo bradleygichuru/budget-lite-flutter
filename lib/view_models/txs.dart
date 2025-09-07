@@ -18,8 +18,10 @@ class TransactionsModel extends ChangeNotifier {
   TransactionsModel() {
     initTxs();
   }
+  int txPage = 1;
   bool handleUncategorized = false;
   bool shouldCategorize = false;
+  Future<List<TransactionObj>> unCategorizedTxs = Future.value([]);
   late Future<List<TransactionObj>> transactions;
   Future<double> readyToAssign = Future.value(0);
   Future<double> totalSpent = Future.value(0);
@@ -31,6 +33,8 @@ class TransactionsModel extends ChangeNotifier {
     final x = await getUncategorizedTx();
     if (x.isNotEmpty) {
       shouldCategorize = x.isNotEmpty;
+
+      unCategorizedTxs = Future.value(x);
     }
     notifyListeners();
   }
@@ -49,6 +53,7 @@ class TransactionsModel extends ChangeNotifier {
   void refreshTx() async {
     final x = await getUncategorizedTx();
     shouldCategorize = x.isNotEmpty;
+    unCategorizedTxs = Future.value(x);
     transactions = getTransactions();
     notifyListeners();
   }
@@ -394,15 +399,15 @@ class TransactionsModel extends ChangeNotifier {
           'UPDATE transactions SET account_id = ? WHERE id = ? ',
           ['$acId', '$txId'],
         );
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        int notiId = prefs.getInt('notification_id')!;
+        SharedPreferencesAsync prefs = SharedPreferencesAsync();
+        int? notiId = await prefs.getInt('notification_id')!;
         if (updated > 0) {
           switch (transaction.type) {
             case 'credit':
               {
                 AwesomeNotifications().createNotification(
                   content: NotificationContent(
-                    id: notiId,
+                    id: notiId!,
                     displayOnForeground: true,
                     channelKey: 'budgetlite_silent',
                     actionType: ActionType.Default,
@@ -410,10 +415,7 @@ class TransactionsModel extends ChangeNotifier {
                     body: 'Credited from ${transaction.source}',
                   ),
                 );
-                prefs.setInt(
-                  'notification_id',
-                  prefs.getInt('notification_id')! + 1,
-                );
+                await prefs.setInt('notification_id', notiId! + 1);
                 refreshTx();
                 notifyListeners();
                 return Result.ok(txId);
@@ -422,7 +424,7 @@ class TransactionsModel extends ChangeNotifier {
               {
                 AwesomeNotifications().createNotification(
                   content: NotificationContent(
-                    id: notiId,
+                    id: notiId!,
                     channelKey: 'budgetlite_silent',
                     actionType: ActionType.Default,
                     title: 'New transaction',
@@ -430,10 +432,7 @@ class TransactionsModel extends ChangeNotifier {
                   ),
                 );
 
-                prefs.setInt(
-                  'notification_id',
-                  prefs.getInt('notification_id')! + 1,
-                );
+                prefs.setInt('notification_id', notiId! + 1);
                 refreshTx();
                 notifyListeners();
                 return Result.ok(txId);
@@ -442,7 +441,7 @@ class TransactionsModel extends ChangeNotifier {
               {
                 AwesomeNotifications().createNotification(
                   content: NotificationContent(
-                    id: notiId,
+                    id: notiId!,
                     channelKey: 'budgetlite_silent',
                     actionType: ActionType.Default,
                     title: 'New transaction',
@@ -450,10 +449,7 @@ class TransactionsModel extends ChangeNotifier {
                   ),
                 );
 
-                prefs.setInt(
-                  'notification_id',
-                  prefs.getInt('notification_id')! + 1,
-                );
+                prefs.setInt('notification_id', notiId! + 1);
                 refreshTx();
                 notifyListeners();
                 return Result.ok(txId);
@@ -462,7 +458,7 @@ class TransactionsModel extends ChangeNotifier {
               {
                 AwesomeNotifications().createNotification(
                   content: NotificationContent(
-                    id: notiId,
+                    id: notiId!,
                     channelKey: 'budgetlite_silent',
                     actionType: ActionType.Default,
                     title: 'New transaction',
@@ -470,10 +466,7 @@ class TransactionsModel extends ChangeNotifier {
                   ),
                 );
 
-                prefs.setInt(
-                  'notification_id',
-                  prefs.getInt('notification_id')! + 1,
-                );
+                prefs.setInt('notification_id', notiId! + 1);
                 refreshTx();
                 notifyListeners();
                 return Result.ok(txId);

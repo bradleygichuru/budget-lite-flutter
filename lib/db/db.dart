@@ -27,14 +27,14 @@ class DatabaseHelper {
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute(
-      "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT,budget_reset_date TEXT,account_tier TEXT,created_at TEXT,resetPending INTEGER DEFAULT 0,auth_id TEXT)",
+      "CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY,email TEXT,country TEXT,budget_reset_date TEXT,account_tier TEXT,created_at TEXT,resetPending INTEGER DEFAULT 0,auth_id TEXT,anonymous INTEGER DEFAULT 0)",
     );
 
     await db.execute(
       "CREATE TABLE IF NOT EXISTS wallets(id INTEGER PRIMARY KEY,balance REAL,name TEXT,savings REAL, account_id INTEGER,FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)",
     );
     await db.execute(
-      'CREATE TABLE IF NOT EXISTS transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT,category TEXT,desc TEXT,account_id INTEGER, message_hash_code TEXT UNIQUE,FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)',
+      'CREATE TABLE IF NOT EXISTS transactions(id INTEGER PRIMARY KEY, type TEXT,source TEXT, amount REAL,date TEXT,category TEXT,desc TEXT,account_id INTEGER, message_hash_code TEXT,FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)',
     );
     await db.execute(
       "CREATE TABLE IF NOT EXISTS categories(id INTEGER PRIMARY KEY,budget REAL,category_name TEXT,spent REAL,account_id INTEGER,FOREIGN KEY (account_id) REFERENCES accounts(id) ON UPDATE CASCADE)",

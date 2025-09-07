@@ -16,10 +16,11 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.9.1+1
+version: 0.9.3+1
 
 environment:
   sdk: ^3.8.1
+  
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -41,7 +42,7 @@ dependencies:
   provider: ^6.1.5
   sqflite: ^2.4.2
   path: ^1.9.1
-  flutter_native_splash: ^2.4.6
+  flutter_native_splash: ^2.4.4
   awesome_notifications: ^0.10.1
   flutter_background_service: ^5.1.0
   google_fonts: ^6.2.1
@@ -65,6 +66,13 @@ dependencies:
   fl_chart: ^1.0.0
   flutter_randomcolor: ^1.0.18
   google_mobile_ads: ^6.0.0
+  crypto: ^3.0.6
+  firebase_auth: ^6.0.1
+  uuid: ^4.5.1
+  excel: ^4.0.6
+  open_file_manager: ^2.0.1
+  path_provider: ^2.1.5
+  showcaseview: ^4.0.1
 
 dev_dependencies:
   flutter_test:

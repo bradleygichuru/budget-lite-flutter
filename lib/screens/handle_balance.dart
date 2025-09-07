@@ -1,12 +1,14 @@
 import 'dart:collection';
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/txs_data_model.dart';
 import 'package:flutter_application_1/data_models/wallet_data_model.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_application_1/view_models/categories.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:watch_it/watch_it.dart';
 
 class HandleBalance extends StatefulWidget with WatchItStatefulWidgetMixin {
@@ -16,7 +18,7 @@ class HandleBalance extends StatefulWidget with WatchItStatefulWidgetMixin {
 }
 
 class HandleBalanceState extends State<HandleBalance> {
-  final _creditfFormKey = GlobalKey<FormState>();
+  final _parseFormKey = GlobalKey<FormState>();
 
   final _debitfFormKey = GlobalKey<FormState>();
 
@@ -34,6 +36,13 @@ class HandleBalanceState extends State<HandleBalance> {
   @override
   void initState() {
     super.initState();
+
+    // WidgetsBinding.instance.addPostFrameCallback(
+    //   (_) => ShowCaseWidget.of(context).startShowCase([
+    //     AppGlobal.parseMessage,
+    //     AppGlobal.manuallyAddTransaction,
+    //   ]),
+    // );
   }
 
   @override
@@ -47,107 +56,569 @@ class HandleBalanceState extends State<HandleBalance> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData(
-        colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
-      ),
-      home: ScaffoldMessenger(
-        key: handleBlScaffoldMessengerKey,
-        child: Scaffold(
-          body: SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: ListTile(
-                    leading: IconButton.outlined(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      icon: Icon(Icons.arrow_back_sharp),
-                    ),
-                    title: Text(
-                      "Add transaction",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+    return ScaffoldMessenger(
+      key: handleBlScaffoldMessengerKey,
+      child: Scaffold(
+        body: SafeArea(
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: ListTile(
+                  leading: IconButton.outlined(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    icon: Icon(Icons.arrow_back_sharp),
+                  ),
+                  title: Text(
+                    "Add transaction",
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                 ),
-                // SliverToBoxAdapter(
-                //   child: SizedBox(
-                //     width: double.infinity,
-                //
-                //     height: 150,
-                //     child: Card.outlined(
-                //       child: Column(
-                //         mainAxisAlignment: MainAxisAlignment.center,
-                //         children: [
-                //           Text(
-                //             "Current Balance",
-                //             style: TextStyle(
-                //               fontSize: 18,
-                //               fontWeight: FontWeight.w500,
-                //             ),
-                //           ),
-                //           Align(
-                //             child: FutureBuilder<double>(
-                //               future: watchPropertyValue(
-                //                 (WalletModel m) => m.totalBalance,
-                //               ),
-                //               builder: (context, snapshot) {
-                //                 if (snapshot.connectionState ==
-                //                     ConnectionState.waiting) {
-                //                   return Center(
-                //                     child: CircularProgressIndicator(),
-                //                   );
-                //                 } else if (snapshot.hasError) {
-                //                   return Text(
-                //                     "Error occured fetching balance",
-                //                     style: TextStyle(
-                //                       color: Colors.red,
-                //                       fontWeight: FontWeight.bold,
-                //                     ),
-                //                   );
-                //                 } else if (snapshot.hasData) {
-                //                   return Text(
-                //                     snapshot.data.toString(),
-                //                     style: TextStyle(
-                //                       fontSize: 30,
-                //                       fontWeight: FontWeight.bold,
-                //                     ),
-                //                   );
-                //                 }
-                //                 return Text(
-                //                   'Error',
-                //                   style: TextStyle(
-                //                     color: Colors.red,
-                //                     fontWeight: FontWeight.bold,
-                //                   ),
-                //                 );
-                //               },
-                //             ),
-                //           ),
-                //         ],
-                //       ),
-                //     ),
-                //   ),
-                // ),
-                SliverToBoxAdapter(
+              ),
+              // SliverToBoxAdapter(
+              //   child: SizedBox(
+              //     width: double.infinity,
+              //
+              //     height: 150,
+              //     child: Card.outlined(
+              //       child: Column(
+              //         mainAxisAlignment: MainAxisAlignment.center,
+              //         children: [
+              //           Text(
+              //             "Current Balance",
+              //             style: TextStyle(
+              //               fontSize: 18,
+              //               fontWeight: FontWeight.w500,
+              //             ),
+              //           ),
+              //           Align(
+              //             child: FutureBuilder<double>(
+              //               future: watchPropertyValue(
+              //                 (WalletModel m) => m.totalBalance,
+              //               ),
+              //               builder: (context, snapshot) {
+              //                 if (snapshot.connectionState ==
+              //                     ConnectionState.waiting) {
+              //                   return Center(
+              //                     child: CircularProgressIndicator(),
+              //                   );
+              //                 } else if (snapshot.hasError) {
+              //                   return Text(
+              //                     "Error occured fetching balance",
+              //                     style: TextStyle(
+              //                       color: Colors.red,
+              //                       fontWeight: FontWeight.bold,
+              //                     ),
+              //                   );
+              //                 } else if (snapshot.hasData) {
+              //                   return Text(
+              //                     snapshot.data.toString(),
+              //                     style: TextStyle(
+              //                       fontSize: 30,
+              //                       fontWeight: FontWeight.bold,
+              //                     ),
+              //                   );
+              //                 }
+              //                 return Text(
+              //                   'Error',
+              //                   style: TextStyle(
+              //                     color: Colors.red,
+              //                     fontWeight: FontWeight.bold,
+              //                   ),
+              //                 );
+              //               },
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //     ),
+              //   ),
+              // ),
+              SliverToBoxAdapter(
+                child: DefaultTabController(
+                  length: 2,
                   child: DefaultTabController(
-                    length: 1,
+                    length: 2,
                     child: Column(
                       children: [
                         TabBar(
                           tabs: [
-                            Tab(text: 'Debit (expense)'),
-                            // Tab(text: 'Credit (income)'),
+                            Tab(text: 'Parse Text Message'),
+                            Tab(text: 'Manually add transaction'),
                           ],
                         ),
                         SizedBox(
                           height: 600,
                           child: TabBarView(
                             children: [
+                              Padding(
+                                padding: EdgeInsetsGeometry.all(4),
+                                child: Card.outlined(
+                                  child: Form(
+                                    key: _parseFormKey,
+                                    child: Padding(
+                                      padding: EdgeInsets.all(5),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.start,
+                                        children: [
+                                          Padding(
+                                            padding: EdgeInsets.all(4),
+                                            child: Align(
+                                              alignment: Alignment.topLeft,
+                                              child: Text(
+                                                "Parse",
+                                                style: TextStyle(
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(5),
+                                            child: DropdownMenu<String>(
+                                              width: double.infinity,
+                                              hintText: "select source",
+                                              onSelected: (value) {
+                                                if (value != null) {
+                                                  category = value;
+                                                }
+                                                // This is called when the user selects an item.
+
+                                                log(
+                                                  "selected_category:$category",
+                                                );
+                                              },
+                                              dropdownMenuEntries:
+                                                  UnmodifiableListView<
+                                                    DropdownMenuEntry<String>
+                                                  >(
+                                                    [
+                                                      "mpesa",
+                                                      "ncba",
+                                                      "equity",
+                                                    ].map<
+                                                      DropdownMenuEntry<String>
+                                                    >(
+                                                      (String name) =>
+                                                          DropdownMenuEntry<
+                                                            String
+                                                          >(
+                                                            value: name,
+                                                            label: name,
+                                                          ),
+                                                    ),
+                                                  ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(5),
+                                            child: TextFormField(
+                                              keyboardType: TextInputType.text,
+                                              controller: sourceController,
+                                              validator: (value) {
+                                                if (value == null ||
+                                                    value.isEmpty) {
+                                                  return 'Please enter valid source';
+                                                }
+                                                return null;
+                                              },
+                                              decoration: const InputDecoration(
+                                                border: OutlineInputBorder(),
+                                                hintText: '',
+                                                labelText: "Text Message",
+                                              ),
+                                            ),
+                                          ),
+                                          SafeArea(
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(7),
+                                              child: ElevatedButton(
+                                                style: ButtonStyle(
+                                                  fixedSize:
+                                                      WidgetStatePropertyAll(
+                                                        Size.fromWidth(
+                                                          double.infinity,
+                                                        ),
+                                                      ),
+                                                  backgroundColor:
+                                                      WidgetStatePropertyAll(
+                                                        Colors.black,
+                                                      ),
+                                                ),
+                                                onPressed: () async {
+                                                  if (_parseFormKey
+                                                          .currentState!
+                                                          .validate() &&
+                                                      category.isNotEmpty) {
+                                                    // TransactionObj
+                                                    // tx = TransactionObj(
+                                                    //   type: TxType.spend.val,
+                                                    //   desc: descController
+                                                    //       .value
+                                                    //       .text,
+                                                    //   category: category,
+                                                    //   source: sourceController
+                                                    //       .value
+                                                    //       .text,
+                                                    //   amount: double.parse(
+                                                    //     amountController
+                                                    //         .value
+                                                    //         .text,
+                                                    //   ),
+                                                    //   date: DateTime.now()
+                                                    //       .toString(),
+                                                    // );
+                                                    try {
+                                                      switch (category) {
+                                                        case "mpesa":
+                                                          {
+                                                            Result
+                                                            e = await userParseMpesa(
+                                                              message:
+                                                                  sourceController
+                                                                      .value
+                                                                      .text,
+                                                            );
+                                                            switch (e) {
+                                                              case Ok():
+                                                                {
+                                                                  category = '';
+                                                                  sourceController
+                                                                      .clear();
+                                                                  if (e.value ==
+                                                                      true) {
+                                                                    di<
+                                                                          TransactionsModel
+                                                                        >()
+                                                                        .refreshTx();
+                                                                    handleBlScaffoldMessengerKey
+                                                                        .currentState!
+                                                                        .showSnackBar(
+                                                                          SnackBar(
+                                                                            content: const Text(
+                                                                              "parsing complete",
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                  } else {
+                                                                    handleBlScaffoldMessengerKey
+                                                                        .currentState!
+                                                                        .showSnackBar(
+                                                                          SnackBar(
+                                                                            content: const Text(
+                                                                              "parsing error",
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                  }
+
+                                                                  break;
+                                                                }
+                                                              case Error():
+                                                                {
+                                                                  switch (e
+                                                                      .error) {
+                                                                    case MessageNull():
+                                                                      {
+                                                                        if (context
+                                                                            .mounted) {
+                                                                          handleBlScaffoldMessengerKey.currentState!.showSnackBar(
+                                                                            SnackBar(
+                                                                              content: const Text(
+                                                                                "source mesage null",
+                                                                              ),
+                                                                            ),
+                                                                          );
+                                                                        }
+
+                                                                        break;
+                                                                      }
+                                                                    default:
+                                                                      {
+                                                                        if (context
+                                                                            .mounted) {
+                                                                          handleBlScaffoldMessengerKey.currentState!.showSnackBar(
+                                                                            SnackBar(
+                                                                              content: const Text(
+                                                                                "Failed updating wallet",
+                                                                              ),
+                                                                            ),
+                                                                          );
+                                                                        }
+
+                                                                        break;
+                                                                      }
+                                                                  }
+                                                                }
+
+                                                              default:
+                                                                {
+                                                                  if (context
+                                                                      .mounted) {
+                                                                    handleBlScaffoldMessengerKey
+                                                                        .currentState!
+                                                                        .showSnackBar(
+                                                                          SnackBar(
+                                                                            content: const Text(
+                                                                              "Failed",
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                  }
+                                                                  break;
+                                                                }
+                                                            }
+                                                          }
+                                                        case 'ncba':
+                                                          {
+                                                            Result
+                                                            e = await userParseNcba(
+                                                              message:
+                                                                  sourceController
+                                                                      .value
+                                                                      .text,
+                                                            );
+                                                            switch (e) {
+                                                              case Ok():
+                                                                {
+                                                                  category = '';
+                                                                  sourceController
+                                                                      .clear();
+                                                                  if (e.value ==
+                                                                      true) {
+                                                                    di<
+                                                                          TransactionsModel
+                                                                        >()
+                                                                        .refreshTx();
+                                                                    handleBlScaffoldMessengerKey
+                                                                        .currentState!
+                                                                        .showSnackBar(
+                                                                          SnackBar(
+                                                                            content: const Text(
+                                                                              "parsing complete",
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                  } else {
+                                                                    handleBlScaffoldMessengerKey
+                                                                        .currentState!
+                                                                        .showSnackBar(
+                                                                          SnackBar(
+                                                                            content: const Text(
+                                                                              "parsing error",
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                  }
+
+                                                                  break;
+                                                                }
+                                                              case Error():
+                                                                {
+                                                                  switch (e
+                                                                      .error) {
+                                                                    case MessageNull():
+                                                                      {
+                                                                        if (context
+                                                                            .mounted) {
+                                                                          handleBlScaffoldMessengerKey.currentState!.showSnackBar(
+                                                                            SnackBar(
+                                                                              content: const Text(
+                                                                                "source mesage null",
+                                                                              ),
+                                                                            ),
+                                                                          );
+                                                                        }
+
+                                                                        break;
+                                                                      }
+                                                                    default:
+                                                                      {
+                                                                        if (context
+                                                                            .mounted) {
+                                                                          handleBlScaffoldMessengerKey.currentState!.showSnackBar(
+                                                                            SnackBar(
+                                                                              content: const Text(
+                                                                                "Failed updating wallet",
+                                                                              ),
+                                                                            ),
+                                                                          );
+                                                                        }
+
+                                                                        break;
+                                                                      }
+                                                                  }
+                                                                }
+
+                                                              default:
+                                                                {
+                                                                  if (context
+                                                                      .mounted) {
+                                                                    handleBlScaffoldMessengerKey
+                                                                        .currentState!
+                                                                        .showSnackBar(
+                                                                          SnackBar(
+                                                                            content: const Text(
+                                                                              "Failed",
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                  }
+                                                                  break;
+                                                                }
+                                                            }
+                                                          }
+                                                        case 'equity':
+                                                          {
+                                                            Result
+                                                            e = await userParseEquity(
+                                                              message:
+                                                                  sourceController
+                                                                      .value
+                                                                      .text,
+                                                            );
+                                                            switch (e) {
+                                                              case Ok():
+                                                                {
+                                                                  category = '';
+                                                                  sourceController
+                                                                      .clear();
+                                                                  if (e.value ==
+                                                                      true) {
+                                                                    di<
+                                                                          TransactionsModel
+                                                                        >()
+                                                                        .refreshTx();
+                                                                    handleBlScaffoldMessengerKey
+                                                                        .currentState!
+                                                                        .showSnackBar(
+                                                                          SnackBar(
+                                                                            content: const Text(
+                                                                              "parsing complete",
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                  } else {
+                                                                    handleBlScaffoldMessengerKey
+                                                                        .currentState!
+                                                                        .showSnackBar(
+                                                                          SnackBar(
+                                                                            content: const Text(
+                                                                              "parsing error",
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                  }
+
+                                                                  break;
+                                                                }
+                                                              case Error():
+                                                                {
+                                                                  switch (e
+                                                                      .error) {
+                                                                    case MessageNull():
+                                                                      {
+                                                                        if (context
+                                                                            .mounted) {
+                                                                          handleBlScaffoldMessengerKey.currentState!.showSnackBar(
+                                                                            SnackBar(
+                                                                              content: const Text(
+                                                                                "source mesage null",
+                                                                              ),
+                                                                            ),
+                                                                          );
+                                                                        }
+
+                                                                        break;
+                                                                      }
+                                                                    default:
+                                                                      {
+                                                                        if (context
+                                                                            .mounted) {
+                                                                          handleBlScaffoldMessengerKey.currentState!.showSnackBar(
+                                                                            SnackBar(
+                                                                              content: const Text(
+                                                                                "Failed updating wallet",
+                                                                              ),
+                                                                            ),
+                                                                          );
+                                                                        }
+
+                                                                        break;
+                                                                      }
+                                                                  }
+                                                                }
+
+                                                              default:
+                                                                {
+                                                                  if (context
+                                                                      .mounted) {
+                                                                    handleBlScaffoldMessengerKey
+                                                                        .currentState!
+                                                                        .showSnackBar(
+                                                                          SnackBar(
+                                                                            content: const Text(
+                                                                              "Failed",
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                  }
+                                                                  break;
+                                                                }
+                                                            }
+                                                          }
+
+                                                        default:
+                                                          {}
+                                                      }
+                                                    } catch (e) {
+                                                      log(
+                                                        'Error ${e.toString()}',
+                                                      );
+
+                                                      handleBlScaffoldMessengerKey
+                                                          .currentState!
+                                                          .showSnackBar(
+                                                            SnackBar(
+                                                              content: const Text(
+                                                                "Error Occured",
+                                                              ),
+                                                            ),
+                                                          );
+                                                    }
+                                                  } else {
+                                                    if (mounted) {
+                                                      handleBlScaffoldMessengerKey
+                                                          .currentState!
+                                                          .showSnackBar(
+                                                            SnackBar(
+                                                              content: const Text(
+                                                                "Confirm form values",
+                                                              ),
+                                                            ),
+                                                          );
+                                                    }
+                                                  }
+                                                },
+                                                child: Text(
+                                                  "Parse",
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
                               Padding(
                                 padding: EdgeInsetsGeometry.all(4),
                                 child: Card.outlined(
@@ -724,8 +1195,8 @@ class HandleBalanceState extends State<HandleBalance> {
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

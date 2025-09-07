@@ -34,6 +34,7 @@ class AutoImportAvailabilityState extends State<AutoImportAvailabilityScreen> {
         ),
         child: Scaffold(
           body: Container(
+            height: double.infinity,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -239,7 +240,7 @@ class AutoImportAvailabilityState extends State<AutoImportAvailabilityScreen> {
                           ),
                         ),
                         onPressed: () {
-                          Navigator.push(
+                          Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(
                               builder: (context) =>
@@ -249,9 +250,10 @@ class AutoImportAvailabilityState extends State<AutoImportAvailabilityScreen> {
                                           .locale
                                           .countryCode ==
                                       'KE'
-                                  ? AutoImportInfoScreen()
-                                  : SetupBudget(),
+                                  ? const AutoImportInfoScreen()
+                                  : const SetupBudget(),
                             ),
+                            (Route<dynamic> route) => false,
                           );
                         },
                         child: Row(
