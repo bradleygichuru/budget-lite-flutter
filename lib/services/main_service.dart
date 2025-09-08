@@ -149,18 +149,18 @@ void onStart(ServiceInstance service) async {
   //   );
   // }
 
-  AwesomeNotifications().createNotification(
-    content: NotificationContent(
-      criticalAlert: false,
-      autoDismissible: false,
-      id: 888,
-      channelKey: 'service_channel',
-      actionType: ActionType.SilentBackgroundAction,
-      title: 'Budgetlite tx discovery service',
-      body: 'running',
-      locked: true,
-    ),
-  );
+  // AwesomeNotifications().createNotification(
+  //   content: NotificationContent(
+  //     criticalAlert: false,
+  //     autoDismissible: false,
+  //     id: 888,
+  //     channelKey: 'service_channel',
+  //     actionType: ActionType.SilentBackgroundAction,
+  //     title: 'Budgetlite tx discovery service',
+  //     body: 'running',
+  //     locked: true,
+  //   ),
+  // );
 
   // if (result != null && result) {
   //   telephony.listenIncomingSms(
