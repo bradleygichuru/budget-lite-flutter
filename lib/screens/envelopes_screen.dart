@@ -29,10 +29,12 @@ class EnvelopeViewState extends State<EnvelopesView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => ShowCaseWidget.of(context).startShowCase([
-        AppGlobal.resetBudgetEnvelope,
-        AppGlobal.addBudgetEnvelope,
-      ]),
+      (_) => di<AuthModel>().shouldShowCase
+          ? ShowCaseWidget.of(context).startShowCase([
+              AppGlobal.resetBudgetEnvelope,
+              AppGlobal.addBudgetEnvelope,
+            ])
+          : null,
     );
   }
 

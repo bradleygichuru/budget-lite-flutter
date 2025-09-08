@@ -74,6 +74,13 @@ class AuthModel extends ChangeNotifier {
     }
   }
 
+  void completeShowcase() async {
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+    prefs.setBool('should_showcase', false);
+    shouldShowCase = false;
+    notifyListeners();
+  }
+
   Future<Result<int>> removePendingBudgetReset() async {
     try {
       final db = await DatabaseHelper().database;
@@ -138,7 +145,8 @@ class AuthModel extends ChangeNotifier {
     isMshwariDepost = await prefs.getBool('is_mshwari_savings');
     autoImport = await prefs.getBool('auto_import');
 
-    shouldShowCase = await prefs.getBool('complete_showcase') ?? true;
+    shouldShowCase = await prefs.getBool('should_showcase') ?? true;
+    log("shouldShowcase:$shouldShowCase");
 
     canLoginAnon = await prefs.getBool('canLoginAnon') ?? false;
     getAuthToken();
@@ -152,7 +160,9 @@ class AuthModel extends ChangeNotifier {
     SharedPreferencesAsync prefs = SharedPreferencesAsync();
     isMshwariDepost = await prefs.getBool('is_mshwari_savings');
 
-    shouldShowCase = await prefs.getBool('complete_showcase') ?? true;
+    shouldShowCase = await prefs.getBool('should_showcase') ?? true;
+
+    log("shouldShowcase:$shouldShowCase");
 
     canLoginAnon = await prefs.getBool('canLoginAnon') ?? false;
     autoImport = await prefs.getBool('auto_import');

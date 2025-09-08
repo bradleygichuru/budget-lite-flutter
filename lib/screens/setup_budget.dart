@@ -187,10 +187,12 @@ class SetupBudgetState extends State<SetupBudget> {
 
   @override
   void initState() {
-    setAccountId();
-    categories = genInitCat(currAccountId);
-    commonCategories = getWithClickstate(currAccountId);
-    di<AuthModel>().setLastOnboardingStep('setup_budget');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setAccountId();
+      categories = genInitCat(currAccountId);
+      commonCategories = getWithClickstate(currAccountId);
+      di<AuthModel>().setLastOnboardingStep('setup_budget');
+    });
     super.initState();
   }
 

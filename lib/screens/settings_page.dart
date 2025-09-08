@@ -46,7 +46,9 @@ class SettingsPageState extends State<SettingsPage> {
   bool? autoImport = di<AuthModel>().autoImport ?? false;
   @override
   void initState() {
-    setVersionInfo();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setVersionInfo();
+    });
     super.initState();
   }
 

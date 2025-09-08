@@ -4,6 +4,7 @@ import 'package:flutter_application_1/constants/globals.dart';
 import 'package:flutter_application_1/data_models/categories_data_model.dart';
 import 'package:flutter_application_1/data_models/txs_data_model.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
+import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/categories.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
@@ -56,9 +57,12 @@ class DashboardState extends State<Dashboard> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => ShowCaseWidget.of(
-        context,
-      ).startShowCase([AppGlobal.budgetOverview, AppGlobal.recentTransactions]),
+      (_) => di<AuthModel>().shouldShowCase
+          ? ShowCaseWidget.of(context).startShowCase([
+              AppGlobal.budgetOverview,
+              AppGlobal.recentTransactions,
+            ])
+          : null,
     );
   }
 

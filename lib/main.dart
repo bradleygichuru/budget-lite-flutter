@@ -238,21 +238,23 @@ class MyAppState extends State<MyApp> {
   void initState() {
     // handleAuth = isSetLoggedIn();
 
-    _listener = AppLifecycleListener(onStateChange: _onStateChanged);
-    AwesomeNotifications().setListeners(
-      onActionReceivedMethod: NotificationController.onActionReceivedMethod,
-      onNotificationCreatedMethod:
-          NotificationController.onNotificationCreatedMethod,
-      onNotificationDisplayedMethod:
-          NotificationController.onNotificationDisplayedMethod,
-      onDismissActionReceivedMethod:
-          NotificationController.onDismissActionReceivedMethod,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _listener = AppLifecycleListener(onStateChange: _onStateChanged);
+      AwesomeNotifications().setListeners(
+        onActionReceivedMethod: NotificationController.onActionReceivedMethod,
+        onNotificationCreatedMethod:
+            NotificationController.onNotificationCreatedMethod,
+        onNotificationDisplayedMethod:
+            NotificationController.onNotificationDisplayedMethod,
+        onDismissActionReceivedMethod:
+            NotificationController.onDismissActionReceivedMethod,
+      );
 
-    setState(() {
-      bestItem = appCast.bestItem();
+      setState(() {
+        bestItem = appCast.bestItem();
+      });
+      FlutterNativeSplash.remove();
     });
-    FlutterNativeSplash.remove();
     super.initState();
     // initPlatformState();
   }
@@ -1062,11 +1064,7 @@ class MyAppState extends State<MyApp> {
                           ),
                           body: ShowCaseWidget(
                             enableShowcase: di<AuthModel>().shouldShowCase,
-                            onFinish: () async {
-                              SharedPreferencesAsync prefs =
-                                  SharedPreferencesAsync();
-                              prefs.setBool('complete_showcase', true);
-                            },
+
                             globalTooltipActionConfig:
                                 const TooltipActionConfig(
                                   position: TooltipActionPosition.inside,

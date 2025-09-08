@@ -60,9 +60,11 @@ class GoalsPageState extends State<GoalsPage> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => ShowCaseWidget.of(
-        context,
-      ).startShowCase([AppGlobal.addFinancialGoals]),
+      (_) => di<AuthModel>().shouldShowCase
+          ? ShowCaseWidget.of(
+              context,
+            ).startShowCase([AppGlobal.addFinancialGoals])
+          : null,
     );
   }
 
@@ -101,6 +103,11 @@ class GoalsPageState extends State<GoalsPage> {
                           ).hideFloatingActionWidgetForKeys([
                             AppGlobal.addFinancialGoals,
                           ]);
+
+                          di<AuthModel>().completeShowcase();
+                          log(
+                            "Complete Showcase: ${di<AuthModel>().shouldShowCase}",
+                          );
                         },
 
                         tooltipActionConfig: const TooltipActionConfig(
