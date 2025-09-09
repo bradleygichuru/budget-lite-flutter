@@ -140,13 +140,13 @@ class SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => di<AuthModel>().shouldShowCase
-          ? ShowCaseWidget.of(
-              context,
-            ).startShowCase([AppGlobal.exportTransactions])
-          : null,
-    );
+    // WidgetsBinding.instance.addPostFrameCallback(
+    //   (_) => di<AuthModel>().shouldShowCase
+    //       ? ShowCaseWidget.of(
+    //           context,
+    //         ).startShowCase([AppGlobal.exportTransactions])
+    //       : null,
+    // );
     return SafeArea(
       child: Scaffold(
         // appBar: AppBar(

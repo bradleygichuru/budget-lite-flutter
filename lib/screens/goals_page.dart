@@ -59,13 +59,13 @@ class GoalsPageState extends State<GoalsPage> {
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => di<AuthModel>().shouldShowCase
-          ? ShowCaseWidget.of(
-              context,
-            ).startShowCase([AppGlobal.addFinancialGoals])
-          : null,
-    );
+    // WidgetsBinding.instance.addPostFrameCallback(
+    //   (_) => di<AuthModel>().shouldShowCase
+    //       ? ShowCaseWidget.of(
+    //           context,
+    //         ).startShowCase([AppGlobal.addFinancialGoals])
+    //       : null,
+    // );
   }
 
   @override

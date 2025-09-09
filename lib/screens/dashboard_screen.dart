@@ -56,14 +56,14 @@ class DashboardState extends State<Dashboard> {
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => di<AuthModel>().shouldShowCase
-          ? ShowCaseWidget.of(context).startShowCase([
-              AppGlobal.budgetOverview,
-              AppGlobal.recentTransactions,
-            ])
-          : null,
-    );
+    // WidgetsBinding.instance.addPostFrameCallback(
+    //   (_) => di<AuthModel>().shouldShowCase
+    //       ? ShowCaseWidget.of(context).startShowCase([
+    //           AppGlobal.budgetOverview,
+    //           AppGlobal.recentTransactions,
+    //         ])
+    //       : null,
+    // );
   }
 
   @override

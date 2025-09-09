@@ -1084,8 +1084,9 @@ class MyAppState extends State<MyApp> {
                               TooltipActionButton(
                                 type: TooltipDefaultActionType.previous,
                                 textStyle: const TextStyle(color: Colors.white),
+                                // onTap: ,
                                 hideActionWidgetForShowcase: [
-                                  AppGlobal.resetBudgetEnvelope,
+                                  AppGlobal.budgetOverview,
                                 ],
                               ),
                               // Here we don't need next action for the last showcase widget so we
