@@ -461,18 +461,16 @@ class MyAppState extends State<MyApp> {
           }
         });
       }
-      if (mounted) {
-        di.get<TransactionsModel>().refreshTx();
-        di.get<WalletModel>().refresh();
-        di.get<CategoriesModel>().refreshCats();
-        di.get<GoalModel>().refreshGoals();
-        di.get<AuthModel>().refreshAuth();
-        di.get<WeeklyReportsModel>().refresh();
-        setState(() {
-          shouldReset = di<AuthModel>().pendingBudgetReset;
-        });
-        log('Refresh Models');
-      }
+      di.get<TransactionsModel>().refreshTx();
+      di.get<WalletModel>().refresh();
+      di.get<CategoriesModel>().refreshCats();
+      di.get<GoalModel>().refreshGoals();
+      di.get<AuthModel>().refreshAuth();
+      di.get<WeeklyReportsModel>().refresh();
+      setState(() {
+        shouldReset = di<AuthModel>().pendingBudgetReset;
+      });
+      log('Refresh Models');
     });
   }
 

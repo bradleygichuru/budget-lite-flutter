@@ -1921,7 +1921,7 @@ Future<void> calculateWeekInsights() async {
   debugPrint('Calculating weekly insights');
   DateTime now = DateTime.now();
 
-  int weeks = 4;
+  int weeks = 2;
 
   // Calculate the start of the current week (Monday)
   // DateTime.monday is 1, DateTime.sunday is 7

@@ -317,7 +317,7 @@ class ReportsScreenState extends State<ReportsScreen> {
                               ),
                               padding: EdgeInsets.all(7),
                             )
-                          : Text(''),
+                          : Text('No reports to show'),
                     ],
                   ),
                 ),
