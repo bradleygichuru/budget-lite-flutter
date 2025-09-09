@@ -549,23 +549,48 @@ class SettingsPageState extends State<SettingsPage> {
                                           }
                                         case Error():
                                           {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Error exporting transactions',
-                                                  style: TextStyle(
-                                                    color: Colors.red,
-                                                  ),
-                                                ),
-                                              ),
-                                            );
+                                            switch (e.error) {
+                                              case NoDataToExport():
+                                                {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        'No data to export',
+                                                        style: TextStyle(
+                                                          color: Colors.red,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
 
-                                            setState(() {
-                                              exportLoading = false;
-                                            });
-                                            break;
+                                                  setState(() {
+                                                    exportLoading = false;
+                                                  });
+                                                  break;
+                                                }
+                                              default:
+                                                {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        'Error exporting transactions',
+                                                        style: TextStyle(
+                                                          color: Colors.red,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+
+                                                  setState(() {
+                                                    exportLoading = false;
+                                                  });
+                                                  break;
+                                                }
+                                            }
                                           }
                                       }
                                       // Navigator.pop(context);

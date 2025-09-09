@@ -89,76 +89,80 @@ Future<Result<int>> exportDataToExcel() async {
     );
 
     // 2. Create an Excel File
-    var excel = Excel.createExcel();
-    Sheet sheetObject = excel['Sheet1'];
-    List<String> headers = data.isNotEmpty ? data.first.keys.toList() : [];
-    for (int i = 0; i < headers.length; i++) {
-      sheetObject
-          .cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0))
-          .value = TextCellValue(
-        headers[i],
-      );
-    }
-    for (int rowIndex = 0; rowIndex < data.length; rowIndex++) {
-      for (int colIndex = 0; colIndex < headers.length; colIndex++) {
-        var value = data[rowIndex][headers[colIndex]];
-        if (value is String) {
-          sheetObject
-              .cell(
-                CellIndex.indexByColumnRow(
-                  columnIndex: colIndex,
-                  rowIndex: rowIndex + 1,
-                ),
-              )
-              .value = TextCellValue(
-            value,
-          );
-        } else if (value is int) {
-          sheetObject
-              .cell(
-                CellIndex.indexByColumnRow(
-                  columnIndex: colIndex,
-                  rowIndex: rowIndex + 1,
-                ),
-              )
-              .value = IntCellValue(
-            value,
-          );
-        } else if (value is double) {
-          sheetObject
-              .cell(
-                CellIndex.indexByColumnRow(
-                  columnIndex: colIndex,
-                  rowIndex: rowIndex + 1,
-                ),
-              )
-              .value = DoubleCellValue(
-            value,
-          );
-        }
-        // Handle other data types as needed
+    if (data.isNotEmpty) {
+      var excel = Excel.createExcel();
+      Sheet sheetObject = excel['Sheet1'];
+      List<String> headers = data.isNotEmpty ? data.first.keys.toList() : [];
+      for (int i = 0; i < headers.length; i++) {
+        sheetObject
+            .cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0))
+            .value = TextCellValue(
+          headers[i],
+        );
       }
-    }
+      for (int rowIndex = 0; rowIndex < data.length; rowIndex++) {
+        for (int colIndex = 0; colIndex < headers.length; colIndex++) {
+          var value = data[rowIndex][headers[colIndex]];
+          if (value is String) {
+            sheetObject
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: colIndex,
+                    rowIndex: rowIndex + 1,
+                  ),
+                )
+                .value = TextCellValue(
+              value,
+            );
+          } else if (value is int) {
+            sheetObject
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: colIndex,
+                    rowIndex: rowIndex + 1,
+                  ),
+                )
+                .value = IntCellValue(
+              value,
+            );
+          } else if (value is double) {
+            sheetObject
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: colIndex,
+                    rowIndex: rowIndex + 1,
+                  ),
+                )
+                .value = DoubleCellValue(
+              value,
+            );
+          }
+          // Handle other data types as needed
+        }
+      }
 
-    // 4. Save the Excel File
-    var fileBytes = excel.encode();
-    final directory = await getDownloadsDirectory();
-    log('Directory:$directory');
-    // String filePath =
-    //     '/storage/emulated/0/Download/budgetlite_${DateTime.now().toString()}.xlsx';
-    String filePath;
+      // 4. Save the Excel File
+      var fileBytes = excel.encode();
+      final directory = await getDownloadsDirectory();
+      log('Directory:$directory');
+      // String filePath =
+      //     '/storage/emulated/0/Download/budgetlite_${DateTime.now().toString()}.xlsx';
+      String filePath;
 
-    if (directory != null) {
-      filePath =
-          '${directory.path}/budgetlite_${DateTime.now().toString()}.xlsx';
+      if (directory != null) {
+        filePath =
+            '${directory.path}/budgetlite_${DateTime.now().toString()}.xlsx';
+      } else {
+        filePath =
+            '/storage/emulated/0/Download/budgetlite_${DateTime.now().toString()}.xlsx';
+      }
+      File(filePath)
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(fileBytes!);
+      return Result.ok(1);
     } else {
-      filePath =
-          '/storage/emulated/0/Download/budgetlite_${DateTime.now().toString()}.xlsx';
+      return Result.error(NoDataToExport());
     }
-    File(filePath)
-      ..createSync(recursive: true)
-      ..writeAsBytesSync(fileBytes!);
-    return Result.ok(1);
 
     // 5. Provide Export Functionality (e.g., sharing)
     // You can then use a package like `share_plus` to share the file.
@@ -1987,3 +1991,5 @@ Future<void> calculateWeekInsights() async {
 class TransactionCreationFailed implements Exception {}
 
 class TransactionExists implements Exception {}
+
+class NoDataToExport implements Exception {}
