@@ -520,30 +520,30 @@ class SettingsPageState extends State<SettingsPage> {
                                             //   ),
                                             // );
 
-                                            final directory =
-                                                await getDownloadsDirectory();
-                                            if (directory != null) {
-                                              openFileManager(
-                                                androidConfig: AndroidConfig(
-                                                  folderType:
-                                                      AndroidFolderType.other,
-                                                  folderPath: directory.path,
-                                                ),
-                                              );
-
-                                              listDirectoryContents(
-                                                directory.path,
-                                              );
-                                            } else {
-                                              openFileManager(
-                                                androidConfig: AndroidConfig(
-                                                  folderType:
-                                                      AndroidFolderType.other,
-                                                  folderPath:
-                                                      "/storage/emulated/0/Download",
-                                                ),
-                                              );
-                                            }
+                                            // final directory =
+                                            //     await getDownloadsDirectory();
+                                            // if (directory != null) {
+                                            //   openFileManager(
+                                            //     androidConfig: AndroidConfig(
+                                            //       folderType:
+                                            //           AndroidFolderType.other,
+                                            //       folderPath: directory.path,
+                                            //     ),
+                                            //   );
+                                            //
+                                            //   listDirectoryContents(
+                                            //     directory.path,
+                                            //   );
+                                            // } else {
+                                            //   openFileManager(
+                                            //     androidConfig: AndroidConfig(
+                                            //       folderType:
+                                            //           AndroidFolderType.other,
+                                            //       folderPath:
+                                            //           "/storage/emulated/0/Download",
+                                            //     ),
+                                            //   );
+                                            // }
 
                                             break;
                                           }
