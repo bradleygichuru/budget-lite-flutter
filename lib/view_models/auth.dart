@@ -232,6 +232,7 @@ class AuthModel extends ChangeNotifier {
     switch (accountCreation) {
       case Ok():
         {
+          setIsMshwariSavings(true);
           if (!kDebugMode) {
             AppGlobal.analytics.logSignUp(signUpMethod: "anon");
           }
@@ -1211,9 +1212,7 @@ class AuthModel extends ChangeNotifier {
 
   Future<int?> getAccountId() async {
     SharedPreferencesAsync prefs = SharedPreferencesAsync();
-    log(
-      'Account id:${await prefs.getInt("budget_lite_current_account_id").toString()}',
-    );
+    log('Account id:${await prefs.getInt("budget_lite_current_account_id")}');
     return prefs.getInt("budget_lite_current_account_id");
   }
 }

@@ -12,6 +12,8 @@ class AppGlobal {
   static GlobalKey recentTransactions = GlobalKey();
   static GlobalKey addFinancialGoals = GlobalKey();
 
+  static GlobalKey exportTransactions = GlobalKey();
+
   static FirebaseAnalytics analytics = FirebaseAnalytics.instance;
 
   static GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();

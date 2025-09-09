@@ -144,10 +144,13 @@ Future<Result<int>> exportDataToExcel() async {
     var fileBytes = excel.encode();
     final directory = await getDownloadsDirectory();
     log('Directory:$directory');
+    // String filePath =
+    //     '/storage/emulated/0/Download/budgetlite_${DateTime.now().toString()}.xlsx';
     String filePath;
 
     if (directory != null) {
-      filePath = '${directory.path}/${DateTime.now().toString()}.xlsx';
+      filePath =
+          '${directory.path}/budgetlite_${DateTime.now().toString()}.xlsx';
     } else {
       filePath =
           '/storage/emulated/0/Download/budgetlite_${DateTime.now().toString()}.xlsx';

@@ -1003,17 +1003,17 @@ class MyAppState extends State<MyApp> {
                           ),
                           appBar: AppBar(
                             actions: [
-                              IconButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SettingsPage(),
-                                    ),
-                                  );
-                                },
-                                icon: Icon(Icons.settings),
-                              ),
+                              // IconButton(
+                              //   onPressed: () {
+                              //     Navigator.push(
+                              //       context,
+                              //       MaterialPageRoute(
+                              //         builder: (context) => SettingsPage(),
+                              //       ),
+                              //     );
+                              //   },
+                              //   icon: Icon(Icons.settings),
+                              // ),
                             ],
 
                             title: Text(
@@ -1055,6 +1055,13 @@ class MyAppState extends State<MyApp> {
                                 icon: Icon(Icons.analytics_outlined),
                                 label: 'Reports',
                               ),
+
+                              NavigationDestination(
+                                selectedIcon: Icon(Icons.settings),
+                                icon: Icon(Icons.settings_outlined),
+                                label: 'Settings',
+                              ),
+
                               // NavigationDestination(
                               //   selectedIcon: Icon(Icons.analytics),
                               //   icon: Icon(Icons.analytics_outlined),
@@ -1087,7 +1094,7 @@ class MyAppState extends State<MyApp> {
                                 type: TooltipDefaultActionType.next,
                                 textStyle: const TextStyle(color: Colors.white),
                                 hideActionWidgetForShowcase: [
-                                  AppGlobal.addFinancialGoals,
+                                  AppGlobal.exportTransactions,
                                 ],
                               ),
                             ],
@@ -1153,6 +1160,7 @@ class MyAppState extends State<MyApp> {
                                 EnvelopesView(),
                                 GoalsPage(),
                                 ReportsScreen(),
+                                SettingsPage(),
                                 // TermsAndConditions(),
                                 //WalletScreen(),
                                 // SettingsPage(),

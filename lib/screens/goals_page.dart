@@ -104,10 +104,10 @@ class GoalsPageState extends State<GoalsPage> {
                             AppGlobal.addFinancialGoals,
                           ]);
 
-                          di<AuthModel>().completeShowcase();
-                          log(
-                            "Complete Showcase: ${di<AuthModel>().shouldShowCase}",
-                          );
+                          // di<AuthModel>().completeShowcase();
+                          // log(
+                          //   "Complete Showcase: ${di<AuthModel>().shouldShowCase}",
+                          // );
                         },
 
                         tooltipActionConfig: const TooltipActionConfig(
