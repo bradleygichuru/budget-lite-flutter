@@ -42,559 +42,548 @@ class LoginFormState extends State<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData(
-        colorSchemeSeed: const Color.fromARGB(255, 25, 143, 240),
-      ),
-      home: SafeArea(
-        child: ScaffoldMessenger(
-          key: loginScaffoldMessengerKey,
-          child: AnnotatedRegion(
-            value: SystemUiOverlayStyle(statusBarColor: Colors.white),
-            child: Scaffold(
-              body: Container(
-                height: double.infinity,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFEFF6FF), Color(0xFFF3E8FF)],
-                  ),
+    return SafeArea(
+      child: ScaffoldMessenger(
+        key: loginScaffoldMessengerKey,
+        child: AnnotatedRegion(
+          value: SystemUiOverlayStyle(statusBarColor: Colors.white),
+          child: Scaffold(
+            body: Container(
+              height: double.infinity,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFEFF6FF), Color(0xFFF3E8FF)],
                 ),
-                child: SingleChildScrollView(
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 16,
-                          ),
-                          child: Center(
-                            child: Icon(
-                              size: 50,
-                              Icons.account_circle,
-                              color: Color(0xFF2563EB),
-                            ),
+              ),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 16,
+                        ),
+                        child: Center(
+                          child: Icon(
+                            size: 50,
+                            Icons.account_circle,
+                            color: Color(0xFF2563EB),
                           ),
                         ),
+                      ),
 
-                        Center(
-                          child: Text(
-                            "Welcome Back",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey.shade900,
-                              fontSize: 24,
-                            ),
+                      Center(
+                        child: Text(
+                          "Welcome Back",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade900,
+                            fontSize: 24,
                           ),
                         ),
+                      ),
 
-                        Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text(
-                            "Sign in to continue your budgeting journey",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey.shade600),
+                      Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          "Sign in to continue your budgeting journey",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      ),
+
+                      // watchPropertyValue((AuthModel m) => m.canLoginAnon)
+                      //     ? Padding(
+                      //         padding: EdgeInsets.all(8),
+                      //         child: Column(
+                      //           crossAxisAlignment: CrossAxisAlignment.center,
+                      //           mainAxisAlignment: MainAxisAlignment.center,
+                      //           children: [
+                      //             OutlinedButton(
+                      //               style: ButtonStyle(
+                      //                 side: WidgetStatePropertyAll(
+                      //                   BorderSide(
+                      //                     color: Colors.blue.shade600,
+                      //                   ),
+                      //                 ),
+                      //                 backgroundColor: WidgetStatePropertyAll(
+                      //                   Colors.white,
+                      //                 ),
+                      //                 foregroundColor: WidgetStatePropertyAll(
+                      //                   Colors.blue.shade600,
+                      //                 ),
+                      //               ),
+                      //               onPressed: _isLoading
+                      //                   ? null
+                      //                   : () async {
+                      //                       setState(() {
+                      //                         _isLoading = true;
+                      //                       });
+                      //                       Result anonSignin =
+                      //                           await di<AuthModel>()
+                      //                               .anonymousSignIn(
+                      //                                 operation: 'login',
+                      //                               );
+                      //                       switch (anonSignin) {
+                      //                         case Ok():
+                      //                           {
+                      //                             authM.completeOnboarding();
+                      //                             loginScaffoldMessengerKey
+                      //                                 .currentState!
+                      //                                 .showSnackBar(
+                      //                                   SnackBar(
+                      //                                     behavior:
+                      //                                         SnackBarBehavior
+                      //                                             .floating,
+                      //                                     content: const Text(
+                      //                                       "Login success",
+                      //                                     ),
+                      //                                   ),
+                      //                                 );
+                      //                             di<AuthModel>()
+                      //                                 .refreshAuth();
+                      //
+                      //                             setState(() {
+                      //                               _isLoading = false;
+                      //                             });
+                      //
+                      //                             di
+                      //                                 .get<
+                      //                                   TransactionsModel
+                      //                                 >()
+                      //                                 .refreshTx();
+                      //                             di
+                      //                                 .get<WalletModel>()
+                      //                                 .refresh();
+                      //                             di
+                      //                                 .get<CategoriesModel>()
+                      //                                 .refreshCats();
+                      //                             di
+                      //                                 .get<GoalModel>()
+                      //                                 .refreshGoals();
+                      //                             di
+                      //                                 .get<AuthModel>()
+                      //                                 .refreshAuth();
+                      //                             di
+                      //                                 .get<
+                      //                                   WeeklyReportsModel
+                      //                                 >()
+                      //                                 .refresh();
+                      //
+                      //                             queryMpesa();
+                      //                             initializeService();
+                      //                             Navigator.pushReplacement(
+                      //                               context,
+                      //                               MaterialPageRoute(
+                      //                                 builder: (context) =>
+                      //                                     const MyApp(),
+                      //                               ),
+                      //                             );
+                      //
+                      //                             break;
+                      //                           }
+                      //                         case Error():
+                      //                           {
+                      //                             setState(() {
+                      //                               _isLoading = false;
+                      //                             });
+                      //                             switch (anonSignin.error) {
+                      //                               case UnknownError():
+                      //                                 {
+                      //                                   loginScaffoldMessengerKey
+                      //                                       .currentState!
+                      //                                       .showSnackBar(
+                      //                                         SnackBar(
+                      //                                           behavior:
+                      //                                               SnackBarBehavior
+                      //                                                   .floating,
+                      //                                           content:
+                      //                                               const Text(
+                      //                                                 "Error occured signing up anonymously",
+                      //                                               ),
+                      //                                         ),
+                      //                                       );
+                      //
+                      //                                   break;
+                      //                                 }
+                      //                               case AuthDisabled():
+                      //                                 {
+                      //                                   loginScaffoldMessengerKey
+                      //                                       .currentState!
+                      //                                       .showSnackBar(
+                      //                                         SnackBar(
+                      //                                           behavior:
+                      //                                               SnackBarBehavior
+                      //                                                   .floating,
+                      //                                           content:
+                      //                                               const Text(
+                      //                                                 "Authentication Disabled",
+                      //                                               ),
+                      //                                         ),
+                      //                                       );
+                      //                                   break;
+                      //                                 }
+                      //
+                      //                               case NoInternetConnection():
+                      //                                 {
+                      //                                   setState(() {
+                      //                                     _isLoading = false;
+                      //                                   });
+                      //                                   loginScaffoldMessengerKey
+                      //                                       .currentState!
+                      //                                       .showSnackBar(
+                      //                                         SnackBar(
+                      //                                           behavior:
+                      //                                               SnackBarBehavior
+                      //                                                   .floating,
+                      //                                           content:
+                      //                                               const Text(
+                      //                                                 "No internet connection",
+                      //                                               ),
+                      //                                         ),
+                      //                                       );
+                      //                                   break;
+                      //                                 }
+                      //                             }
+                      //                           }
+                      //                       }
+                      //                     },
+                      //               child: _isLoading
+                      //                   ? Center(
+                      //                       child: SizedBox(
+                      //                         width: 24.0,
+                      //                         height: 24.0,
+                      //                         child: CircularProgressIndicator(
+                      //                           valueColor:
+                      //                               AlwaysStoppedAnimation<
+                      //                                 Color
+                      //                               >(Colors.white),
+                      //                         ),
+                      //                       ),
+                      //                     )
+                      //                   : Row(
+                      //                       crossAxisAlignment:
+                      //                           CrossAxisAlignment.center,
+                      //                       mainAxisAlignment:
+                      //                           MainAxisAlignment.spaceEvenly,
+                      //                       children: [
+                      //                         Icon(
+                      //                           Icons.account_circle_outlined,
+                      //                           color: Colors.blue.shade600,
+                      //                         ),
+                      //                         Text(
+                      //                           'Login Anonymously',
+                      //                           style: TextStyle(
+                      //                             color: Colors.blue.shade600,
+                      //                           ),
+                      //                         ),
+                      //                       ],
+                      //                     ),
+                      //             ),
+                      //             Divider(),
+                      //             Text(
+                      //               'Try BudgetLite without creating an account',
+                      //               style: TextStyle(
+                      //                 fontSize: 12,
+                      //                 color: Colors.grey.shade500,
+                      //               ),
+                      //             ),
+                      //           ],
+                      //         ),
+                      //       )
+                      //     : Text(''),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 0,
+                          vertical: 16,
+                        ),
+                        child: TextFormField(
+                          controller: emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter valid Email';
+                            }
+                            return null;
+                          },
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: 'johndoe@gmail.com',
+                            labelText: "Email",
                           ),
                         ),
-
-                        // watchPropertyValue((AuthModel m) => m.canLoginAnon)
-                        //     ? Padding(
-                        //         padding: EdgeInsets.all(8),
-                        //         child: Column(
-                        //           crossAxisAlignment: CrossAxisAlignment.center,
-                        //           mainAxisAlignment: MainAxisAlignment.center,
-                        //           children: [
-                        //             OutlinedButton(
-                        //               style: ButtonStyle(
-                        //                 side: WidgetStatePropertyAll(
-                        //                   BorderSide(
-                        //                     color: Colors.blue.shade600,
-                        //                   ),
-                        //                 ),
-                        //                 backgroundColor: WidgetStatePropertyAll(
-                        //                   Colors.white,
-                        //                 ),
-                        //                 foregroundColor: WidgetStatePropertyAll(
-                        //                   Colors.blue.shade600,
-                        //                 ),
-                        //               ),
-                        //               onPressed: _isLoading
-                        //                   ? null
-                        //                   : () async {
-                        //                       setState(() {
-                        //                         _isLoading = true;
-                        //                       });
-                        //                       Result anonSignin =
-                        //                           await di<AuthModel>()
-                        //                               .anonymousSignIn(
-                        //                                 operation: 'login',
-                        //                               );
-                        //                       switch (anonSignin) {
-                        //                         case Ok():
-                        //                           {
-                        //                             authM.completeOnboarding();
-                        //                             loginScaffoldMessengerKey
-                        //                                 .currentState!
-                        //                                 .showSnackBar(
-                        //                                   SnackBar(
-                        //                                     behavior:
-                        //                                         SnackBarBehavior
-                        //                                             .floating,
-                        //                                     content: const Text(
-                        //                                       "Login success",
-                        //                                     ),
-                        //                                   ),
-                        //                                 );
-                        //                             di<AuthModel>()
-                        //                                 .refreshAuth();
-                        //
-                        //                             setState(() {
-                        //                               _isLoading = false;
-                        //                             });
-                        //
-                        //                             di
-                        //                                 .get<
-                        //                                   TransactionsModel
-                        //                                 >()
-                        //                                 .refreshTx();
-                        //                             di
-                        //                                 .get<WalletModel>()
-                        //                                 .refresh();
-                        //                             di
-                        //                                 .get<CategoriesModel>()
-                        //                                 .refreshCats();
-                        //                             di
-                        //                                 .get<GoalModel>()
-                        //                                 .refreshGoals();
-                        //                             di
-                        //                                 .get<AuthModel>()
-                        //                                 .refreshAuth();
-                        //                             di
-                        //                                 .get<
-                        //                                   WeeklyReportsModel
-                        //                                 >()
-                        //                                 .refresh();
-                        //
-                        //                             queryMpesa();
-                        //                             initializeService();
-                        //                             Navigator.pushReplacement(
-                        //                               context,
-                        //                               MaterialPageRoute(
-                        //                                 builder: (context) =>
-                        //                                     const MyApp(),
-                        //                               ),
-                        //                             );
-                        //
-                        //                             break;
-                        //                           }
-                        //                         case Error():
-                        //                           {
-                        //                             setState(() {
-                        //                               _isLoading = false;
-                        //                             });
-                        //                             switch (anonSignin.error) {
-                        //                               case UnknownError():
-                        //                                 {
-                        //                                   loginScaffoldMessengerKey
-                        //                                       .currentState!
-                        //                                       .showSnackBar(
-                        //                                         SnackBar(
-                        //                                           behavior:
-                        //                                               SnackBarBehavior
-                        //                                                   .floating,
-                        //                                           content:
-                        //                                               const Text(
-                        //                                                 "Error occured signing up anonymously",
-                        //                                               ),
-                        //                                         ),
-                        //                                       );
-                        //
-                        //                                   break;
-                        //                                 }
-                        //                               case AuthDisabled():
-                        //                                 {
-                        //                                   loginScaffoldMessengerKey
-                        //                                       .currentState!
-                        //                                       .showSnackBar(
-                        //                                         SnackBar(
-                        //                                           behavior:
-                        //                                               SnackBarBehavior
-                        //                                                   .floating,
-                        //                                           content:
-                        //                                               const Text(
-                        //                                                 "Authentication Disabled",
-                        //                                               ),
-                        //                                         ),
-                        //                                       );
-                        //                                   break;
-                        //                                 }
-                        //
-                        //                               case NoInternetConnection():
-                        //                                 {
-                        //                                   setState(() {
-                        //                                     _isLoading = false;
-                        //                                   });
-                        //                                   loginScaffoldMessengerKey
-                        //                                       .currentState!
-                        //                                       .showSnackBar(
-                        //                                         SnackBar(
-                        //                                           behavior:
-                        //                                               SnackBarBehavior
-                        //                                                   .floating,
-                        //                                           content:
-                        //                                               const Text(
-                        //                                                 "No internet connection",
-                        //                                               ),
-                        //                                         ),
-                        //                                       );
-                        //                                   break;
-                        //                                 }
-                        //                             }
-                        //                           }
-                        //                       }
-                        //                     },
-                        //               child: _isLoading
-                        //                   ? Center(
-                        //                       child: SizedBox(
-                        //                         width: 24.0,
-                        //                         height: 24.0,
-                        //                         child: CircularProgressIndicator(
-                        //                           valueColor:
-                        //                               AlwaysStoppedAnimation<
-                        //                                 Color
-                        //                               >(Colors.white),
-                        //                         ),
-                        //                       ),
-                        //                     )
-                        //                   : Row(
-                        //                       crossAxisAlignment:
-                        //                           CrossAxisAlignment.center,
-                        //                       mainAxisAlignment:
-                        //                           MainAxisAlignment.spaceEvenly,
-                        //                       children: [
-                        //                         Icon(
-                        //                           Icons.account_circle_outlined,
-                        //                           color: Colors.blue.shade600,
-                        //                         ),
-                        //                         Text(
-                        //                           'Login Anonymously',
-                        //                           style: TextStyle(
-                        //                             color: Colors.blue.shade600,
-                        //                           ),
-                        //                         ),
-                        //                       ],
-                        //                     ),
-                        //             ),
-                        //             Divider(),
-                        //             Text(
-                        //               'Try BudgetLite without creating an account',
-                        //               style: TextStyle(
-                        //                 fontSize: 12,
-                        //                 color: Colors.grey.shade500,
-                        //               ),
-                        //             ),
-                        //           ],
-                        //         ),
-                        //       )
-                        //     : Text(''),
-                        Padding(
+                      ),
+                      SafeArea(
+                        child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 0,
                             vertical: 16,
                           ),
                           child: TextFormField(
-                            controller: emailController,
-                            keyboardType: TextInputType.emailAddress,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'Please enter valid Email';
+                                return 'Please enter password';
                               }
                               return null;
                             },
-                            decoration: const InputDecoration(
+                            controller: passwordController,
+                            obscureText: true,
+                            decoration: InputDecoration(
                               border: OutlineInputBorder(),
-                              hintText: 'johndoe@gmail.com',
-                              labelText: "Email",
+                              labelText: 'Password',
                             ),
                           ),
                         ),
-                        SafeArea(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 0,
-                              vertical: 16,
-                            ),
-                            child: TextFormField(
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter password';
-                                }
-                                return null;
-                              },
-                              controller: passwordController,
-                              obscureText: true,
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Password',
-                              ),
-                            ),
-                          ),
-                        ),
-                        SafeArea(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 0,
-                              vertical: 16,
-                            ),
-                            child: Center(
-                              child: FilledButton(
-                                style: ButtonStyle(
-                                  backgroundColor:
-                                      WidgetStatePropertyAll<Color>(
-                                        Color(0xFF2563EB),
-                                      ),
-                                ),
-                                onPressed: _isLoading
-                                    ? null
-                                    : () async {
-                                        if (_formKey.currentState!.validate()) {
-                                          setState(() {
-                                            _isLoading = true;
-                                          });
-                                          log("signing user in");
-                                          Result loginResult = await authM
-                                              .loginUser(
-                                                emailController.value.text,
-                                                passwordController.value.text,
-                                              );
-                                          switch (loginResult) {
-                                            case Ok():
-                                              {
-                                                authM.completeOnboarding();
-                                                loginScaffoldMessengerKey
-                                                    .currentState!
-                                                    .showSnackBar(
-                                                      SnackBar(
-                                                        behavior:
-                                                            SnackBarBehavior
-                                                                .floating,
-                                                        content: const Text(
-                                                          "Login success",
-                                                        ),
-                                                      ),
-                                                    );
-                                                // authM.refreshAuth();
-
-                                                setState(() {
-                                                  _isLoading = false;
-                                                });
-
-                                                di
-                                                    .get<TransactionsModel>()
-                                                    .refreshTx();
-                                                di.get<WalletModel>().refresh();
-                                                di
-                                                    .get<CategoriesModel>()
-                                                    .refreshCats();
-                                                di
-                                                    .get<GoalModel>()
-                                                    .refreshGoals();
-                                                di
-                                                    .get<AuthModel>()
-                                                    .refreshAuth();
-                                                di
-                                                    .get<WeeklyReportsModel>()
-                                                    .refresh();
-
-                                                queryMpesa();
-                                                // initializeService();
-                                                Navigator.pushReplacement(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        const MyApp(),
-                                                  ),
-                                                );
-
-                                                break;
-                                              }
-                                            case Error():
-                                              {
-                                                switch (loginResult.error) {
-                                                  case ErrorLogginIn():
-                                                    {
-                                                      setState(() {
-                                                        _isLoading = false;
-                                                      });
-                                                      loginScaffoldMessengerKey
-                                                          .currentState!
-                                                          .showSnackBar(
-                                                            SnackBar(
-                                                              behavior:
-                                                                  SnackBarBehavior
-                                                                      .floating,
-                                                              content: const Text(
-                                                                "Error Login in",
-                                                              ),
-                                                            ),
-                                                          );
-                                                    }
-                                                  case InvalidEmailOrPassword():
-                                                    {
-                                                      setState(() {
-                                                        _isLoading = false;
-                                                      });
-                                                      loginScaffoldMessengerKey
-                                                          .currentState!
-                                                          .showSnackBar(
-                                                            SnackBar(
-                                                              behavior:
-                                                                  SnackBarBehavior
-                                                                      .floating,
-                                                              content: const Text(
-                                                                "Invalid email or password",
-                                                              ),
-                                                            ),
-                                                          );
-                                                      break;
-                                                    }
-                                                  case NoInternetConnection():
-                                                    {
-                                                      setState(() {
-                                                        _isLoading = false;
-                                                      });
-                                                      loginScaffoldMessengerKey
-                                                          .currentState!
-                                                          .showSnackBar(
-                                                            SnackBar(
-                                                              behavior:
-                                                                  SnackBarBehavior
-                                                                      .floating,
-                                                              content: const Text(
-                                                                "No internet connection",
-                                                              ),
-                                                            ),
-                                                          );
-                                                      break;
-                                                    }
-
-                                                  default:
-                                                    log(
-                                                      'Error login in ',
-                                                      error: loginResult.error,
-                                                    );
-                                                    {
-                                                      setState(() {
-                                                        _isLoading = false;
-                                                      });
-                                                      loginScaffoldMessengerKey
-                                                          .currentState!
-                                                          .showSnackBar(
-                                                            SnackBar(
-                                                              behavior:
-                                                                  SnackBarBehavior
-                                                                      .floating,
-                                                              content: const Text(
-                                                                "Error Login in",
-                                                              ),
-                                                            ),
-                                                          );
-                                                    }
-                                                }
-                                              }
-                                          }
-
-                                          setState(() {
-                                            _isLoading = false;
-                                          });
-                                        }
-                                      },
-                                child: _isLoading
-                                    ? Center(
-                                        child: SizedBox(
-                                          width: 24.0,
-                                          height: 24.0,
-                                          child: CircularProgressIndicator(
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                  Colors.white,
-                                                ),
-                                          ),
-                                        ),
-                                      )
-                                    : Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          const Text('Sign In'),
-                                          Padding(
-                                            padding: EdgeInsets.symmetric(
-                                              horizontal: 4,
-                                            ),
-                                            child: const Icon(
-                                              Icons.arrow_right_alt,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.all(3),
-                          child: Center(
-                            child: const Text("Don't have an account?"),
-                          ),
-                        ),
-                        Padding(
+                      ),
+                      SafeArea(
+                        child: Padding(
                           padding: EdgeInsets.symmetric(
-                            horizontal: 8,
+                            horizontal: 0,
                             vertical: 16,
                           ),
                           child: Center(
-                            child: OutlinedButton(
+                            child: FilledButton(
                               style: ButtonStyle(
                                 backgroundColor: WidgetStatePropertyAll<Color>(
-                                  Colors.white,
+                                  Color(0xFF2563EB),
                                 ),
                               ),
                               onPressed: _isLoading
                                   ? null
-                                  : () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const SignupForm(),
-                                        ),
-                                      );
-                                      // Navigate back to first route when tapped.
-                                    },
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                    ),
-                                    child: const Icon(Icons.person_add),
-                                  ),
+                                  : () async {
+                                      if (_formKey.currentState!.validate()) {
+                                        setState(() {
+                                          _isLoading = true;
+                                        });
+                                        log("signing user in");
+                                        Result loginResult = await authM
+                                            .loginUser(
+                                              emailController.value.text,
+                                              passwordController.value.text,
+                                            );
+                                        switch (loginResult) {
+                                          case Ok():
+                                            {
+                                              authM.completeOnboarding();
+                                              loginScaffoldMessengerKey
+                                                  .currentState!
+                                                  .showSnackBar(
+                                                    SnackBar(
+                                                      behavior: SnackBarBehavior
+                                                          .floating,
+                                                      content: const Text(
+                                                        "Login success",
+                                                      ),
+                                                    ),
+                                                  );
+                                              // authM.refreshAuth();
 
-                                  const Text('Create Account'),
-                                ],
-                              ),
+                                              setState(() {
+                                                _isLoading = false;
+                                              });
+
+                                              di
+                                                  .get<TransactionsModel>()
+                                                  .refreshTx();
+                                              di.get<WalletModel>().refresh();
+                                              di
+                                                  .get<CategoriesModel>()
+                                                  .refreshCats();
+                                              di
+                                                  .get<GoalModel>()
+                                                  .refreshGoals();
+                                              di.get<AuthModel>().refreshAuth();
+                                              di
+                                                  .get<WeeklyReportsModel>()
+                                                  .refresh();
+
+                                              queryMpesa();
+                                              // initializeService();
+                                              Navigator.pushReplacement(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const MyApp(),
+                                                ),
+                                              );
+
+                                              break;
+                                            }
+                                          case Error():
+                                            {
+                                              switch (loginResult.error) {
+                                                case ErrorLogginIn():
+                                                  {
+                                                    setState(() {
+                                                      _isLoading = false;
+                                                    });
+                                                    loginScaffoldMessengerKey
+                                                        .currentState!
+                                                        .showSnackBar(
+                                                          SnackBar(
+                                                            behavior:
+                                                                SnackBarBehavior
+                                                                    .floating,
+                                                            content: const Text(
+                                                              "Error Login in",
+                                                            ),
+                                                          ),
+                                                        );
+                                                  }
+                                                case InvalidEmailOrPassword():
+                                                  {
+                                                    setState(() {
+                                                      _isLoading = false;
+                                                    });
+                                                    loginScaffoldMessengerKey
+                                                        .currentState!
+                                                        .showSnackBar(
+                                                          SnackBar(
+                                                            behavior:
+                                                                SnackBarBehavior
+                                                                    .floating,
+                                                            content: const Text(
+                                                              "Invalid email or password",
+                                                            ),
+                                                          ),
+                                                        );
+                                                    break;
+                                                  }
+                                                case NoInternetConnection():
+                                                  {
+                                                    setState(() {
+                                                      _isLoading = false;
+                                                    });
+                                                    loginScaffoldMessengerKey
+                                                        .currentState!
+                                                        .showSnackBar(
+                                                          SnackBar(
+                                                            behavior:
+                                                                SnackBarBehavior
+                                                                    .floating,
+                                                            content: const Text(
+                                                              "No internet connection",
+                                                            ),
+                                                          ),
+                                                        );
+                                                    break;
+                                                  }
+
+                                                default:
+                                                  log(
+                                                    'Error login in ',
+                                                    error: loginResult.error,
+                                                  );
+                                                  {
+                                                    setState(() {
+                                                      _isLoading = false;
+                                                    });
+                                                    loginScaffoldMessengerKey
+                                                        .currentState!
+                                                        .showSnackBar(
+                                                          SnackBar(
+                                                            behavior:
+                                                                SnackBarBehavior
+                                                                    .floating,
+                                                            content: const Text(
+                                                              "Error Login in",
+                                                            ),
+                                                          ),
+                                                        );
+                                                  }
+                                              }
+                                            }
+                                        }
+
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
+                                      }
+                                    },
+                              child: _isLoading
+                                  ? Center(
+                                      child: SizedBox(
+                                        width: 24.0,
+                                        height: 24.0,
+                                        child: CircularProgressIndicator(
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Text('Sign In'),
+                                        Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                          ),
+                                          child: const Icon(
+                                            Icons.arrow_right_alt,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.all(3),
+                        child: Center(
+                          child: const Text("Don't have an account?"),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 16,
+                        ),
+                        child: Center(
+                          child: OutlinedButton(
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStatePropertyAll<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const SignupForm(),
+                                      ),
+                                    );
+                                    // Navigate back to first route when tapped.
+                                  },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 4),
+                                  child: const Icon(Icons.person_add),
+                                ),
+
+                                const Text('Create Account'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

@@ -74,7 +74,10 @@ dependencies:
   path_provider: ^2.1.5
   showcaseview: ^4.0.1
   share_plus: ^11.1.0
-
+  receive_sharing_intent:
+    git:
+      url: https://github.com/KasemJaffer/receive_sharing_intent
+      ref: 2cea396843cd3ab1b5ec4334be4233864637874e
 dev_dependencies:
   flutter_test:
     sdk: flutter
