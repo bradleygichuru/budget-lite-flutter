@@ -5,6 +5,7 @@ import 'package:flutter_application_1/data_models/goal_data_model.dart';
 import 'package:flutter_application_1/screens/handle_savings.dart';
 import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/goals.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'dart:developer';
 
@@ -59,13 +60,15 @@ class GoalsPageState extends State<GoalsPage> {
   void initState() {
     super.initState();
 
-    // WidgetsBinding.instance.addPostFrameCallback(
-    //   (_) => di<AuthModel>().shouldShowCase
-    //       ? ShowCaseWidget.of(
-    //           context,
-    //         ).startShowCase([AppGlobal.addFinancialGoals])
-    //       : null,
-    // );
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) =>
+          di<AuthModel>().shouldShowCase &&
+              !di<AuthModel>().addFinancialGoalsShowcaseComplete
+          ? ShowCaseWidget.of(
+              context,
+            ).startShowCase([AppGlobal.addFinancialGoals])
+          : null,
+    );
   }
 
   @override
@@ -103,6 +106,12 @@ class GoalsPageState extends State<GoalsPage> {
                           ).hideFloatingActionWidgetForKeys([
                             AppGlobal.addFinancialGoals,
                           ]);
+
+                          SharedPreferencesAsync prefs =
+                              SharedPreferencesAsync();
+                          prefs.setBool('add_financial_goals_complete', true);
+
+                          di<AuthModel>().refreshShowcase();
 
                           // di<AuthModel>().completeShowcase();
                           // log(

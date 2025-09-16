@@ -7,9 +7,21 @@ import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/categories.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:watch_it/watch_it.dart';
 import 'package:flutter_application_1/constants/globals.dart';
+
+List<GlobalKey> showcases() {
+  List<GlobalKey> x = [];
+  if (!di<AuthModel>().resetBudgetEnvelopeShowcaseComplete) {
+    x.add(AppGlobal.resetBudgetEnvelope);
+  }
+  if (!di<AuthModel>().addBudgetEnvelopeShowcaseComplete) {
+    x.add(AppGlobal.addBudgetEnvelope);
+  }
+  return x;
+}
 
 class EnvelopesView extends StatefulWidget with WatchItStatefulWidgetMixin {
   const EnvelopesView({super.key});
@@ -28,14 +40,15 @@ class EnvelopeViewState extends State<EnvelopesView> {
   @override
   void initState() {
     super.initState();
-    // WidgetsBinding.instance.addPostFrameCallback(
-    //   (_) => di<AuthModel>().shouldShowCase
-    //       ? ShowCaseWidget.of(context).startShowCase([
-    //           AppGlobal.resetBudgetEnvelope,
-    //           AppGlobal.addBudgetEnvelope,
-    //         ])
-    //       : null,
-    // );
+
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) =>
+          di<AuthModel>().shouldShowCase &&
+              (!di<AuthModel>().resetBudgetEnvelopeShowcaseComplete ||
+                  !di<AuthModel>().addBudgetEnvelopeShowcaseComplete)
+          ? ShowCaseWidget.of(context).startShowCase(showcases())
+          : null,
+    );
   }
 
   @override
@@ -149,6 +162,15 @@ class EnvelopeViewState extends State<EnvelopesView> {
                                 ).hideFloatingActionWidgetForKeys([
                                   AppGlobal.resetBudgetEnvelope,
                                 ]);
+
+                                SharedPreferencesAsync prefs =
+                                    SharedPreferencesAsync();
+                                prefs.setBool(
+                                  'reset_budget_envelope_complete',
+                                  true,
+                                );
+
+                                di<AuthModel>().refreshShowcase();
                               },
                               tooltipActionConfig: const TooltipActionConfig(
                                 alignment: MainAxisAlignment.end,
@@ -242,6 +264,15 @@ class EnvelopeViewState extends State<EnvelopesView> {
                                 ).hideFloatingActionWidgetForKeys([
                                   AppGlobal.addBudgetEnvelope,
                                 ]);
+
+                                SharedPreferencesAsync prefs =
+                                    SharedPreferencesAsync();
+                                prefs.setBool(
+                                  'add_budget_envelope_complete',
+                                  true,
+                                );
+
+                                di<AuthModel>().refreshShowcase();
                               },
 
                               tooltipActionConfig: const TooltipActionConfig(

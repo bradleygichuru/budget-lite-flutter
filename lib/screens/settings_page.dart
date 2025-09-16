@@ -140,13 +140,15 @@ class SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // WidgetsBinding.instance.addPostFrameCallback(
-    //   (_) => di<AuthModel>().shouldShowCase
-    //       ? ShowCaseWidget.of(
-    //           context,
-    //         ).startShowCase([AppGlobal.exportTransactions])
-    //       : null,
-    // );
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) =>
+          di<AuthModel>().shouldShowCase &&
+              !di<AuthModel>().exportTransactionsShowcaseComplete
+          ? ShowCaseWidget.of(
+              context,
+            ).startShowCase([AppGlobal.exportTransactions])
+          : null,
+    );
     return SafeArea(
       child: Scaffold(
         // appBar: AppBar(
@@ -422,7 +424,7 @@ class SettingsPageState extends State<SettingsPage> {
               Showcase(
                 key: AppGlobal.exportTransactions,
                 description:
-                    "You can export all your recorded transactionson this section",
+                    "You can export all your recorded transactions on this section",
 
                 enableAutoScroll: true,
 
@@ -431,7 +433,12 @@ class SettingsPageState extends State<SettingsPage> {
                     AppGlobal.exportTransactions,
                   ]);
 
+                  SharedPreferencesAsync prefs = SharedPreferencesAsync();
+                  prefs.setBool('export_transactions_showcase_complete', true);
+
                   di<AuthModel>().completeShowcase();
+
+                  di<AuthModel>().refreshShowcase();
                   // log(
                   //   "Complete Showcase: ${di<AuthModel>().shouldShowCase}",
                   // );

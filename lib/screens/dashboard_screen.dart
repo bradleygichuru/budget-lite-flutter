@@ -8,6 +8,7 @@ import 'package:flutter_application_1/view_models/auth.dart';
 import 'package:flutter_application_1/view_models/categories.dart';
 import 'package:flutter_application_1/view_models/txs.dart';
 import 'package:flutter_application_1/view_models/wallet.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:watch_it/watch_it.dart';
 
@@ -44,6 +45,17 @@ Map<String, Color> getEnvelopecolor(Category cat) {
   // return y;
 }
 
+List<GlobalKey> showcases() {
+  List<GlobalKey> x = [];
+  if (!di<AuthModel>().budgetOverviewShowCaseComplete) {
+    x.add(AppGlobal.budgetOverview);
+  }
+  if (!di<AuthModel>().recentTransactionsShowcaseComplete) {
+    x.add(AppGlobal.recentTransactions);
+  }
+  return x;
+}
+
 class Dashboard extends StatefulWidget with WatchItStatefulWidgetMixin {
   const Dashboard({super.key});
   @override
@@ -56,14 +68,14 @@ class DashboardState extends State<Dashboard> {
   void initState() {
     super.initState();
 
-    // WidgetsBinding.instance.addPostFrameCallback(
-    //   (_) => di<AuthModel>().shouldShowCase
-    //       ? ShowCaseWidget.of(context).startShowCase([
-    //           AppGlobal.budgetOverview,
-    //           AppGlobal.recentTransactions,
-    //         ])
-    //       : null,
-    // );
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) =>
+          di<AuthModel>().shouldShowCase &&
+              (!di<AuthModel>().recentTransactionsShowcaseComplete ||
+                  !di<AuthModel>().budgetOverviewShowCaseComplete)
+          ? ShowCaseWidget.of(context).startShowCase(showcases())
+          : null,
+    );
   }
 
   @override
@@ -172,6 +184,10 @@ class DashboardState extends State<Dashboard> {
                   ShowCaseWidget.of(
                     context,
                   ).hideFloatingActionWidgetForKeys([AppGlobal.budgetOverview]);
+
+                  SharedPreferencesAsync prefs = SharedPreferencesAsync();
+                  prefs.setBool('budget_overview_showcase', true);
+                  di<AuthModel>().refreshShowcase();
                 },
 
                 tooltipActionConfig: const TooltipActionConfig(
@@ -318,10 +334,15 @@ class DashboardState extends State<Dashboard> {
                 key: AppGlobal.recentTransactions,
                 description: "Recent transactions will show up below",
 
-                onBarrierClick: () {
+                onBarrierClick: () async {
                   ShowCaseWidget.of(context).hideFloatingActionWidgetForKeys([
                     AppGlobal.recentTransactions,
                   ]);
+
+                  SharedPreferencesAsync prefs = SharedPreferencesAsync();
+                  prefs.setBool('recent_transactions_showcase_complete', true);
+
+                  di<AuthModel>().refreshShowcase();
                 },
 
                 tooltipActionConfig: const TooltipActionConfig(

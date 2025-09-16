@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:another_telephony/telephony.dart';
+import 'package:chat_bubbles/bubbles/bubble_special_three.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -22,15 +23,25 @@ import 'package:flutter_application_1/services/main_service.dart';
 import 'package:flutter_application_1/util/result_wraper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
+import 'package:introduction_screen/introduction_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
+import 'package:watch_it/watch_it.dart';
 
 class AuthModel extends ChangeNotifier {
   AuthModel() {
     initAuth();
   }
+  bool exportTransactionsShowcaseComplete = false;
+  bool budgetOverviewShowCaseComplete = false;
+  bool recentTransactionsShowcaseComplete = false;
+  bool resetBudgetEnvelopeShowcaseComplete = false;
+  bool addBudgetEnvelopeShowcaseComplete = false;
+  bool addFinancialGoalsShowcaseComplete = false;
+  bool addTxShowCaseComplete = false;
+  bool addSavingsShowCaseComplete = false;
   bool canLoginAnon = false;
   bool? isMshwariDepost;
   bool isAnon = false;
@@ -39,7 +50,7 @@ class AuthModel extends ChangeNotifier {
   int? accountId;
   bool shouldShowCase = false;
   DateTime date = DateTime.now();
-  late Future<bool> handleAuth;
+  Future<bool> handleAuth = Future.value(true);
   late bool isLoggedIn;
   late bool isNewUser;
   late String? authToken;
@@ -133,9 +144,34 @@ class AuthModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refreshShowcase() async {
+    SharedPreferencesAsync prefs = SharedPreferencesAsync();
+
+    shouldShowCase = await prefs.getBool('should_showcase') ?? true;
+    exportTransactionsShowcaseComplete =
+        await prefs.getBool('export_transactions_showcase_complete') ?? false;
+    addFinancialGoalsShowcaseComplete =
+        await prefs.getBool('add_financial_goals_complete') ?? false;
+    addBudgetEnvelopeShowcaseComplete =
+        await prefs.getBool('add_budget_envelope_complete') ?? false;
+    resetBudgetEnvelopeShowcaseComplete =
+        await prefs.getBool('reset_budget_envelope_complete') ?? false;
+
+    budgetOverviewShowCaseComplete =
+        await prefs.getBool('budget_overview_showcase') ?? false;
+
+    recentTransactionsShowcaseComplete =
+        await prefs.getBool('recent_transactions_showcase_complete') ?? false;
+
+    addTxShowCaseComplete =
+        await prefs.getBool('add_tx_showcase_complete') ?? false;
+    addSavingsShowCaseComplete =
+        await prefs.getBool('add_savings_showcase_complete') ?? false;
+    notifyListeners();
+  }
+
   Future<void> refreshAuth() async {
     handleAuth = isSetLoggedIn();
-
     int? acid = await getAccountId();
     if (acid != null) {
       await setAccountProfileInfo(acid);
@@ -149,6 +185,26 @@ class AuthModel extends ChangeNotifier {
     log("shouldShowcase:$shouldShowCase");
 
     canLoginAnon = await prefs.getBool('canLoginAnon') ?? false;
+
+    exportTransactionsShowcaseComplete =
+        await prefs.getBool('export_transactions_showcase_complete') ?? false;
+    addFinancialGoalsShowcaseComplete =
+        await prefs.getBool('add_financial_goals_complete') ?? false;
+    addBudgetEnvelopeShowcaseComplete =
+        await prefs.getBool('add_budget_envelope_complete') ?? false;
+    resetBudgetEnvelopeShowcaseComplete =
+        await prefs.getBool('reset_budget_envelope_complete') ?? false;
+
+    budgetOverviewShowCaseComplete =
+        await prefs.getBool('budget_overview_showcase') ?? false;
+
+    recentTransactionsShowcaseComplete =
+        await prefs.getBool('recent_transactions_showcase_complete') ?? false;
+
+    addTxShowCaseComplete =
+        await prefs.getBool('add_tx_showcase_complete') ?? false;
+    addSavingsShowCaseComplete =
+        await prefs.getBool('add_savings_showcase_complete') ?? false;
     getAuthToken();
     getSessionToken();
 
@@ -161,6 +217,25 @@ class AuthModel extends ChangeNotifier {
     isMshwariDepost = await prefs.getBool('is_mshwari_savings');
 
     shouldShowCase = await prefs.getBool('should_showcase') ?? true;
+    exportTransactionsShowcaseComplete =
+        await prefs.getBool('export_transactions_showcase_complete') ?? false;
+    addFinancialGoalsShowcaseComplete =
+        await prefs.getBool('add_financial_goals_complete') ?? false;
+    addBudgetEnvelopeShowcaseComplete =
+        await prefs.getBool('add_budget_envelope_complete') ?? false;
+    resetBudgetEnvelopeShowcaseComplete =
+        await prefs.getBool('reset_budget_envelope_complete') ?? false;
+
+    budgetOverviewShowCaseComplete =
+        await prefs.getBool('budget_overview_showcase') ?? false;
+
+    recentTransactionsShowcaseComplete =
+        await prefs.getBool('recent_transactions_showcase_complete') ?? false;
+
+    addTxShowCaseComplete =
+        await prefs.getBool('add_tx_showcase_complete') ?? false;
+    addSavingsShowCaseComplete =
+        await prefs.getBool('add_savings_showcase_complete') ?? false;
 
     log("shouldShowcase:$shouldShowCase");
 
@@ -967,13 +1042,421 @@ class AuthModel extends ChangeNotifier {
             }
           default:
             {
-              authWidget = Landing();
+              const bodyStyle = TextStyle(fontSize: 19.0);
+              authWidget = IntroductionScreen(
+                // globalFooter: SizedBox(
+                //   width: double.infinity,
+                //   height: 60,
+                //   child: ElevatedButton(
+                //     child: const Text(
+                //       'Let\'s go right away!',
+                //       style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold),
+                //     ),
+                //     onPressed: () => {},
+                //   ),
+                // ),
+                showSkipButton: false,
+                showBackButton: false,
+                back: const Icon(Icons.arrow_back),
+                skip: const Text(
+                  'Skip',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                next: const Icon(Icons.arrow_forward),
+                done: const Text(
+                  'Done',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                curve: Curves.fastLinearToSlowEaseIn,
+                controlsMargin: const EdgeInsets.all(16),
+                controlsPadding: kIsWeb
+                    ? const EdgeInsets.all(12.0)
+                    : const EdgeInsets.fromLTRB(8.0, 4.0, 8.0, 4.0),
+                dotsDecorator: DotsDecorator(
+                  size: const Size.square(10.0),
+                  activeSize: const Size(20.0, 10.0),
+                  color: Colors.black26,
+                  spacing: const EdgeInsets.symmetric(horizontal: 3.0),
+                  activeShape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25.0),
+                  ),
+                ),
+                dotsContainerDecorator: const ShapeDecoration(
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                  ),
+                ),
+                pages: [
+                  PageViewModel(
+                    decoration: PageDecoration(
+                      titleTextStyle: TextStyle(
+                        fontSize: 28.0,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      bodyTextStyle: bodyStyle,
+                      bodyPadding: EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+                      pageColor: Colors.white,
+                      imagePadding: EdgeInsets.zero,
+                    ),
+                    title: "Why budgetlite?",
+                    bodyWidget: const Landing(),
+                  ),
+                ],
+                onDone: () => log('Done'),
+
+                // showSkipButton: true,
+                // skipOrBackFlex: 0,
+                // nextFlex: 0,
+                // showBackButton: false,
+              );
               notifyListeners();
               break;
             }
         }
       } else {
-        authWidget = Landing();
+        const bodyStyle = TextStyle(fontSize: 19.0);
+        authWidget = IntroductionScreen(
+          globalHeader: SafeArea(
+            child: Center(
+              child: SizedBox(
+                width: double.infinity,
+                height: 60,
+                child: const Text(
+                  textAlign: TextAlign.center,
+                  'Why budgetlite?',
+                  style: TextStyle(fontSize: 26.0, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+          showSkipButton: false,
+          showBackButton: false,
+          back: const Icon(Icons.arrow_back),
+          skip: const Text(
+            'Skip',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          next: const Icon(Icons.arrow_forward),
+          done: const Text(
+            'Done',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          curve: Curves.fastLinearToSlowEaseIn,
+          controlsMargin: const EdgeInsets.all(16),
+          controlsPadding: kIsWeb
+              ? const EdgeInsets.all(12.0)
+              : const EdgeInsets.fromLTRB(8.0, 4.0, 8.0, 4.0),
+          dotsDecorator: DotsDecorator(
+            size: const Size.square(10.0),
+            activeSize: const Size(20.0, 10.0),
+            color: Colors.black26,
+            spacing: const EdgeInsets.symmetric(horizontal: 3.0),
+            activeShape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25.0),
+            ),
+          ),
+          dotsContainerDecorator: const ShapeDecoration(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8.0)),
+            ),
+          ),
+          pages: [
+            PageViewModel(
+              decoration: PageDecoration(
+                bodyAlignment: Alignment.center,
+                titleTextStyle: TextStyle(
+                  fontSize: 28.0,
+                  fontWeight: FontWeight.w700,
+                ),
+                bodyTextStyle: bodyStyle,
+                bodyPadding: EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+                pageColor: Colors.white,
+                imagePadding: EdgeInsets.zero,
+              ),
+              title: "Envelope budgeting",
+              bodyWidget: const SizedBox(
+                width: 180,
+                height: 160,
+                child: Card(
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.all(5),
+                        child: Icon(Icons.wallet, color: Color(0xFF1E88E5)),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          "Envelope budgeting",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: 5,
+                              horizontal: 20,
+                            ),
+                            child: Text(
+                              "Allocate money to different spending categories and track your progress",
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            PageViewModel(
+              title: "Savings Goals",
+              decoration: PageDecoration(
+                bodyAlignment: Alignment.center,
+                titleTextStyle: TextStyle(
+                  fontSize: 28.0,
+                  fontWeight: FontWeight.w700,
+                ),
+                bodyTextStyle: bodyStyle,
+                bodyPadding: EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+                pageColor: Colors.white,
+                imagePadding: EdgeInsets.zero,
+              ),
+              bodyWidget: const SizedBox(
+                width: 180,
+                height: 160,
+                child: Card(
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.all(5),
+                        child: Icon(
+                          Icons.crisis_alert_outlined,
+                          color: Color(0xFF00CEC8),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          "Savings Goals",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: 5,
+                              horizontal: 20,
+                            ),
+                            child: Text(
+                              "Set and achieve financial goals with visual progress tracking",
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            PageViewModel(
+              title: "Spending Reports",
+              decoration: PageDecoration(
+                bodyAlignment: Alignment.center,
+                titleTextStyle: TextStyle(
+                  fontSize: 28.0,
+                  fontWeight: FontWeight.w700,
+                ),
+                bodyTextStyle: bodyStyle,
+                bodyPadding: EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+                pageColor: Colors.white,
+                imagePadding: EdgeInsets.zero,
+              ),
+              bodyWidget: const SizedBox(
+                width: 180,
+                height: 160,
+                child: Card(
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.all(5),
+                        child: Icon(
+                          Icons.trending_up,
+                          color: Color(0xFF805AD5),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          "Spending Reports",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: 5,
+                              horizontal: 20,
+                            ),
+                            child: Text(
+                              "Understand your spending patterns with clear charts and insights",
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            PageViewModel(
+              title: "Smart Alerts",
+              decoration: PageDecoration(
+                bodyAlignment: Alignment.center,
+                titleTextStyle: TextStyle(
+                  fontSize: 28.0,
+                  fontWeight: FontWeight.w700,
+                ),
+                bodyTextStyle: bodyStyle,
+                bodyPadding: EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+                pageColor: Colors.white,
+                imagePadding: EdgeInsets.zero,
+              ),
+              bodyWidget: const SizedBox(
+                width: 180,
+                height: 160,
+                child: Card(
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.all(5),
+                        child: Icon(
+                          Icons.notification_important,
+                          color: Colors.red,
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          "Smart Alerts",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: 5,
+                              horizontal: 20,
+                            ),
+                            child: Text(
+                              "Get notified when you approach budget limits or reach milestones",
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            PageViewModel(
+              title: "Easy add by sharing transaction message to budgetlite",
+              decoration: PageDecoration(
+                bodyAlignment: Alignment.center,
+                titleTextStyle: TextStyle(
+                  fontSize: 28.0,
+                  fontWeight: FontWeight.w700,
+                ),
+                bodyTextStyle: bodyStyle,
+                bodyPadding: EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+                pageColor: Colors.white,
+                imagePadding: EdgeInsets.zero,
+              ),
+              bodyWidget: const SizedBox(
+                width: double.infinity,
+                height: 160,
+                child: Card(
+                  color: Colors.white,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.center,
+                        child: Icon(Icons.share, color: Colors.green),
+                      ),
+                      // Padding(
+                      //   padding: EdgeInsets.symmetric(vertical: 2),
+                      //   child: Text(
+                      //     "Smart Alerts",
+                      //     style: TextStyle(fontWeight: FontWeight.w600),
+                      //   ),
+                      // ),
+                      Expanded(
+                        child: BubbleSpecialThree(
+                          text:
+                              'TI891SAIXJ Confirmed. Ksh1000.00 sent to John Doe ******** on 8/9/25 at 9:06 PM. New M-PESA balance is Ksh16.34. ',
+                          color: Color(0xFF1B97F3),
+                          tail: true,
+                          textStyle: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+          onDone: () async {
+            Result res = await di<AuthModel>().anonCreateAccount();
+            switch (res) {
+              case Ok():
+                {
+                  AppGlobal.navigatorKey.currentState!.pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => const SetupBudget(),
+                    ),
+                    (Route<dynamic> route) => false,
+                  );
+                  // Navigator.pushAndRemoveUntil(
+                  //   context,
+                  //   MaterialPageRoute(
+                  //     builder: (context) => const SetupBudget(),
+                  //   ),
+                  //   (Route<dynamic> route) => false,
+                  // );
+                  break;
+                }
+              default:
+                {
+                  AppGlobal.landingScaffoldKey.currentState!.showSnackBar(
+                    SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      content: const Text("Error initializing preferences"),
+                    ),
+                  );
+                  break;
+                }
+            }
+          },
+
+          // showSkipButton: true,
+          // skipOrBackFlex: 0,
+          // nextFlex: 0,
+          // showBackButton: false,
+        );
+        // authWidget = Landing();
         notifyListeners();
       }
 

@@ -12,7 +12,14 @@ class AppGlobal {
   static GlobalKey recentTransactions = GlobalKey();
   static GlobalKey addFinancialGoals = GlobalKey();
 
+  static GlobalKey txAdd = GlobalKey();
+
+  static GlobalKey savingsAdd = GlobalKey();
+
   static GlobalKey exportTransactions = GlobalKey();
+
+  static GlobalKey<ScaffoldMessengerState> landingScaffoldKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   static FirebaseAnalytics analytics = FirebaseAnalytics.instance;
 

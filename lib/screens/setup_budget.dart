@@ -668,6 +668,7 @@ class SetupBudgetState extends State<SetupBudget> {
                                       0,
                                       0,
                                     );
+                                    di<AuthModel>().refreshAuth();
                                     Navigator.pushAndRemoveUntil(
                                       context,
                                       MaterialPageRoute(

@@ -10,7 +10,6 @@ import 'package:flutter_application_1/screens/reports_screen.dart';
 import 'package:flutter_application_1/screens/terms_and_conditions.dart';
 import 'package:flutter_application_1/view_models/weekly_reports.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:loading_overlay/loading_overlay.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -45,6 +44,17 @@ import 'package:upgrader/upgrader.dart';
 import 'package:watch_it/watch_it.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_application_1/firebase_options.dart';
+
+List<GlobalKey> showcases() {
+  List<GlobalKey> x = [];
+  if (!di<AuthModel>().addTxShowCaseComplete) {
+    x.add(AppGlobal.txAdd);
+  }
+  if (!di<AuthModel>().addSavingsShowCaseComplete) {
+    x.add(AppGlobal.savingsAdd);
+  }
+  return x;
+}
 
 void setup() {
   //intialize changenotifier singletons
@@ -175,7 +185,7 @@ Future<void> main() async {
   initializeService();
   runApp(
     MaterialApp(
-      // navigatorKey: AppGlobal.navigatorKey,
+      navigatorKey: AppGlobal.navigatorKey,
       theme: ThemeData(colorSchemeSeed: Colors.blue.shade600),
       home: MyApp(),
     ),
@@ -208,6 +218,10 @@ class MyAppState extends State<MyApp> {
   bool shouldReset = false;
   String sharedMessages = '';
   AppcastItem? bestItem;
+
+  // bool shouldShowcaseState = watchPropertyValue(
+  //   (AuthModel m) => m.shouldShowCase,
+  // );
   static const appcastURL =
       'https://raw.githubusercontent.com/bradleygichuru/budgetlite-appcast/refs/heads/main/budgetlite_updates.xml';
   final appCast = Appcast();
@@ -268,6 +282,15 @@ class MyAppState extends State<MyApp> {
         bestItem = appCast.bestItem();
       });
     });
+
+    // WidgetsBinding.instance.addPostFrameCallback(
+    //   (_) =>
+    //       di<AuthModel>().shouldShowCase &&
+    //           (!di<AuthModel>().addSavingsShowCaseComplete ||
+    //               !di<AuthModel>().addTxShowCaseComplete)
+    //       ? ShowCaseWidget.of(context).startShowCase(showcases())
+    //       : null,
+    // );
 
     FlutterNativeSplash.remove();
     _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen(
@@ -1319,12 +1342,8 @@ class MyAppState extends State<MyApp> {
               Widget cont = Text("");
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Scaffold(
-                  body: LoadingOverlay(
-                    isLoading:
-                        snapshot.connectionState == ConnectionState.waiting
-                        ? true
-                        : false,
-                    child: Text('loading'),
+                  body: SafeArea(
+                    child: Center(child: CircularProgressIndicator()),
                   ),
                 );
                 // SafeArea(child: Center(child: CircularProgressIndicator()));
@@ -1332,12 +1351,16 @@ class MyAppState extends State<MyApp> {
               if (snapshot.connectionState == ConnectionState.done) {
                 if (snapshot.hasData) {
                   if (snapshot.requireData) {
-                    return di<AuthModel>().authWidget;
+                    return ScaffoldMessenger(
+                      key: AppGlobal.landingScaffoldKey,
+                      child: Scaffold(body: di<AuthModel>().authWidget),
+                    );
                   } else {
                     return SafeArea(
                       child: Scaffold(
                         floatingActionButtonLocation: ExpandableFab.location,
                         floatingActionButton: ExpandableFab(
+                          initialOpen: di<AuthModel>().shouldShowCase,
                           openButtonBuilder: RotateFloatingActionButtonBuilder(
                             child: const Icon(Icons.account_balance_wallet),
                             fabSize: ExpandableFabSize.regular,
@@ -1408,6 +1431,24 @@ class MyAppState extends State<MyApp> {
                               label: Text('Add transaction'),
                               icon: Icon(Icons.add),
                             ),
+                            // Showcase(
+                            //   key: AppGlobal.txAdd,
+                            //   description: "Record transactions",
+                            //
+                            //   onBarrierClick: () {
+                            //     ShowCaseWidget.of(
+                            //       context,
+                            //     ).hideFloatingActionWidgetForKeys([
+                            //       AppGlobal.txAdd,
+                            //     ]);
+                            //
+                            //     SharedPreferencesAsync prefs =
+                            //         SharedPreferencesAsync();
+                            //     prefs.setBool('add_tx_showcase_complete', true);
+                            //     di<AuthModel>().refreshShowcase();
+                            //   },
+                            //   child: ,
+                            // ),
                             FloatingActionButton.extended(
                               heroTag: 'savings',
                               onPressed: () async {
@@ -1424,6 +1465,27 @@ class MyAppState extends State<MyApp> {
                               label: Text('Record Savings'),
                               icon: Icon(Icons.add),
                             ),
+                            // Showcase(
+                            //   key: AppGlobal.savingsAdd,
+                            //   description: "Record savings",
+                            //
+                            //   onBarrierClick: () {
+                            //     ShowCaseWidget.of(
+                            //       context,
+                            //     ).hideFloatingActionWidgetForKeys([
+                            //       AppGlobal.savingsAdd,
+                            //     ]);
+                            //
+                            //     SharedPreferencesAsync prefs =
+                            //         SharedPreferencesAsync();
+                            //     prefs.setBool(
+                            //       'add_savings_showcase_complete',
+                            //       true,
+                            //     );
+                            //     di<AuthModel>().refreshShowcase();
+                            //   },
+                            //   child: ,
+                            // ),
                           ],
                         ),
                         appBar: AppBar(
