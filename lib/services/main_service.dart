@@ -69,7 +69,6 @@ Future<void> initializeService() async {
     androidConfiguration: AndroidConfiguration(
       // this will be executed when app is in foreground or background in separated isolate
       onStart: onStart,
-      autoStartOnBoot: true,
 
       // auto start service
       autoStart: true,

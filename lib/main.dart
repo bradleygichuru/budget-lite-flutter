@@ -227,7 +227,7 @@ class MyAppState extends State<MyApp> {
   final appCast = Appcast();
 
   final upgrader = Upgrader(
-    // durationUntilAlertAgain: Duration(minutes: 1),
+    durationUntilAlertAgain: Duration(days: 1),
     // debugLogging: kDebugMode ? true : false,
     storeController: UpgraderStoreController(
       onAndroid: () => UpgraderAppcastStore(appcastURL: appcastURL),
@@ -1034,46 +1034,43 @@ class MyAppState extends State<MyApp> {
                     },
                   ),
                   backgroundColor: Colors.blue.shade700,
-                  title: Column(
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.all(7),
-                        child: FutureBuilder<List<TransactionObj>>(
-                          future: watchPropertyValue(
-                            (TransactionsModel m) => m.unCategorizedTxs,
-                          ),
-                          builder: (context, snapshot) {
-                            Widget x = CircularProgressIndicator();
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return CircularProgressIndicator();
-                            } else if (snapshot.hasError) {
-                              return Text(
-                                "Error occured fetching transactions",
-                              );
-                            } else if (snapshot.connectionState ==
-                                    ConnectionState.done &&
-                                snapshot.hasData) {
-                              if (snapshot.data!.length < 0) {
-                                setState(() {
-                                  handleUncategorized = false;
-                                });
-                              }
-                              return Text(
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-
-                                  color: Colors.white,
-                                ),
-                                "Pending Categorization",
-                              );
-                            }
-                            return x;
-                          },
-                        ),
+                  title: Padding(
+                    padding: EdgeInsets.all(7),
+                    child: FutureBuilder<List<TransactionObj>>(
+                      future: watchPropertyValue(
+                        (TransactionsModel m) => m.unCategorizedTxs,
                       ),
-                    ],
+                      builder: (context, snapshot) {
+                        Widget x = CircularProgressIndicator();
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return CircularProgressIndicator();
+                        } else if (snapshot.hasError) {
+                          return Text("Error occured fetching transactions");
+                        } else if (snapshot.connectionState ==
+                                ConnectionState.done &&
+                            snapshot.hasData) {
+                          if (snapshot.data!.isEmpty) {
+                            setState(() {
+                              handleUncategorized = false;
+                            });
+
+                            di<TransactionsModel>().toogleCategorizationOff();
+                          }
+
+                          return Text(
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+
+                              color: Colors.white,
+                            ),
+                            "Pending Categorization",
+                          );
+                        }
+                        return x;
+                      },
+                    ),
                   ),
                 ),
                 body: FutureBuilder<List<TransactionObj>>(

@@ -39,19 +39,22 @@ class TransactionsModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  toogleCategorizationOff() {
+  void toogleCategorizationOff() {
     handleUncategorized = false;
 
     notifyListeners();
   }
 
-  toogleCategorizationOn() {
+  void toogleCategorizationOn() {
     handleUncategorized = true;
     notifyListeners();
   }
 
   void refreshTx() async {
     final x = await getUncategorizedTx();
+    if (x.isEmpty) {
+      handleUncategorized = false;
+    }
     shouldCategorize = x.isNotEmpty;
     unCategorizedTxs = Future.value(x);
     transactions = getTransactions();
