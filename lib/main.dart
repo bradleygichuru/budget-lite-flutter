@@ -620,7 +620,7 @@ class MyAppState extends State<MyApp> {
                     Padding(
                       padding: EdgeInsetsGeometry.all(7),
                       child: Text(
-                        'Parse Text message',
+                        'Parse Text Message',
                         style: TextStyle(
                           fontSize: 20,
                           color: Colors.blue.shade600,
@@ -1216,6 +1216,7 @@ class MyAppState extends State<MyApp> {
                                                         switch (res) {
                                                           case Ok():
                                                             {
+                                                              calculateWeekInsights();
                                                               mainScaffoldMessengerKey
                                                                   .currentState!
                                                                   .showSnackBar(

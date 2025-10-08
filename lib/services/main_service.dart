@@ -128,7 +128,7 @@ void onStart(ServiceInstance service) async {
 
   // cron.schedule(Schedule.parse('* * * * *'), calculateWeekInsights);
   cron.schedule(Schedule.parse('0 8 * * *'), calculateWeekInsights);
-  cron.schedule(Schedule.parse('0 0 1 * *'), resetBudgets);
+  // cron.schedule(Schedule.parse('0 0 1 * *'), resetBudgets);
   cron.schedule(Schedule.parse('0 8 * * *'), dailyBudgetAlert); //every day at 8
 
   cron.schedule(

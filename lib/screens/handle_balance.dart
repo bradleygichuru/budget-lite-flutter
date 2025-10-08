@@ -290,6 +290,7 @@ class HandleBalanceState extends State<HandleBalance> {
                                                                       .clear();
                                                                   if (e.value ==
                                                                       true) {
+                                                                    calculateWeekInsights();
                                                                     di<
                                                                           TransactionsModel
                                                                         >()
@@ -389,6 +390,7 @@ class HandleBalanceState extends State<HandleBalance> {
                                                                       .clear();
                                                                   if (e.value ==
                                                                       true) {
+                                                                    calculateWeekInsights();
                                                                     di<
                                                                           TransactionsModel
                                                                         >()
@@ -488,6 +490,7 @@ class HandleBalanceState extends State<HandleBalance> {
                                                                       .clear();
                                                                   if (e.value ==
                                                                       true) {
+                                                                    calculateWeekInsights();
                                                                     di<
                                                                           TransactionsModel
                                                                         >()
@@ -806,6 +809,8 @@ class HandleBalanceState extends State<HandleBalance> {
                                                                     TransactionsModel
                                                                   >()
                                                                   .refreshTx();
+
+                                                              calculateWeekInsights();
 
                                                               if (context
                                                                   .mounted) {
